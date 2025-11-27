@@ -265,6 +265,12 @@ namespace StormByte::String {
 		return std::string(reinterpret_cast<const char*>(span.data()), span.size());
 	}
 
+	std::vector<std::byte> ToByteVector(const std::string& str) noexcept {
+		std::vector<std::byte> byte_vector(str.size());
+		std::memcpy(byte_vector.data(), str.data(), str.size());
+		return byte_vector;
+	}
+
 	template STORMBYTE_PUBLIC std::string HumanReadable<int>(const int&, const Format&, const std::string&) noexcept;
 	template STORMBYTE_PUBLIC std::string HumanReadable<unsigned int>(const unsigned int&, const Format&, const std::string&) noexcept;
 	template STORMBYTE_PUBLIC std::string HumanReadable<long>(const long&, const Format&, const std::string&) noexcept;

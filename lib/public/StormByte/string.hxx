@@ -184,4 +184,14 @@ namespace StormByte::String {
 	 * @return The string representation of the byte vector's contents.
 	 */
 	STORMBYTE_PUBLIC std::string FromByteVector(const std::vector<std::byte>& byte_vector) noexcept;
+
+	/**
+	 * @brief Converts a string to a byte vector.
+	 * 
+	 * This function converts a string into a vector of bytes (`std::byte`).
+	 * 
+	 * @param str The string to convert.
+	 * @return A vector of bytes representing the string's contents.
+	 */
+	STORMBYTE_PUBLIC std::vector<std::byte> ToByteVector(const std::string& str) noexcept;
 }
