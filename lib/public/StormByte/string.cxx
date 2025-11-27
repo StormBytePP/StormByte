@@ -1,5 +1,6 @@
 #include <StormByte/string.hxx>
 
+#include <cstring>
 #include <cwchar>
 #include <cstdlib>
 #include <ranges>
