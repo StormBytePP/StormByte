@@ -171,10 +171,10 @@ namespace StormByte {
 			 * 
 			 * @return A vector of bytes containing the serialized container data.
 			 */
-			std::vector<std::byte>																	SerializeContainer() const noexcept {
+			std::vector<std::byte>																		SerializeContainer() const noexcept {
 				std::size_t size = m_data.size();
 				Serializable<std::size_t> size_serial(size);
-				std::vector<std::byte> buffer(std::move(size_serial.Serialize()));
+				std::vector<std::byte> buffer = size_serial.Serialize();
 				for (const auto& element: m_data) {
 					Serializable<std::decay_t<decltype(element)>> element_serial(element);
 					AppendVector(buffer, element_serial.Serialize());
@@ -381,7 +381,7 @@ namespace StormByte {
 				if (!expected_second)
 					return StormByte::Unexpected(expected_second.error());
 	
-				return T { expected_first.value(), expected_second.value() };
+				return T { std::move(expected_first.value()), std::move(expected_second.value()) };
 			}
 
 			/**
@@ -418,7 +418,7 @@ namespace StormByte {
 					if (!expected_value)
 						return StormByte::Unexpected(expected_value.error());
 	
-					return T { expected_value.value() };
+					return T { std::move(expected_value.value()) };
 				} else {
 					return T {};
 				}
