@@ -13,6 +13,11 @@ on:
         required: false
         type: string
         default: './docs'
+      extra-cmake-options:
+        description: 'Additional CMake configuration options'
+        required: false
+        type: string
+        default: ''
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
@@ -53,6 +58,7 @@ jobs:
             -G Ninja
             -DWITH_SYSTEM_STORMBYTE=OFF
             -DENABLE_DOC=ON
+            ${{ inputs.extra-cmake-options }}
           build-type: Release
           target: ${{ inputs.doc_target }}
 
