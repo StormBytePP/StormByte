@@ -19,10 +19,14 @@ find_library(STORMBYTE_LIBRARY
 mark_as_advanced(STORMBYTE_LIBRARY)
 
 # List of all known components
-set(_available_components Config Crypto Database Multimedia Network System)
+set(_available_components Buffer Config Crypto Database Multimedia Network System)
 
 # Transitive dependencies
-# Empty for now
+# Define which components depend on other components
+# Crypto depends on Buffer
+# Network depends on Buffer
+set(_component_dependencies_Crypto Buffer)
+set(_component_dependencies_Network Buffer)
 
 # Use StormByte_FIND_COMPONENTS to determine requested components
 if (DEFINED StormByte_FIND_COMPONENTS)
@@ -55,10 +59,23 @@ foreach(component IN LISTS _requested_components)
         set(STORMBYTE_${component}_LIBRARIES ${STORMBYTE_${component}_LIBRARY})
         add_library(StormByte-${component} UNKNOWN IMPORTED GLOBAL)
         add_library(StormByte::${component} ALIAS StormByte-${component})
+        
+        # Build the list of link libraries (always include StormByte)
+        set(_link_libraries StormByte)
+        
+        # Add transitive dependencies if defined
+        if (DEFINED _component_dependencies_${component})
+            foreach(dep IN LISTS _component_dependencies_${component})
+                if (TARGET StormByte-${dep})
+                    list(APPEND _link_libraries StormByte-${dep})
+                endif()
+            endforeach()
+        endif()
+        
         set_target_properties(StormByte-${component} PROPERTIES
             IMPORTED_LOCATION ${STORMBYTE_${component}_LIBRARIES}
             INTERFACE_INCLUDE_DIRECTORIES ${STORMBYTE_INCLUDE_DIR}
-            INTERFACE_LINK_LIBRARIES StormByte
+            INTERFACE_LINK_LIBRARIES "${_link_libraries}"
         )
         list(APPEND _found_components ${component})
     else()
@@ -104,12 +121,5 @@ else()
         message(STATUS "StormByte library found.")
     endif()
 endif()
-
-# Make transitive link dependencies configurable
-foreach(component IN LISTS _requested_components)
-    if (${component}_FOUND AND DEFINED STORMBYTE_${component}_TRANSITIVE_LIBRARIES)
-        target_link_libraries(StormByte-${component} INTERFACE ${STORMBYTE_${component}_TRANSITIVE_LIBRARIES})
-    endif()
-endforeach()
 
 mark_as_advanced(STORMBYTE_INCLUDE_DIR STORMBYTE_LIBRARIES)
