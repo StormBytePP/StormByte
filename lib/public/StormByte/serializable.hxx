@@ -1,12 +1,19 @@
 #pragma once
 
-#include <StormByte/buffer/simple.hxx>
 #include <StormByte/exception.hxx>
 #include <StormByte/expected.hxx>
 #include <StormByte/type_traits.hxx>
 
 #include <optional>
 #include <utility>
+#include <vector>
+
+namespace {
+	// Helper function to append one vector to another
+	inline void AppendVector(std::vector<std::byte>& dest, std::vector<std::byte>&& src) {
+		dest.insert(dest.end(), std::make_move_iterator(src.begin()), std::make_move_iterator(src.end()));
+	}
+}
 
 /**
  * @namespace StormByte
@@ -64,11 +71,14 @@ namespace StormByte {
 			Serializable& operator=(Serializable&& other) noexcept 			= delete;
 
 			/**
-			 * @brief The function to serialize the data.
-			 * @param data The data to serialize.
-			 * @return The serialized data.
+			 * @brief Serializes the data into a byte vector.
+			 * 
+			 * This function automatically selects the appropriate serialization method based on
+			 * the type of data: trivial types, containers, pairs, optionals, or complex types.
+			 * 
+			 * @return A vector of bytes containing the serialized data.
 			 */
-			Buffer::Simple													Serialize() const noexcept {
+			std::vector<std::byte>													Serialize() const noexcept {
 				if constexpr (std::is_trivially_copyable_v<T>) {
 					return SerializeTrivial();
 				} else if constexpr (is_container<T>::value) {
@@ -83,11 +93,16 @@ namespace StormByte {
 			}
 
 			/**
-			 * @brief The function to deserialize the data.
-			 * @param data The data to deserialize.
-			 * @return The deserialized data.
+			 * @brief Deserializes data from a byte vector.
+			 * 
+			 * This function automatically selects the appropriate deserialization method based on
+			 * the type of data: trivial types, containers, pairs, optionals, or complex types.
+			 * 
+			 * @param data The byte vector containing the serialized data.
+			 * @return An Expected object containing the deserialized data on success,
+			 *         or a DeserializeError on failure.
 			 */
-			static StormByte::Expected<T, Buffer::BufferOverflow> 			Deserialize(const Buffer::Simple& data) noexcept {
+			static StormByte::Expected<T, DeserializeError> 					Deserialize(const std::vector<std::byte>& data) noexcept {
 				if constexpr (std::is_trivially_copyable_v<T>) {
 					return DeserializeTrivial(data);
 				} else if constexpr (is_container<T>::value) {
@@ -101,7 +116,15 @@ namespace StormByte {
 				}
 			}
 
-			static std::size_t												Size(const DecayedT& data) noexcept {
+			/**
+			 * @brief Calculates the serialized size of the data.
+			 * 
+			 * This function computes the size in bytes that the serialized data will occupy.
+			 * 
+			 * @param data The data to calculate the size for.
+			 * @return The size in bytes of the serialized data.
+			 */
+			static std::size_t														Size(const DecayedT& data) noexcept {
 				if constexpr (std::is_trivially_copyable_v<T>) {
 					return sizeof(data);
 				} else if constexpr (is_container<T>::value) {
@@ -119,76 +142,101 @@ namespace StormByte {
 			const DecayedT& m_data;											///< The data to serialize.
 
 			/**
-			 * @brief The function to serialize the trivial data.
-			 * @param data The data to serialize.
-			 * @return The serialized data.
+			 * @brief Serializes trivially copyable data.
+			 * 
+			 * This function performs a direct memory copy of the data into a byte vector.
+			 * Only used for types that satisfy std::is_trivially_copyable_v.
+			 * 
+			 * @return A vector of bytes containing the serialized data.
 			 */
-			Buffer::Simple													SerializeTrivial() const noexcept {
-				return { reinterpret_cast<const char*>(&m_data), sizeof(m_data) };
+			std::vector<std::byte>													SerializeTrivial() const noexcept {
+				return { reinterpret_cast<const std::byte*>(&m_data), reinterpret_cast<const std::byte*>(&m_data) + sizeof(m_data) };
 			}
 
 			/**
-			 * @brief The function to serialize the complex data.
-			 * @param data The data to serialize.
-			 * @return The serialized data.
+			 * @brief Serializes complex data types.
+			 * 
+			 * This function handles serialization of complex types that don't fall into
+			 * the trivial, container, pair, or optional categories.
+			 * 
+			 * @return A vector of bytes containing the serialized data.
 			 */
-			Buffer::Simple													SerializeComplex() const noexcept;
+			std::vector<std::byte>													SerializeComplex() const noexcept;
 
 			/**
-			 * @brief The function to serialize the container data.
-			 * @param data The data to serialize.
-			 * @return The serialized data.
+			 * @brief Serializes container data.
+			 * 
+			 * This function serializes container types (vector, list, etc.) by first serializing
+			 * the size of the container, followed by each element.
+			 * 
+			 * @return A vector of bytes containing the serialized container data.
 			 */
-			Buffer::Simple													SerializeContainer() const noexcept {
+			std::vector<std::byte>																	SerializeContainer() const noexcept {
 				std::size_t size = m_data.size();
 				Serializable<std::size_t> size_serial(size);
-				Buffer::Simple buffer(std::move(size_serial.Serialize()));
+				std::vector<std::byte> buffer(std::move(size_serial.Serialize()));
 				for (const auto& element: m_data) {
 					Serializable<std::decay_t<decltype(element)>> element_serial(element);
-					buffer << std::move(element_serial.Serialize());
+					AppendVector(buffer, element_serial.Serialize());
 				}
 				return buffer;
 			}
 
 			/**
-			 * @brief The function to serialize the pair data.
-			 * @param data The data to serialize.
-			 * @return The serialized data.
+			 * @brief Serializes pair data.
+			 * 
+			 * This function serializes std::pair types by serializing the first element
+			 * followed by the second element.
+			 * 
+			 * @return A vector of bytes containing the serialized pair data.
 			 */
-			Buffer::Simple 												SerializePair() const noexcept {
+			std::vector<std::byte>																	SerializePair() const noexcept {
 				Serializable<std::decay_t<typename T::first_type>> first_serial(m_data.first);
 				Serializable<std::decay_t<typename T::second_type>> second_serial(m_data.second);
-				return first_serial.Serialize() << std::move(second_serial.Serialize());
+				std::vector<std::byte> buffer = first_serial.Serialize();
+				AppendVector(buffer, second_serial.Serialize());
+				return buffer;
 			}
 
 			/**
-			 * @brief The function to serialize the optional data.
-			 * @param data The data to serialize.
-			 * @return The serialized data.
+			 * @brief Serializes optional data.
+			 * 
+			 * This function serializes std::optional types by first serializing a boolean
+			 * indicating whether the optional has a value, followed by the value itself if present.
+			 * 
+			 * @return A vector of bytes containing the serialized optional data.
 			 */
-			Buffer::Simple 												SerializeOptional() const noexcept {
+			std::vector<std::byte>																	SerializeOptional() const noexcept {
 				bool has_value = m_data.has_value();
-				Buffer::Simple buffer = std::move(Serializable<bool>(has_value).Serialize());
+				std::vector<std::byte> buffer = std::move(Serializable<bool>(has_value).Serialize());
 				if (m_data.has_value()) {
 					Serializable<std::decay_t<decltype(m_data.value())>> value_serial(m_data.value());
-					buffer << std::move(value_serial.Serialize());
+					AppendVector(buffer, value_serial.Serialize());
 				}
 				return buffer;
 			}
 
 			/**
-			 * @brief The function to get the size of the complex data.
-			 * @param data The data to get the size.
-			 * @return The size of the complex data.
+			 * @brief Calculates the serialized size of complex data.
+			 * 
+			 * This function computes the size in bytes for complex types that don't fall into
+			 * the trivial, container, pair, or optional categories.
+			 * 
+			 * @param data The data to calculate the size for.
+			 * @return The size in bytes of the serialized data.
 			 */
-			static std::size_t												SizeComplex(const DecayedT& data) noexcept;
+			static std::size_t														SizeComplex(const DecayedT& data) noexcept;
 
 			/**
-			 * @brief The function to get the size of the container data.
-			 * @param data The data to get the size.
-			 * @return The size of the container data.
+			 * @brief Calculates the serialized size of container data.
+			 * 
+			 * This function computes the size in bytes for container types, including
+			 * the size field and all contained elements.
+			 * 
+			 * @param data The container data to calculate the size for.
+			 * @return The size in bytes of the serialized container data.
 			 */
-			static std::size_t												SizeContainer(const DecayedT& data) noexcept {
+			static std::size_t														SizeContainer(const DecayedT& data) noexcept {
 				std::size_t size = sizeof(std::size_t);
 				for (const auto& element: data) {
 					size += Serializable<std::decay_t<decltype(element)>>::Size(element);
@@ -197,22 +245,30 @@ namespace StormByte {
 			}
 
 			/**
-			 * @brief The function to get the size of the pair data.
-			 * @param data The data to get the size.
-			 * @return The size of the pair data.
+			 * @brief Calculates the serialized size of pair data.
+			 * 
+			 * This function computes the size in bytes for std::pair types by summing
+			 * the sizes of both elements.
+			 * 
+			 * @param data The pair data to calculate the size for.
+			 * @return The size in bytes of the serialized pair data.
 			 */
-			static std::size_t												SizePair(const DecayedT& data) noexcept {
+			static std::size_t														SizePair(const DecayedT& data) noexcept {
 				return
 					Serializable<std::decay_t<typename T::first_type>>::Size(data.first) +
 					Serializable<std::decay_t<typename T::second_type>>::Size(data.second);
 			}
 
 			/**
-			 * @brief The function to get the size of the optional data.
-			 * @param data The data to get the size.
-			 * @return The size of the optional data.
+			 * @brief Calculates the serialized size of optional data.
+			 * 
+			 * This function computes the size in bytes for std::optional types, including
+			 * the boolean flag and the contained value if present.
+			 * 
+			 * @param data The optional data to calculate the size for.
+			 * @return The size in bytes of the serialized optional data.
 			 */
-			static std::size_t 												SizeOptional(const DecayedT& data) noexcept {
+			static std::size_t 														SizeOptional(const DecayedT& data) noexcept {
 				std::size_t size = sizeof(bool);
 				if (data.has_value()) {
 					size += Serializable<std::decay_t<decltype(data.value())>>::Size(data.value());
@@ -221,74 +277,144 @@ namespace StormByte {
 			}
 
 			/**
-			 * @brief The function to deserialize the trivial data.
-			 * @param data Serialized data
-			 * @return The deserialized data.
+			 * @brief Deserializes trivially copyable data.
+			 * 
+			 * This function performs a direct memory copy from the byte vector to reconstruct
+			 * the original data. Only used for types that satisfy std::is_trivially_copyable_v.
+			 * 
+			 * @param data The byte vector containing the serialized data.
+			 * @return An Expected object containing the deserialized data on success,
+			 *         or a DeserializeError if the data is insufficient.
 			 */
-			static StormByte::Expected<T, Buffer::BufferOverflow>			DeserializeTrivial(const Buffer::Simple& data) noexcept {
-				auto expected_value = data.Read(sizeof(T));
-				if (!expected_value)
-					return StormByte::Unexpected(expected_value.error());
-				return T { *reinterpret_cast<const T*>(expected_value.value().data()) };
+			static StormByte::Expected<T, DeserializeError>						DeserializeTrivial(const std::vector<std::byte>& data) noexcept {
+				if (data.size() < sizeof(T))
+					return StormByte::Unexpected<DeserializeError>("Insufficient data for deserialization");
+				return T { *reinterpret_cast<const T*>(data.data()) };
 			}
 
 			/**
-			 * @brief The function to deserialize the complex data.
-			 * @param data Serialized data
-			 * @return The deserialized data.
+			 * @brief Deserializes complex data types.
+			 * 
+			 * This function handles deserialization of complex types that don't fall into
+			 * the trivial, container, pair, or optional categories.
+			 * 
+			 * @param data The byte vector containing the serialized data.
+			 * @return An Expected object containing the deserialized data on success,
+			 *         or a DeserializeError on failure.
 			 */
-			static StormByte::Expected<T, Buffer::BufferOverflow>			DeserializeComplex(const Buffer::Simple& data) noexcept;
+			static StormByte::Expected<T, DeserializeError>						DeserializeComplex(const std::vector<std::byte>& data) noexcept;
 
 			/**
-			 * @brief The function to deserialize the container data.
-			 * @param data Serialized data
-			 * @return The deserialized data.
+			 * @brief Deserializes container data.
+			 * 
+			 * This function deserializes container types by first reading the size,
+			 * then deserializing each element and inserting it into the container.
+			 * 
+			 * @param data The byte vector containing the serialized container data.
+			 * @return An Expected object containing the deserialized container on success,
+			 *         or a DeserializeError on failure.
 			 */
-			static StormByte::Expected<T, Buffer::BufferOverflow> 			DeserializeContainer(const Buffer::Simple& data) noexcept {	
-				auto expected_container_size = Serializable<std::size_t>::Deserialize(data);
+			static StormByte::Expected<T, DeserializeError> 					DeserializeContainer(const std::vector<std::byte>& data) noexcept {
+				std::size_t offset = 0;
+				
+				// Deserialize the container size
+				if (offset + sizeof(std::size_t) > data.size())
+					return StormByte::Unexpected<DeserializeError>("Insufficient data for container size");
+				
+				std::vector<std::byte> size_data(data.begin() + offset, data.begin() + offset + sizeof(std::size_t));
+				auto expected_container_size = Serializable<std::size_t>::Deserialize(size_data);
 				if (!expected_container_size)
 					return StormByte::Unexpected(expected_container_size.error());
-	
+				
 				std::size_t size = expected_container_size.value();
+				offset += sizeof(std::size_t);
 	
 				T container;
 				for (std::size_t i = 0; i < size; ++i) {
-					auto expected_element = Serializable<std::decay_t<typename T::value_type>>::Deserialize(data);
+					using ElementT = std::decay_t<typename T::value_type>;
+					
+					if (offset >= data.size())
+						return StormByte::Unexpected<DeserializeError>("Insufficient data for container element");
+					
+					std::vector<std::byte> element_data(data.begin() + offset, data.end());
+					auto expected_element = Serializable<ElementT>::Deserialize(element_data);
 					if (!expected_element)
 						return StormByte::Unexpected(expected_element.error());
 
+					// Calculate the actual size of the deserialized element
+					std::size_t element_size = Serializable<ElementT>::Size(expected_element.value());
 					container.insert(container.end(), std::move(expected_element.value()));
+					offset += element_size;
 				}
 				return container;
 			}
 
 			/**
-			 * @brief The function to deserialize the pair data.
-			 * @param data Serialized data
-			 * @return The deserialized data.
+			 * @brief Deserializes pair data.
+			 * 
+			 * This function deserializes std::pair types by deserializing the first element
+			 * followed by the second element.
+			 * 
+			 * @param data The byte vector containing the serialized pair data.
+			 * @return An Expected object containing the deserialized pair on success,
+			 *         or a DeserializeError on failure.
 			 */
-			static StormByte::Expected<T, Buffer::BufferOverflow>			DeserializePair(const Buffer::Simple& data) noexcept {	
+			static StormByte::Expected<T, DeserializeError>						DeserializePair(const std::vector<std::byte>& data) noexcept {
 				using FirstT = std::decay_t<typename T::first_type>;
 				using SecondT = std::decay_t<typename T::second_type>;
+				std::size_t offset = 0;
 	
-				auto expected_first = Serializable<FirstT>::Deserialize(data);
+				// Deserialize first element
+				std::vector<std::byte> first_data(data.begin() + offset, data.end());
+				auto expected_first = Serializable<FirstT>::Deserialize(first_data);
 				if (!expected_first)
 					return StormByte::Unexpected(expected_first.error());
+				
+				offset += Serializable<FirstT>::Size(expected_first.value());
 	
-				auto expected_second = Serializable<SecondT>::Deserialize(data);
+				// Deserialize second element
+				if (offset >= data.size())
+					return StormByte::Unexpected<DeserializeError>("Insufficient data for pair second element");
+				
+				std::vector<std::byte> second_data(data.begin() + offset, data.end());
+				auto expected_second = Serializable<SecondT>::Deserialize(second_data);
 				if (!expected_second)
 					return StormByte::Unexpected(expected_second.error());
 	
 				return T { expected_first.value(), expected_second.value() };
 			}
 
-			static StormByte::Expected<T, Buffer::BufferOverflow>			DeserializeOptional(const Buffer::Simple& data) noexcept {
-				auto expected_has_value = Serializable<bool>::Deserialize(data);
+			/**
+			 * @brief Deserializes optional data.
+			 * 
+			 * This function deserializes std::optional types by first reading the boolean flag
+			 * indicating whether a value is present, then deserializing the value if it exists.
+			 * 
+			 * @param data The byte vector containing the serialized optional data.
+			 * @return An Expected object containing the deserialized optional on success,
+			 *         or a DeserializeError on failure.
+			 */
+			static StormByte::Expected<T, DeserializeError>						DeserializeOptional(const std::vector<std::byte>& data) noexcept {
+				std::size_t offset = 0;
+				
+				// Deserialize the has_value boolean
+				if (offset + sizeof(bool) > data.size())
+					return StormByte::Unexpected<DeserializeError>("Insufficient data for optional flag");
+				
+				std::vector<std::byte> bool_data(data.begin() + offset, data.begin() + offset + sizeof(bool));
+				auto expected_has_value = Serializable<bool>::Deserialize(bool_data);
 				if (!expected_has_value)
 					return StormByte::Unexpected(expected_has_value.error());
+				
+				offset += sizeof(bool);
 	
 				if (expected_has_value.value()) {
-					auto expected_value = Serializable<std::decay_t<decltype(m_data.value())>>::Deserialize(data);
+					if (offset >= data.size())
+						return StormByte::Unexpected<DeserializeError>("Insufficient data for optional value");
+					
+					using ValueT = std::decay_t<typename T::value_type>;
+					std::vector<std::byte> value_data(data.begin() + offset, data.end());
+					auto expected_value = Serializable<ValueT>::Deserialize(value_data);
 					if (!expected_value)
 						return StormByte::Unexpected(expected_value.error());
 	

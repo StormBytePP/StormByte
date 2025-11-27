@@ -1,7 +1,5 @@
 option(ENABLE_TEST "Enable Unit Tests" OFF)
 if(ENABLE_TEST AND NOT STORMBYTE_AS_DEPENDENCY)
-	add_subdirectory(buffers)
-
 	add_executable(ArithmeticMutexedTests arithmetic_mutexed_test.cxx)
 	target_link_libraries(ArithmeticMutexedTests StormByte)
 	add_test(NAME ArithmeticMutexedTests COMMAND ArithmeticMutexedTests)

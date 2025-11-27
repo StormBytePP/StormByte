@@ -1,9 +1,11 @@
 #pragma once
 
-#include <StormByte/buffer/simple.hxx>
+#include <StormByte/exception.hxx>
+#include <StormByte/expected.hxx>
+#include <StormByte/visibility.h>
 
 #include <algorithm>
-#include <cstdint>
+#include <cstddef>
 #include <cmath>
 #include <iomanip>
 #include <locale>
@@ -174,32 +176,12 @@ namespace StormByte::String {
 	STORMBYTE_PUBLIC std::string SanitizeNewlines(const std::string& str) noexcept;
 
 	/**
-	 * @brief Converts a `Buffer::Simple` object to a string.
+	 * @brief Converts a byte vector to a string.
 	 * 
-	 * This function extracts the contents of a `Buffer::Simple` object and converts it into a string.
+	 * This function extracts the contents of a byte vector and converts it into a string.
 	 * 
-	 * @param buffer The `Buffer::Simple` object to convert.
-	 * @return The string representation of the buffer's contents.
+	 * @param byte_vector The byte vector to convert.
+	 * @return The string representation of the byte vector's contents.
 	 */
-	STORMBYTE_PUBLIC std::string FromBuffer(const Buffer::Simple& buffer) noexcept;
-
-	/**
-	 * @brief Converts a `Buffer::Data` object to a string.
-	 * 
-	 * This function extracts the contents of a `Buffer::Data` object and converts it into a string.
-	 * 
-	 * @param data The `Buffer::Data` object to convert.
-	 * @return The string representation of the buffer's contents.
-	 */
-	STORMBYTE_PUBLIC std::string FromBuffer(const Buffer::Data& data) noexcept;
-
-	/**
-	 * @brief Converts a span of bytes to a string.
-	 * 
-	 * This function converts a span of bytes (`std::span<const std::byte>`) into a string representation.
-	 * 
-	 * @param span The span of bytes to convert.
-	 * @return The string representation of the byte span.
-	 */
-	STORMBYTE_PUBLIC std::string FromBuffer(const std::span<const std::byte>& span) noexcept;
+	STORMBYTE_PUBLIC std::string FromByteVector(const std::vector<std::byte>& byte_vector) noexcept;
 }

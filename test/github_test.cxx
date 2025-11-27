@@ -2,49 +2,66 @@
 #include <StormByte/test_handlers.h>
 
 #include <format>
+#include <iomanip>
 #include <map>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <vector>
 
+namespace {
+	std::string HexData(const std::vector<std::byte>& buffer) {
+		std::ostringstream oss;
+		for (size_t i = 0; i < buffer.size(); ++i) {
+			if (i > 0 && i % 16 == 0) oss << "\n";
+			oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(buffer[i]) << " ";
+		}
+		return oss.str();
+	}
+
+	void AppendVector(std::vector<std::byte>& dest, const std::vector<std::byte>& src) {
+		dest.insert(dest.end(), src.begin(), src.end());
+	}
+}
+
 int github_clang_libstdcpp_bus_error() {
-	StormByte::Buffer::Simple buffer;
-	
+	std::vector<std::byte> buffer;
+
 	{
 		std::string str = "Hello World!";
 		StormByte::Serializable<std::string> serialization(str);
-		buffer << serialization.Serialize();
+		AppendVector(buffer, serialization.Serialize());
 	}
 
-	std::cout << "Buffer: " << std::endl << buffer.HexData();
+	std::cout << "Buffer: " << std::endl << HexData(buffer) << std::endl;
 	return 0;
 }
 
 int github_clang_libstdcpp_bus_error2() {
-	StormByte::Buffer::Simple buffer1, buffer2;;
-	
+	std::vector<std::byte> buffer1, buffer2;
+
 	{
 		std::string str = "Hello World!";
 		StormByte::Serializable<std::string> serialization(str);
-		buffer2 << serialization.Serialize();
+		AppendVector(buffer2, serialization.Serialize());
 		buffer1 = buffer2;
 	}
 
-	std::cout << "Buffer1: " << std::endl << buffer1.HexData();
+	std::cout << "Buffer1: " << std::endl << HexData(buffer1) << std::endl;
 	return 0;
 }
 
 int github_clang_libstdcpp_bus_error3() {
-	StormByte::Buffer::Simple buffer1, buffer2;;
-	
+	std::vector<std::byte> buffer1, buffer2;
+
 	{
 		std::string str = "Hello World!";
 		StormByte::Serializable<std::string> serialization(str);
 		buffer2 = std::move(serialization.Serialize());
-		buffer1 << std::move(buffer2);
+		AppendVector(buffer1, std::move(buffer2));
 	}
 
-	std::cout << "Buffer1: " << std::endl << buffer1.HexData();
+	std::cout << "Buffer1: " << std::endl << HexData(buffer1) << std::endl;
 	return 0;
 }
 

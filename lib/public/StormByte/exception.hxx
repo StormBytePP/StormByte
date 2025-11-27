@@ -106,4 +106,9 @@ namespace StormByte {
 		 */
 		void 													free_str() noexcept;
 	};
+
+	class STORMBYTE_PUBLIC DeserializeError: public Exception {
+		public:
+			using Exception::Exception;
+	};
 }
