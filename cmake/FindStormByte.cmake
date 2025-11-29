@@ -19,7 +19,7 @@ find_library(STORMBYTE_LIBRARY
 mark_as_advanced(STORMBYTE_LIBRARY)
 
 # List of all known components
-set(_available_components Buffer Config Crypto Database Multimedia Network System)
+set(_available_components Buffer Config Crypto Database Logger Multimedia Network System)
 
 # Transitive dependencies
 # Define which components depend on other components

@@ -20,7 +20,6 @@ StormByte is a comprehensive, cross-platform C++ library aimed at easing system 
 - [Installation](#installation)
 - [Modules](#modules)
   - **Base**
-    - [Logger](#logger)
     - [Serialization](#serialization)
     - [String Utilities](#string-utilities)
     - [System Utilities](#system-utilities)
@@ -28,6 +27,7 @@ StormByte is a comprehensive, cross-platform C++ library aimed at easing system 
   - [Config](https://dev.stormbyte.org/StormByte-Config)
   - [Crypto](https://dev.stormbyte.org/StormByte-Crypto)
   - [Database](https://dev.stormbyte.org/StormByte-Database)
+  - [Logger](https://dev.stormbyte.org/StormByte-Logger)
   - [Multimedia](https://dev.stormbyte.org/StormByte-Multimedia)
   - [Network](https://dev.stormbyte.org/StormByte-Network)
   - [System](https://dev.stormbyte.org/StormByte-System)
@@ -68,50 +68,6 @@ StormByte Library is composed of several modules:
 
 The Base component is the core of the library containing only templates, string helpers, and the base exception framework.
 
-### Logger
-
-#### Overview
-
-The `Logger` module provides robust logging functionalities with support for multiple log levels, customizable formats, and output redirection to various targets. Whether you need basic console logging or advanced logging to files, the `Logger` module is designed for flexibility and ease of use.
-
-#### Features
-- **Log Levels**: Includes levels such as `Info`, `Debug`, `Warning`, `Error`, and `Fatal`.
-- **Custom Formats**: Allows customization of log headers with placeholders like `%T` for timestamps and `%L` for log levels.
-- **Output Targets**: Supports logging to `std::ostream` or any custom output stream.
-- **Thread Safety**: Ensures logs are safely written even in multithreaded applications.
-
-#### Example Usage
-
-##### Basic Logging
-```cpp
-#include <StormByte/logger/log.hxx>
-#include <iostream>
-
-using namespace StormByte::Logger;
-
-int main() {
-    Log logger(std::cout, Level::Info, "%T %L: ");
-    logger << Level::Info << "This is an info message." << std::endl;
-    logger << Level::Error << "An error occurred." << std::endl;
-    return 0;
-}
-```
-
-##### Redirecting Logs to a File
-```cpp
-#include <StormByte/logger/log.hxx>
-#include <fstream>
-
-using namespace StormByte::Logger;
-
-int main() {
-    std::ofstream file("log.txt");
-    Log logger(file, Level::Debug, "%L %T: ");
-    logger << Level::Debug << "Debugging information." << std::endl;
-    logger << Level::Fatal << "Critical error!" << std::endl;
-    return 0;
-}
-```
 
 ### Serialization
 

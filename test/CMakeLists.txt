@@ -4,10 +4,6 @@ if(ENABLE_TEST AND NOT STORMBYTE_AS_DEPENDENCY)
 	target_link_libraries(ArithmeticMutexedTests StormByte)
 	add_test(NAME ArithmeticMutexedTests COMMAND ArithmeticMutexedTests)
 
-	add_executable(LoggerTests logger_test.cxx)
-	target_link_libraries(LoggerTests StormByte)
-	add_test(NAME LoggerTests COMMAND LoggerTests)
-
 	add_executable(MutexedTests mutexed_test.cxx)
 	target_link_libraries(MutexedTests StormByte)
 	add_test(NAME MutexedTests COMMAND MutexedTests)
