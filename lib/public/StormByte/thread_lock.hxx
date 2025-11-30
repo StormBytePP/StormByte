@@ -33,7 +33,8 @@ namespace StormByte {
 			constexpr ThreadLock() noexcept = default;
 
 			ThreadLock(const ThreadLock&) = delete;
-			constexpr ThreadLock(ThreadLock&&) noexcept = default;
+			// std::mutex is nor movable in Windows.
+			ThreadLock(ThreadLock&&) = delete;
 
 			/**
 			 * @brief Destroy the ThreadLock and release any held resources.
@@ -44,7 +45,7 @@ namespace StormByte {
 			~ThreadLock() noexcept;
 
 			ThreadLock& operator=(const ThreadLock&) = delete;
-			constexpr ThreadLock& operator=(ThreadLock&&) noexcept = default;
+			ThreadLock& operator=(ThreadLock&&) = delete;
 
 			/**
 			 * @brief Acquire the lock.
