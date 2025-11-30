@@ -20,6 +20,9 @@ if(ENABLE_TEST AND NOT STORMBYTE_AS_DEPENDENCY)
 	target_link_libraries(SystemTests StormByte)
 	add_test(NAME SystemTests COMMAND SystemTests)
 
+	add_executable(ThreadLockTests thread_lock_test.cxx)
+	target_link_libraries(ThreadLockTests StormByte)
+	add_test(NAME ThreadLockTests COMMAND ThreadLockTests)
 
 	# Github special test
 	add_executable(GithubTests github_test.cxx)
