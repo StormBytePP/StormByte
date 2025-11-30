@@ -25,6 +25,7 @@ set(_available_components Buffer Config Crypto Database Logger Multimedia Networ
 # Define which components depend on other components
 # Crypto depends on Buffer
 # Network depends on Buffer
+set(_component_dependencies_Buffer Logger)
 set(_component_dependencies_Crypto Buffer)
 set(_component_dependencies_Network Buffer)
 
