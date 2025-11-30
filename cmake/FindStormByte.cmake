@@ -42,11 +42,25 @@ set(_component_dependencies_Buffer Logger)
 set(_component_dependencies_Crypto Buffer)
 set(_component_dependencies_Network Buffer)
 
-# Parse requested components from the calling project
+# Parse requested components from the calling project.
+# Support two usage styles:
+# 1) The caller sets `StormByte_FIND_COMPONENTS` before calling `find_package`.
+# 2) The caller invokes `find_package(StormByte REQUIRED Module1 Module2 ...)`.
 if (DEFINED StormByte_FIND_COMPONENTS)
     set(_requested_components ${StormByte_FIND_COMPONENTS})
 else()
+    # Collect ARGN (arguments passed to this find module) and filter out common keywords
     set(_requested_components)
+    if (ARGN)
+        foreach(_arg IN LISTS ARGN)
+            string(TOUPPER "${_arg}" _ARG_UP)
+            # Skip standard find_package keywords
+            if (_ARG_UP STREQUAL "REQUIRED" OR _ARG_UP STREQUAL "QUIET" OR _ARG_UP STREQUAL "COMPONENTS" OR _ARG_UP STREQUAL "EXACT" OR _ARG_UP STREQUAL "NO_MODULE")
+                continue()
+            endif()
+            list(APPEND _requested_components ${_arg})
+        endforeach()
+    endif()
 endif()
 
 # Validate requested components
@@ -151,4 +165,3 @@ else()
 endif()
 
 mark_as_advanced(STORMBYTE_INCLUDE_DIR STORMBYTE_LIBRARY)
-mark_as_advanced(STORMBYTE_INCLUDE_DIR STORMBYTE_LIBRARIES)
