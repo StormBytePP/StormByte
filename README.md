@@ -471,6 +471,29 @@ int main() {
 }
 ```
 
+### UUID
+
+The `StormByte` library provides a simple helper to generate RFC4122-compliant version 4 UUIDs.
+
+- **Function**: `StormByte::GenerateUUIDv4()`
+- **Returns**: a 36-character, lowercase UUID string in the form
+    `xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx` (where `y` is one of `8`, `9`, `a`, or `b`).
+- **Exception safety**: marked `noexcept` in the public header.
+- **Randomness**: implementation prefers the OS CSPRNG and falls back to a PRNG if necessary.
+
+#### Example
+```cpp
+#include <StormByte/uuid.hxx>
+#include <iostream>
+
+int main() {
+        // Generate a new UUID v4 string
+        std::string uuid = StormByte::GenerateUUIDv4();
+        std::cout << "Generated UUID v4: " << uuid << std::endl;
+        return 0;
+}
+```
+
 ## Contributing
 
 Contributions are welcome! Please fork the repository and submit pull requests for any enhancements or bug fixes.

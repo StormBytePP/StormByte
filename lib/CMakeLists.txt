@@ -11,6 +11,11 @@ set_target_properties(StormByte PROPERTIES
 	VERSION 		${CMAKE_PROJECT_VERSION}
 )
 
+# Win dependencies
+if(WIN32)
+	target_link_libraries(StormByte PRIVATE Bcrypt.lib)
+endif()
+
 # Compile options
 if(MSVC)
 	target_compile_options(StormByte PRIVATE /EHsc)

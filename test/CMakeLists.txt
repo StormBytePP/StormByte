@@ -28,4 +28,8 @@ if(ENABLE_TEST AND NOT STORMBYTE_AS_DEPENDENCY)
 	add_executable(GithubTests github_test.cxx)
 	target_link_libraries(GithubTests StormByte)
 	add_test(NAME GithubTests COMMAND GithubTests)
+
+	add_executable(UUIDTest uuid_test.cxx)
+	target_link_libraries(UUIDTest StormByte)
+	add_test(NAME UUIDTest COMMAND UUIDTest)
 endif()
