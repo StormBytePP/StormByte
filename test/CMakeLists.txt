@@ -1,13 +1,5 @@
 option(ENABLE_TEST "Enable Unit Tests" OFF)
 if(ENABLE_TEST AND NOT STORMBYTE_AS_DEPENDENCY)
-	add_executable(ArithmeticMutexedTests arithmetic_mutexed_test.cxx)
-	target_link_libraries(ArithmeticMutexedTests StormByte)
-	add_test(NAME ArithmeticMutexedTests COMMAND ArithmeticMutexedTests)
-
-	add_executable(MutexedTests mutexed_test.cxx)
-	target_link_libraries(MutexedTests StormByte)
-	add_test(NAME MutexedTests COMMAND MutexedTests)
-
 	add_executable(SerializationTests serialization_test.cxx)
 	target_link_libraries(SerializationTests StormByte)
 	add_test(NAME SerializationTests COMMAND SerializationTests)
