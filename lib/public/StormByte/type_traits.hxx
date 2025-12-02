@@ -71,4 +71,12 @@ namespace StormByte {
 	struct is_reference {
 		static constexpr bool value = std::is_reference_v<T>;
 	};
+
+	/**
+	 * @brief Concept to check if a type is an enumeration
+	 * 
+	 * @tparam E Type to check
+	 */
+	template<typename E>
+	concept EnumType = std::is_enum_v<std::remove_cv_t<E>>;
 }
