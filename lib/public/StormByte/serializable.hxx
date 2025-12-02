@@ -7,6 +7,7 @@
 #include <optional>
 #include <utility>
 #include <vector>
+#include <cstring>
 
 namespace {
 	// Helper function to append one vector to another
@@ -37,7 +38,7 @@ namespace StormByte {
 			 * @brief The constructor of the Serializable class.
 			 * @param data The data to serialize.
 			 */
-			Serializable(const DecayedT& data) noexcept: m_data(data) {}
+			Serializable(const DecayedT& data) noexcept : m_data(data) {}
 
 			/**
 			 * @brief The copy constructor of the Serializable class.

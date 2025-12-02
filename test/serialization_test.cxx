@@ -228,6 +228,22 @@ int test_serialize_optional_string() {
 	RETURN_TEST("test_serialize_optional_string", 0);
 }
 
+int test_serialize_deserialize_big_string() {
+	const std::string fn_name = "test_serialize_deserialize_big_string";
+	const std::string data(10 * 1024 * 1024, 'A'); // 10MB string
+	Serializable<std::string> serialization(data);
+	std::vector<std::byte> buffer = serialization.Serialize();
+	ASSERT_FALSE(fn_name, buffer.empty());
+	auto expected_data = Serializable<std::string>::Deserialize(buffer);
+	if (!expected_data) {
+		std::cerr << expected_data.error()->what() << std::endl;
+		RETURN_TEST(fn_name.c_str(), 1);
+	}
+
+	ASSERT_EQUAL(fn_name, data, expected_data.value());
+	RETURN_TEST(fn_name.c_str(), 0);
+}
+
 int main() {
 	int result = 0;
 	result += test_serialize_int();
@@ -243,6 +259,7 @@ int main() {
 	result += test_serialize_optional_notempty();
 	result += test_serialize_optional_empty();
 	result += test_serialize_optional_string();
+	result += test_serialize_deserialize_big_string();
 
 	if (result == 0) {
 		std::cout << "All tests passed!" << std::endl;
