@@ -29,6 +29,7 @@ namespace StormByte {
 
 	/**
 	 * @class VariadicValue
+	 * @deprecated Use std::variant directly instead.
 	 * @brief A class that can hold a value of any of the specified types
 	 * 
 	 * This class is a variant that can hold a value of any of the specified types.
