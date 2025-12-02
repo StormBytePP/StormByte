@@ -1,6 +1,7 @@
 #pragma once
 
 #include <optional>
+#include <string>
 #include <type_traits>
 
 /**
@@ -12,20 +13,43 @@
  */
 namespace StormByte {
 	/**
+	 * @brief Type trait to check if a type is a string-like type.
+	 * @tparam T The type to check.
+	 *
+	 * A type is considered string-like if it's std::string, std::wstring, or related types.
+	 */
+	template<typename T>
+	struct is_string : std::false_type {};
+
+	template<>
+	struct is_string<std::string> : std::true_type {};
+
+	template<>
+	struct is_string<std::wstring> : std::true_type {};
+
+	template<>
+	struct is_string<std::u16string> : std::true_type {};
+
+	template<>
+	struct is_string<std::u32string> : std::true_type {};
+
+	/**
 	 * @brief Type trait to check if a type is a container.
 	 * @tparam T The type to check.
 	 *
-	 * A type is considered a container if it has `begin()`, `end()`, and a `value_type`.
+	 * A type is considered a container if it has `begin()`, `end()`, and a `value_type`,
+	 * but excludes string types which are handled separately for performance.
 	 */
 	template<typename T, typename _ = void>
 	struct is_container : std::false_type {};
 
 	/**
-	 * @brief Type trait specialization for containers.
+	 * @brief Type trait specialization for containers (excluding strings).
 	 * @tparam T The type to check.
 	 */
 	template<typename T>
-	struct is_container<T, std::void_t<decltype(std::declval<T>().begin()), decltype(std::declval<T>().end()), typename T::value_type>> : std::true_type {};
+	struct is_container<T, std::void_t<decltype(std::declval<T>().begin()), decltype(std::declval<T>().end()), typename T::value_type>> 
+		: std::bool_constant<!is_string<std::decay_t<T>>::value> {};
 
 	/**
 	 * @brief Type trait to check if a type is an optional.
