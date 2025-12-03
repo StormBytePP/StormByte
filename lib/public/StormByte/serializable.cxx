@@ -16,15 +16,14 @@ namespace StormByte {
 
 	// Explicit template specialization for std::string deserialization
 	template<> STORMBYTE_PUBLIC
-	StormByte::Expected<std::string, DeserializeError> Serializable<std::string>::DeserializeComplex(const std::vector<std::byte>& data) noexcept {
+	StormByte::Expected<std::string, DeserializeError> Serializable<std::string>::DeserializeComplex(std::span<const std::byte> data) noexcept {
 		std::size_t offset = 0;
 		
 		// Deserialize the size
 		if (offset + sizeof(std::size_t) > data.size())
 			return StormByte::Unexpected<DeserializeError>("Insufficient data for string size");
 		
-		std::vector<std::byte> size_data(data.begin() + offset, data.begin() + offset + sizeof(std::size_t));
-		auto expected_size = Serializable<std::size_t>::Deserialize(size_data);
+		auto expected_size = Serializable<std::size_t>::Deserialize(data.subspan(offset, sizeof(std::size_t)));
 		if (!expected_size)
 			return StormByte::Unexpected(expected_size.error());
 		
@@ -63,14 +62,13 @@ namespace StormByte {
 	}
 
 	template<> STORMBYTE_PUBLIC
-	StormByte::Expected<std::wstring, DeserializeError> Serializable<std::wstring>::DeserializeComplex(const std::vector<std::byte>& data) noexcept {
+	StormByte::Expected<std::wstring, DeserializeError> Serializable<std::wstring>::DeserializeComplex(std::span<const std::byte> data) noexcept {
 		std::size_t offset = 0;
 		
 		if (offset + sizeof(std::size_t) > data.size())
 			return StormByte::Unexpected<DeserializeError>("Insufficient data for wstring size");
 		
-		std::vector<std::byte> size_data(data.begin() + offset, data.begin() + offset + sizeof(std::size_t));
-		auto expected_size = Serializable<std::size_t>::Deserialize(size_data);
+		auto expected_size = Serializable<std::size_t>::Deserialize(data.subspan(offset, sizeof(std::size_t)));
 		if (!expected_size)
 			return StormByte::Unexpected(expected_size.error());
 		
@@ -106,14 +104,13 @@ namespace StormByte {
 	}
 
 	template<> STORMBYTE_PUBLIC
-	StormByte::Expected<std::u16string, DeserializeError> Serializable<std::u16string>::DeserializeComplex(const std::vector<std::byte>& data) noexcept {
+	StormByte::Expected<std::u16string, DeserializeError> Serializable<std::u16string>::DeserializeComplex(std::span<const std::byte> data) noexcept {
 		std::size_t offset = 0;
 		
 		if (offset + sizeof(std::size_t) > data.size())
 			return StormByte::Unexpected<DeserializeError>("Insufficient data for u16string size");
 		
-		std::vector<std::byte> size_data(data.begin() + offset, data.begin() + offset + sizeof(std::size_t));
-		auto expected_size = Serializable<std::size_t>::Deserialize(size_data);
+		auto expected_size = Serializable<std::size_t>::Deserialize(data.subspan(offset, sizeof(std::size_t)));
 		if (!expected_size)
 			return StormByte::Unexpected(expected_size.error());
 		
@@ -149,14 +146,13 @@ namespace StormByte {
 	}
 
 	template<> STORMBYTE_PUBLIC
-	StormByte::Expected<std::u32string, DeserializeError> Serializable<std::u32string>::DeserializeComplex(const std::vector<std::byte>& data) noexcept {
+	StormByte::Expected<std::u32string, DeserializeError> Serializable<std::u32string>::DeserializeComplex(std::span<const std::byte> data) noexcept {
 		std::size_t offset = 0;
 		
 		if (offset + sizeof(std::size_t) > data.size())
 			return StormByte::Unexpected<DeserializeError>("Insufficient data for u32string size");
 		
-		std::vector<std::byte> size_data(data.begin() + offset, data.begin() + offset + sizeof(std::size_t));
-		auto expected_size = Serializable<std::size_t>::Deserialize(size_data);
+		auto expected_size = Serializable<std::size_t>::Deserialize(data.subspan(offset, sizeof(std::size_t)));
 		if (!expected_size)
 			return StormByte::Unexpected(expected_size.error());
 		

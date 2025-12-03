@@ -244,6 +244,45 @@ int test_serialize_deserialize_big_string() {
 	RETURN_TEST(fn_name.c_str(), 0);
 }
 
+int test_serialize_deserialize_with_span() {
+	const std::string fn_name = "test_serialize_deserialize_with_span";
+	int data = 123456;
+	Serializable<int> serialization(data);
+	std::vector<std::byte> buffer = serialization.Serialize();
+	if (buffer.empty())
+		RETURN_TEST(fn_name.c_str(), 1);
+
+	// Call Deserialize overload that accepts std::span<const std::byte>
+	auto expected_data = Serializable<int>::Deserialize(std::span<const std::byte>(buffer.data(), buffer.size()));
+	if (!expected_data) {
+		std::cerr << expected_data.error()->what() << std::endl;
+		RETURN_TEST(fn_name.c_str(), 1);
+	}
+
+	ASSERT_EQUAL(fn_name.c_str(), data, expected_data.value());
+	RETURN_TEST(fn_name.c_str(), 0);
+}
+
+int test_serialize_deserialize_with_span_truncated() {
+	const std::string fn_name = "test_serialize_deserialize_with_span_truncated";
+	int data = 123456;
+	Serializable<int> serialization(data);
+	std::vector<std::byte> buffer = serialization.Serialize();
+	if (buffer.empty())
+		RETURN_TEST(fn_name.c_str(), 1);
+
+	// Create a truncated span (smaller than sizeof(int))
+	std::size_t truncated_len = sizeof(int) / 2;
+	std::span<const std::byte> truncated_span(buffer.data(), truncated_len);
+	auto expected_data = Serializable<int>::Deserialize(truncated_span);
+	if (expected_data) {
+		std::cerr << "Expected failure, but got value: " << expected_data.value() << std::endl;
+		RETURN_TEST(fn_name.c_str(), 1);
+	}
+
+	RETURN_TEST(fn_name.c_str(), 0);
+}
+
 int main() {
 	int result = 0;
 	result += test_serialize_int();
@@ -260,6 +299,8 @@ int main() {
 	result += test_serialize_optional_empty();
 	result += test_serialize_optional_string();
 	result += test_serialize_deserialize_big_string();
+	result += test_serialize_deserialize_with_span();
+	result += test_serialize_deserialize_with_span_truncated();
 
 	if (result == 0) {
 		std::cout << "All tests passed!" << std::endl;
