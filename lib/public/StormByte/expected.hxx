@@ -26,7 +26,7 @@ namespace StormByte {
 	 */
 	template <typename T, class E>
 	using Expected = std::conditional_t<
-		is_reference<T>::value,
+		Type::Reference<T>,
 		std::expected<std::reference_wrapper<std::remove_reference_t<T>>, std::shared_ptr<E>>,
 		std::expected<T, std::shared_ptr<E>>
 	>;
