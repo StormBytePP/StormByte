@@ -20,9 +20,14 @@ StormByte is a comprehensive, cross-platform C++ library aimed at easing system 
 - [Installation](#installation)
 - [Modules](#modules)
   - **Base**
+    - [Exception Handling](#exception-handling)
+    - [Expected and Error Handling](#expected-and-error-handling)
     - [Serialization](#serialization)
     - [String Utilities](#string-utilities)
     - [System Utilities](#system-utilities)
+    - [Thread Synchronization](#thread-synchronization)
+    - [Clonable Interface](#clonable-interface)
+    - [Type Traits](#type-traits)
   - [Buffer](https://dev.stormbyte.org/StormByte-Buffer)
   - [Config](https://dev.stormbyte.org/StormByte-Config)
   - [Crypto](https://dev.stormbyte.org/StormByte-Crypto)
@@ -68,6 +73,125 @@ StormByte Library is composed of several modules:
 
 The Base component is the core of the library containing only templates, string helpers, and the base exception framework.
 
+### Exception Handling
+
+The `Exception` class provides a consistent, cross-platform mechanism for error handling in the StormByte library. It uses `const char*` for internal storage to avoid issues with `std::string` across DLL boundaries on Windows.
+
+#### Features
+- **Formatted Messages**: Supports `std::format` for constructing exception messages
+- **Cross-Platform**: Works consistently across Windows and Linux
+- **DLL-Safe**: Uses `const char*` internally to avoid std::string ABI issues
+- **Inheritable**: Can be subclassed for domain-specific exceptions
+
+#### Example Usage
+
+```cpp
+#include <StormByte/exception.hxx>
+#include <iostream>
+
+using namespace StormByte;
+
+void process_data(int value) {
+    if (value < 0) {
+        throw Exception("Invalid value: {}", value);
+    }
+    if (value > 100) {
+        throw Exception(std::string("Value too large: ") + std::to_string(value));
+    }
+}
+
+int main() {
+    try {
+        process_data(-5);
+    } catch (const Exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+    }
+    
+    try {
+        process_data(150);
+    } catch (const Exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+    }
+    
+    return 0;
+}
+```
+
+### Expected and Error Handling
+
+StormByte provides `Expected<T, E>` as an alias for `std::expected` with enhanced support for reference types and shared error ownership. It also includes the `Unexpected` helper for creating error values and a custom error code system.
+
+#### Features
+- **Reference Support**: Automatically uses `std::reference_wrapper` for reference types
+- **Shared Error Ownership**: Uses `std::shared_ptr<E>` for error types to allow safe copying
+- **Formatted Errors**: `Unexpected` supports `std::format` for error messages
+- **Custom Error Codes**: Integration with `std::error_code` via `Error::Code` and `Error::Category`
+
+#### Example Usage
+
+##### Basic Expected Usage
+
+```cpp
+#include <StormByte/expected.hxx>
+#include <StormByte/exception.hxx>
+#include <iostream>
+
+using namespace StormByte;
+
+Expected<int, Exception> divide(int a, int b) {
+    if (b == 0) {
+        return Unexpected<Exception>("Division by zero");
+    }
+    return a / b;
+}
+
+Expected<std::string, Exception> read_config(const std::string& key) {
+    if (key.empty()) {
+        return Unexpected<Exception>("Empty key: {}", key);
+    }
+    // Simulate reading config
+    return "config_value";
+}
+
+int main() {
+    auto result = divide(10, 2);
+    if (result) {
+        std::cout << "Result: " << result.value() << std::endl;
+    } else {
+        std::cerr << "Error: " << result.error()->what() << std::endl;
+    }
+    
+    auto config = read_config("");
+    if (!config) {
+        std::cerr << "Config error: " << config.error()->what() << std::endl;
+    }
+    
+    return 0;
+}
+```
+
+##### Custom Error Codes
+
+```cpp
+#include <StormByte/error.hxx>
+#include <iostream>
+
+using namespace StormByte;
+
+// Define custom error codes by extending Error::Code enum
+// (currently empty, but can be extended by library users)
+
+int main() {
+    // Get the error category singleton
+    const auto& cat = Error::category();
+    std::cout << "Error category: " << cat.name() << std::endl;
+    
+    // Create error codes (when codes are defined)
+    // std::error_code ec = make_error_code(Error::Code::SomeError);
+    
+    return 0;
+}
+```
 
 ### Serialization
 
@@ -79,6 +203,8 @@ The `Serializable` template class provides a flexible and efficient way to seria
 - **Pair and Optional Support**: Built-in support for `std::pair` and `std::optional`
 - **Extensible**: Can be specialized for custom types
 - **Type-Safe**: Uses `Expected<T, DeserializeError>` for safe deserialization with error handling
+- **Zero-Copy Deserialization**: Supports `std::span<const std::byte>` for efficient deserialization without allocations
+- **Alignment-Safe**: Uses `std::memcpy` internally to avoid undefined behavior with misaligned data
 
 #### Built-in Type Support
 
@@ -137,6 +263,13 @@ int main() {
         std::cout << std::endl;
     }
     
+    // Zero-copy deserialization using std::span
+    std::span<const std::byte> dataSpan(vecData.data(), vecData.size());
+    auto spanResult = Serializable<std::vector<int>>::Deserialize(dataSpan);
+    if (spanResult) {
+        std::cout << "Deserialized from span without copying!" << std::endl;
+    }
+    
     return 0;
 }
 ```
@@ -180,15 +313,14 @@ namespace StormByte {
             return buffer;
         }
 
-        static Expected<Point, DeserializeError> Deserialize(const std::vector<std::byte>& data) noexcept {
+        static Expected<Point, DeserializeError> Deserialize(std::span<const std::byte> data) noexcept {
             std::size_t offset = 0;
             
             // Deserialize x coordinate
             if (offset + sizeof(int) > data.size())
                 return Unexpected<DeserializeError>("Insufficient data for Point.x");
             
-            std::vector<std::byte> xData(data.begin() + offset, data.begin() + offset + sizeof(int));
-            auto x = Serializable<int>::Deserialize(xData);
+            auto x = Serializable<int>::Deserialize(data.subspan(offset, sizeof(int)));
             if (!x) return Unexpected(x.error());
             offset += sizeof(int);
             
@@ -196,11 +328,15 @@ namespace StormByte {
             if (offset + sizeof(int) > data.size())
                 return Unexpected<DeserializeError>("Insufficient data for Point.y");
             
-            std::vector<std::byte> yData(data.begin() + offset, data.begin() + offset + sizeof(int));
-            auto y = Serializable<int>::Deserialize(yData);
+            auto y = Serializable<int>::Deserialize(data.subspan(offset, sizeof(int)));
             if (!y) return Unexpected(y.error());
             
             return Point{x.value(), y.value()};
+        }
+        
+        // Convenience overload for vector
+        static Expected<Point, DeserializeError> Deserialize(const std::vector<std::byte>& data) noexcept {
+            return Deserialize(std::span<const std::byte>(data.data(), data.size()));
         }
 
     private:
@@ -491,6 +627,203 @@ int main() {
         std::string uuid = StormByte::GenerateUUIDv4();
         std::cout << "Generated UUID v4: " << uuid << std::endl;
         return 0;
+}
+```
+
+### Thread Synchronization
+
+The `ThreadLock` class provides a lightweight, reentrant lock with thread ownership tracking. Unlike standard mutexes, it allows the owning thread to call `Lock()` multiple times without blocking itself.
+
+#### Features
+- **Reentrant for Owner**: The owning thread can lock multiple times without deadlock
+- **Thread Ownership**: Tracks which thread owns the lock
+- **Simple API**: Just `Lock()` and `Unlock()` methods
+- **Non-copyable, Non-movable**: Ensures proper resource management
+
+#### Example Usage
+
+```cpp
+#include <StormByte/thread_lock.hxx>
+#include <iostream>
+#include <thread>
+#include <vector>
+
+using namespace StormByte;
+
+class SharedResource {
+private:
+    ThreadLock lock;
+    int value = 0;
+
+public:
+    void increment() {
+        lock.Lock();
+        ++value;
+        // Reentrant: same thread can call nested_operation
+        nested_operation();
+        lock.Unlock();
+    }
+    
+    void nested_operation() {
+        lock.Lock();  // Same thread, doesn't block
+        value *= 2;
+        lock.Unlock();
+    }
+    
+    int get_value() {
+        lock.Lock();
+        int v = value;
+        lock.Unlock();
+        return v;
+    }
+};
+
+int main() {
+    SharedResource resource;
+    std::vector<std::thread> threads;
+    
+    // Spawn multiple threads
+    for (int i = 0; i < 10; ++i) {
+        threads.emplace_back([&resource]() {
+            for (int j = 0; j < 100; ++j) {
+                resource.increment();
+            }
+        });
+    }
+    
+    // Wait for all threads
+    for (auto& t : threads) {
+        t.join();
+    }
+    
+    std::cout << "Final value: " << resource.get_value() << std::endl;
+    return 0;
+}
+```
+
+### Clonable Interface
+
+The `Clonable` template class provides a CRTP (Curiously Recurring Template Pattern) base for types that need cloning support with smart pointers. It works with both `std::shared_ptr` and `std::unique_ptr`.
+
+#### Features
+- **Smart Pointer Agnostic**: Works with `std::shared_ptr` and `std::unique_ptr`
+- **Type-Safe Cloning**: Virtual `Clone()` method returns the correct smart pointer type
+- **Factory Method**: `MakePointer` for creating instances with the correct pointer type
+- **CRTP Pattern**: Compile-time polymorphism for efficient cloning
+
+#### Example Usage
+
+```cpp
+#include <StormByte/clonable.hxx>
+#include <iostream>
+#include <memory>
+
+using namespace StormByte;
+
+// Base class using shared_ptr
+class Shape : public Clonable<Shape, std::shared_ptr<Shape>> {
+public:
+    virtual ~Shape() = default;
+    virtual void draw() const = 0;
+    virtual std::shared_ptr<Shape> Clone() const override = 0;
+};
+
+class Circle : public Shape {
+private:
+    double radius;
+
+public:
+    Circle(double r) : radius(r) {}
+    
+    void draw() const override {
+        std::cout << "Circle with radius: " << radius << std::endl;
+    }
+    
+    std::shared_ptr<Shape> Clone() const override {
+        return MakePointer<Circle>(radius);
+    }
+};
+
+class Rectangle : public Shape {
+private:
+    double width, height;
+
+public:
+    Rectangle(double w, double h) : width(w), height(h) {}
+    
+    void draw() const override {
+        std::cout << "Rectangle " << width << "x" << height << std::endl;
+    }
+    
+    std::shared_ptr<Shape> Clone() const override {
+        return MakePointer<Rectangle>(width, height);
+    }
+};
+
+int main() {
+    auto circle = Shape::MakePointer<Circle>(5.0);
+    auto rect = Shape::MakePointer<Rectangle>(10.0, 20.0);
+    
+    circle->draw();
+    rect->draw();
+    
+    // Clone shapes
+    auto circle_copy = circle->Clone();
+    auto rect_copy = rect->Clone();
+    
+    circle_copy->draw();
+    rect_copy->draw();
+    
+    return 0;
+}
+```
+
+### Type Traits
+
+StormByte provides several custom type traits for compile-time type inspection, particularly useful for template metaprogramming and serialization.
+
+#### Available Type Traits
+
+- **`is_string<T>`**: Checks if `T` is a string type (`std::string`, `std::wstring`, `std::u16string`, `std::u32string`)
+- **`is_container<T>`**: Checks if `T` is a container (has `begin()`, `end()`, `value_type`), excluding strings
+- **`is_optional<T>`**: Checks if `T` is `std::optional<U>`
+- **`is_pair<T>`**: Checks if `T` is `std::pair<U, V>` or has `first` and `second` members
+- **`is_reference<T>`**: Checks if `T` is a reference type
+
+#### Example Usage
+
+```cpp
+#include <StormByte/type_traits.hxx>
+#include <iostream>
+#include <vector>
+#include <optional>
+#include <string>
+
+using namespace StormByte;
+
+template<typename T>
+void process() {
+    if constexpr (is_string<T>::value) {
+        std::cout << "String type" << std::endl;
+    } else if constexpr (is_container<T>::value) {
+        std::cout << "Container type" << std::endl;
+    } else if constexpr (is_optional<T>::value) {
+        std::cout << "Optional type" << std::endl;
+    } else if constexpr (is_pair<T>::value) {
+        std::cout << "Pair type" << std::endl;
+    } else {
+        std::cout << "Other type" << std::endl;
+    }
+}
+
+int main() {
+    process<std::string>();                    // String type
+    process<std::vector<int>>();               // Container type
+    process<std::optional<int>>();             // Optional type
+    process<std::pair<int, double>>();         // Pair type
+    process<int>();                            // Other type
+    
+    return 0;
 }
 ```
 
