@@ -12,9 +12,8 @@ project("StormByte C++ Library"
 
 include(cmake/asan.cmake)
 
-enable_testing()
-add_subdirectory(thirdparty)
 add_subdirectory(doc)
+add_subdirectory(thirdparty)
 add_subdirectory(lib)
 add_subdirectory(test)
 

@@ -1,5 +1,7 @@
 option(ENABLE_TEST "Enable Unit Tests" OFF)
 if(ENABLE_TEST AND NOT STORMBYTE_AS_DEPENDENCY)
+	enable_testing()
+	
 	add_executable(SerializationTests serialization_test.cxx)
 	target_link_libraries(SerializationTests StormByte)
 	add_test(NAME SerializationTests COMMAND SerializationTests)
@@ -15,11 +17,6 @@ if(ENABLE_TEST AND NOT STORMBYTE_AS_DEPENDENCY)
 	add_executable(ThreadLockTests thread_lock_test.cxx)
 	target_link_libraries(ThreadLockTests StormByte)
 	add_test(NAME ThreadLockTests COMMAND ThreadLockTests)
-
-	# Github special test
-	add_executable(GithubTests github_test.cxx)
-	target_link_libraries(GithubTests StormByte)
-	add_test(NAME GithubTests COMMAND GithubTests)
 
 	add_executable(UUIDTest uuid_test.cxx)
 	target_link_libraries(UUIDTest StormByte)

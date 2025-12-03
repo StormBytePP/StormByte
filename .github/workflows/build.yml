@@ -7,7 +7,7 @@ on:
     branches: [ "master" ]
 
 env:
-  BUILD_TYPE: Release
+  BUILD_TYPE: Debug
 
 jobs:
   build-linux:
@@ -45,10 +45,9 @@ jobs:
           -DENABLE_TEST=ON
           -DENABLE_ASAN=ON
           ${{ matrix.compiler == 'clang' && format('-DCMAKE_CXX_FLAGS=-stdlib={0}', matrix.stdlib) || '' }}
+        run-test: true
+        ctest-options: --output-on-failure --test-dir ${{ github.workspace }}/build/test
         build-type: ${{ env.BUILD_TYPE }}
-
-    - name: Run unit tests
-      run: ctest --output-on-failure --test-dir ${{ github.workspace }}/build
 
   build-windows:
     runs-on: windows-latest
@@ -68,11 +67,12 @@ jobs:
         uses: stormbytepp/install-toolchain@v1
         with:
           compiler: msvc
+          arch: ${{ matrix.arch }}
 
       - name: Build with CMake
         uses: ashutoshvarma/action-cmake-build@master
         with:
-          build-dir: ${{ github.workspace }}/build
+          build-dir: ${{ github.workspace }}\build
           configure-options: >-
             -G Ninja
             -DENABLE_TEST=ON
@@ -83,4 +83,4 @@ jobs:
           Copy-Item -Path "${{ github.workspace }}\build\lib\StormByte.dll" -Destination "${{ github.workspace }}\build\test" -Force
 
       - name: Run unit tests
-        run: ctest --output-on-failure --test-dir ${{ github.workspace }}\build
+        run: ctest --output-on-failure --test-dir ${{ github.workspace }}\build\test

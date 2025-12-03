@@ -1,6 +1,6 @@
 option(ENABLE_ASAN "Enable AddressSanitizer (and UBSan) for debug builds" OFF)
 
-if(ENABLE_ASAN)
+if(ENABLE_ASAN AND NOT STORMBYTE_AS_DEPENDENCY)
 	# Recommend Debug builds for ASan
 	set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
 
@@ -20,6 +20,6 @@ if(ENABLE_ASAN)
 		"ASAN_OPTIONS=detect_leaks=1:abort_on_error=1:strict_string_checks=1:alloc_dealloc_mismatch=1;UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1"
 	)
 
-	# Show status message
-	message(STATUS "AddressSanitizer enabled")
+	# Inform about ASan being enabled
+	message(STATUS "AddressSanitizer and UndefinedBehaviorSanitizer enabled")
 endif()
