@@ -10,8 +10,12 @@ project("StormByte C++ Library"
 	HOMEPAGE_URL "https://dev.stormbyte.org/StormByte"
 )
 
+include(cmake/asan.cmake)
+
 enable_testing()
 add_subdirectory(thirdparty)
 add_subdirectory(doc)
 add_subdirectory(lib)
 add_subdirectory(test)
+
+include(cmake/outputflags.cmake)

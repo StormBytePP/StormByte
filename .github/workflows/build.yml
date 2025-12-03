@@ -42,6 +42,8 @@ jobs:
         cxx: ${{ steps.install-toolchain.outputs.cxx_compiler }}
         configure-options: >-
           -G Ninja
+          -DENABLE_TEST=ON
+          -DENABLE_ASAN=ON
           ${{ matrix.compiler == 'clang' && format('-DCMAKE_CXX_FLAGS=-stdlib={0}', matrix.stdlib) || '' }}
         build-type: ${{ env.BUILD_TYPE }}
 
