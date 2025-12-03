@@ -15,7 +15,7 @@ namespace StormByte {
 	// Implementation detail: type traits for internal use only
 	namespace {
 		template<typename T>
-		struct is_string : std::is_same<T, std::string> {};
+		struct is_string : std::bool_constant<std::is_same_v<T, std::string> || std::is_same_v<T, std::wstring>> {};
 
 		template<typename T, typename _ = void>
 		struct is_container : std::false_type {};
@@ -50,10 +50,10 @@ namespace StormByte {
 	 */
 	namespace Type {
 		/**
-		 * @brief Concept to check if a type is std::string.
+		 * @brief Concept to check if a type is std::string or std::wstring.
 		 * @tparam T The type to check.
 		 *
-		 * A type satisfies String if it is exactly std::string.
+		 * A type satisfies String if it is exactly std::string or std::wstring.
 		 * @code
 		 * template<Type::String T>
 		 * void process(T str) { ... }

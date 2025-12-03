@@ -9,14 +9,7 @@
 #include <span>
 #include <utility>
 #include <vector>
-
-
-namespace {
-	// Helper function to append one vector to another
-	inline void AppendVector(std::vector<std::byte>& dest, std::vector<std::byte>&& src) {
-		dest.insert(dest.end(), std::make_move_iterator(src.begin()), std::make_move_iterator(src.end()));
-	}
-}
+#include <version>
 
 /**
  * @namespace StormByte
@@ -188,13 +181,19 @@ namespace StormByte {
 			 * 
 			 * @return A vector of bytes containing the serialized container data.
 			 */
-			std::vector<std::byte>											SerializeContainer() const noexcept {
+			std::vector<std::byte> 											SerializeContainer() const noexcept {
 				std::size_t size = m_data.size();
 				Serializable<std::size_t> size_serial(size);
 				std::vector<std::byte> buffer = size_serial.Serialize();
+				buffer.reserve(buffer.size() + SizeContainer(m_data));
 				for (const auto& element: m_data) {
 					Serializable<std::decay_t<decltype(element)>> element_serial(element);
-					AppendVector(buffer, element_serial.Serialize());
+					auto element_data = element_serial.Serialize();
+#ifdef __cpp_lib_containers_ranges
+					buffer.append_range(std::move(element_data));
+#else
+					buffer.insert(buffer.end(), std::make_move_iterator(element_data.begin()), std::make_move_iterator(element_data.end()));
+#endif
 				}
 				return buffer;
 			}
@@ -210,8 +209,17 @@ namespace StormByte {
 			std::vector<std::byte>											SerializePair() const noexcept {
 				Serializable<std::decay_t<typename T::first_type>> first_serial(m_data.first);
 				Serializable<std::decay_t<typename T::second_type>> second_serial(m_data.second);
-				std::vector<std::byte> buffer = first_serial.Serialize();
-				AppendVector(buffer, second_serial.Serialize());
+				std::vector<std::byte> buffer;
+				buffer.reserve(SizePair(m_data));
+				auto first_data = first_serial.Serialize();
+				auto second_data = second_serial.Serialize();
+#ifdef __cpp_lib_containers_ranges
+				buffer.append_range(std::move(first_data));
+				buffer.append_range(std::move(second_data));
+#else
+				buffer.insert(buffer.end(), std::make_move_iterator(first_data.begin()), std::make_move_iterator(first_data.end()));
+				buffer.insert(buffer.end(), std::make_move_iterator(second_data.begin()), std::make_move_iterator(second_data.end()));
+#endif
 				return buffer;
 			}
 
@@ -225,10 +233,22 @@ namespace StormByte {
 			 */
 			std::vector<std::byte>											SerializeOptional() const noexcept {
 				bool has_value = m_data.has_value();
-				std::vector<std::byte> buffer = std::move(Serializable<bool>(has_value).Serialize());
+				std::vector<std::byte> buffer;
+				buffer.reserve(SizeOptional(m_data));
+				auto has_value_data = Serializable<bool>(has_value).Serialize();
+#ifdef __cpp_lib_containers_ranges
+				buffer.append_range(std::move(has_value_data));
+#else
+				buffer.insert(buffer.end(), std::make_move_iterator(has_value_data.begin()), std::make_move_iterator(has_value_data.end()));
+#endif
 				if (m_data.has_value()) {
 					Serializable<std::decay_t<decltype(m_data.value())>> value_serial(m_data.value());
-					AppendVector(buffer, value_serial.Serialize());
+					auto value_data = value_serial.Serialize();
+#ifdef __cpp_lib_containers_ranges
+					buffer.append_range(std::move(value_data));
+#else
+					buffer.insert(buffer.end(), std::make_move_iterator(value_data.begin()), std::make_move_iterator(value_data.end()));
+#endif
 				}
 				return buffer;
 			}
@@ -303,7 +323,7 @@ namespace StormByte {
 			 * @return An Expected object containing the deserialized data on success,
 			 *         or a DeserializeError if the data is insufficient.
 			 */
-			static StormByte::Expected<T, DeserializeError>						DeserializeTrivial(std::span<const std::byte> data) noexcept {
+			static StormByte::Expected<T, DeserializeError>					DeserializeTrivial(std::span<const std::byte> data) noexcept {
 				if (data.size() < sizeof(T))
 					return StormByte::Unexpected<DeserializeError>("Insufficient data for deserialization");
 				T result;
@@ -321,7 +341,7 @@ namespace StormByte {
 			 * @return An Expected object containing the deserialized data on success,
 			 *         or a DeserializeError if the data is insufficient.
 			 */
-			static StormByte::Expected<T, DeserializeError>						DeserializeTrivial(const std::vector<std::byte>& data) noexcept {
+			static StormByte::Expected<T, DeserializeError>					DeserializeTrivial(const std::vector<std::byte>& data) noexcept {
 				return DeserializeTrivial(std::span<const std::byte>(data.data(), data.size()));
 			}
 
@@ -335,7 +355,7 @@ namespace StormByte {
 			 * @return An Expected object containing the deserialized data on success,
 			 *         or a DeserializeError on failure.
 			 */
-			static StormByte::Expected<T, DeserializeError>						DeserializeComplex(std::span<const std::byte> data) noexcept;
+			static StormByte::Expected<T, DeserializeError>					DeserializeComplex(std::span<const std::byte> data) noexcept;
 
 			/**
 			 * @brief Deserializes complex data types.
@@ -347,7 +367,7 @@ namespace StormByte {
 			 * @return An Expected object containing the deserialized data on success,
 			 *         or a DeserializeError on failure.
 			 */
-			static StormByte::Expected<T, DeserializeError>						DeserializeComplex(const std::vector<std::byte>& data) noexcept {
+			static StormByte::Expected<T, DeserializeError>					DeserializeComplex(const std::vector<std::byte>& data) noexcept {
 				return DeserializeComplex(std::span<const std::byte>(data.data(), data.size()));
 			}
 
@@ -418,7 +438,7 @@ namespace StormByte {
 			 * @return An Expected object containing the deserialized pair on success,
 			 *         or a DeserializeError on failure.
 			 */
-			static StormByte::Expected<T, DeserializeError>						DeserializePair(std::span<const std::byte> data) noexcept {
+			static StormByte::Expected<T, DeserializeError>					DeserializePair(std::span<const std::byte> data) noexcept {
 				using FirstT = std::decay_t<typename T::first_type>;
 				using SecondT = std::decay_t<typename T::second_type>;
 				std::size_t offset = 0;
@@ -451,7 +471,7 @@ namespace StormByte {
 			 * @return An Expected object containing the deserialized pair on success,
 			 *         or a DeserializeError on failure.
 			 */
-			static StormByte::Expected<T, DeserializeError>						DeserializePair(const std::vector<std::byte>& data) noexcept {
+			static StormByte::Expected<T, DeserializeError>					DeserializePair(const std::vector<std::byte>& data) noexcept {
 				return DeserializePair(std::span<const std::byte>(data.data(), data.size()));
 			}
 
@@ -465,7 +485,7 @@ namespace StormByte {
 			 * @return An Expected object containing the deserialized optional on success,
 			 *         or a DeserializeError on failure.
 			 */
-			static StormByte::Expected<T, DeserializeError>						DeserializeOptional(std::span<const std::byte> data) noexcept {
+			static StormByte::Expected<T, DeserializeError>					DeserializeOptional(std::span<const std::byte> data) noexcept {
 				std::size_t offset = 0;
 				
 				// Deserialize the has_value boolean
@@ -503,7 +523,7 @@ namespace StormByte {
 			 * @return An Expected object containing the deserialized optional on success,
 			 *         or a DeserializeError on failure.
 			 */
-			static StormByte::Expected<T, DeserializeError>						DeserializeOptional(const std::vector<std::byte>& data) noexcept {
+			static StormByte::Expected<T, DeserializeError>					DeserializeOptional(const std::vector<std::byte>& data) noexcept {
 				return DeserializeOptional(std::span<const std::byte>(data.data(), data.size()));
 			}
 	};
