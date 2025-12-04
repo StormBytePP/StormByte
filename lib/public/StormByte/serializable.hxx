@@ -2,14 +2,13 @@
 
 #include <StormByte/exception.hxx>
 #include <StormByte/expected.hxx>
+#include <StormByte/helpers.hxx>
 #include <StormByte/type_traits.hxx>
 
 #include <cstring>
 #include <optional>
 #include <span>
 #include <utility>
-#include <vector>
-#include <version>
 
 /**
  * @namespace StormByte
@@ -189,11 +188,7 @@ namespace StormByte {
 				for (const auto& element: m_data) {
 					Serializable<std::decay_t<decltype(element)>> element_serial(element);
 					auto element_data = element_serial.Serialize();
-#ifdef __cpp_lib_containers_ranges
-					buffer.append_range(std::move(element_data));
-#else
-					buffer.insert(buffer.end(), std::make_move_iterator(element_data.begin()), std::make_move_iterator(element_data.end()));
-#endif
+					append_vector(buffer, std::move(element_data));
 				}
 				return buffer;
 			}
@@ -213,13 +208,8 @@ namespace StormByte {
 				buffer.reserve(SizePair(m_data));
 				auto first_data = first_serial.Serialize();
 				auto second_data = second_serial.Serialize();
-#ifdef __cpp_lib_containers_ranges
-				buffer.append_range(std::move(first_data));
-				buffer.append_range(std::move(second_data));
-#else
-				buffer.insert(buffer.end(), std::make_move_iterator(first_data.begin()), std::make_move_iterator(first_data.end()));
-				buffer.insert(buffer.end(), std::make_move_iterator(second_data.begin()), std::make_move_iterator(second_data.end()));
-#endif
+				append_vector(buffer, std::move(first_data));
+				append_vector(buffer, std::move(second_data));
 				return buffer;
 			}
 
@@ -236,19 +226,11 @@ namespace StormByte {
 				std::vector<std::byte> buffer;
 				buffer.reserve(SizeOptional(m_data));
 				auto has_value_data = Serializable<bool>(has_value).Serialize();
-#ifdef __cpp_lib_containers_ranges
-				buffer.append_range(std::move(has_value_data));
-#else
-				buffer.insert(buffer.end(), std::make_move_iterator(has_value_data.begin()), std::make_move_iterator(has_value_data.end()));
-#endif
+				append_vector(buffer, std::move(has_value_data));
 				if (m_data.has_value()) {
 					Serializable<std::decay_t<decltype(m_data.value())>> value_serial(m_data.value());
 					auto value_data = value_serial.Serialize();
-#ifdef __cpp_lib_containers_ranges
-					buffer.append_range(std::move(value_data));
-#else
-					buffer.insert(buffer.end(), std::make_move_iterator(value_data.begin()), std::make_move_iterator(value_data.end()));
-#endif
+					append_vector(buffer, std::move(value_data));
 				}
 				return buffer;
 			}
