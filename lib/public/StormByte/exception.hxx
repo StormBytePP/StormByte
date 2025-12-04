@@ -54,6 +54,13 @@ namespace StormByte {
 			}
 		}
 
+		template <typename... Args>
+		Exception(const std::string& component, std::format_string<Args...> fmt, Args&&... args) {
+			std::string formatted_message = std::format(fmt, std::forward<Args>(args)...);
+			std::string full_message = "StormByte::" +component + ": " + formatted_message;
+			m_what = copy_str(full_message.c_str());
+		}
+
 		/**
 		 * @brief Copy constructor
 		 * @param e Exception to copy
