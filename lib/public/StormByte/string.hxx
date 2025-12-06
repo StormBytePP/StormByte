@@ -194,4 +194,14 @@ namespace StormByte::String {
 	 * @return A vector of bytes representing the string's contents.
 	 */
 	STORMBYTE_PUBLIC std::vector<std::byte> ToByteVector(const std::string& str) noexcept;
+
+	/**
+	 * @brief Removes all whitespace characters from a string.
+	 * 
+	 * This function eliminates all whitespace characters from the input string.
+	 * 
+	 * @param str The string to process.
+	 * @return The string with all whitespace characters removed.
+	 */
+	STORMBYTE_PUBLIC std::string RemoveWhitespace(const std::string& str) noexcept;
 }

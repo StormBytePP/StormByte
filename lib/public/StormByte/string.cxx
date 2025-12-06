@@ -272,6 +272,13 @@ namespace StormByte::String {
 		return byte_vector;
 	}
 
+	std::string RemoveWhitespace(const std::string& str) noexcept {
+		std::string out;
+		out.reserve(str.size());
+		for (char c : str) if (!isspace(static_cast<unsigned char>(c))) out.push_back(c);
+		return out;
+	}
+
 	// Explicit instantiations for `HumanReadable` (ordered by category).
 	// Note: `wchar_t`, `char16_t`, and `char32_t` are excluded because they are not
 	// streamed to `std::ostringstream` on many standard library implementations.

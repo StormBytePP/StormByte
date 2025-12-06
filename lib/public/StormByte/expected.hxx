@@ -4,6 +4,7 @@
 
 #include <expected>
 #include <format>
+#include <type_traits>
 #include <memory>
 #include <string>
 
@@ -57,6 +58,21 @@ namespace StormByte {
 		return std::unexpected<std::shared_ptr<std::decay_t<E>>>(
 			std::make_shared<std::decay_t<E>>(std::forward<E>(error))
 		);
+	}
+
+	/**
+	 * @brief Construct an Unexpected<Base> from a Derived instance.
+	 *
+	 * Allows calling `Unexpected<Base>(Derived(...))` to create a
+	 * `std::unexpected<std::shared_ptr<Base>>` that holds a `Derived`
+	 * instance inside the `shared_ptr` and upcasts it to `Base`.
+	 */
+	template <typename Base, typename Derived>
+	auto Unexpected(Derived&& error) -> std::unexpected<std::shared_ptr<Base>>
+	requires std::is_base_of_v<Base, std::decay_t<Derived>>
+	{
+		using DerivedT = std::decay_t<Derived>;
+		return std::unexpected<std::shared_ptr<Base>>(std::static_pointer_cast<Base>(std::make_shared<DerivedT>(std::forward<Derived>(error))));
 	}
 
 	/**
