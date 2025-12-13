@@ -1,8 +1,11 @@
 #pragma once
 
+#include <concepts>
 #include <optional>
 #include <string>
 #include <type_traits>
+#include <utility>
+#include <variant>
 
 /**
  * @namespace StormByte
@@ -39,6 +42,22 @@ namespace StormByte {
 			decltype(std::declval<T>().first), 
 			decltype(std::declval<T>().second)
 		>> : std::true_type {};
+
+		template<typename T>
+		struct is_variant : std::false_type {};
+
+		template<typename... Ts>
+		struct is_variant<std::variant<Ts...>> : std::true_type {};
+
+		template<typename VariantT, typename U, std::size_t... I>
+		constexpr bool variant_has_type_impl(std::index_sequence<I...>) noexcept {
+			return ((std::is_same_v<std::remove_cvref_t<U>, std::remove_cvref_t<std::variant_alternative_t<I, VariantT>>>) || ...);
+		}
+
+		template<typename VariantT, typename U>
+		struct variant_has_type : std::bool_constant<
+			variant_has_type_impl<VariantT, U>(std::make_index_sequence<std::variant_size_v<VariantT>>())
+		> {};
 	}
 
 	/**
@@ -244,6 +263,33 @@ namespace StormByte {
 		 */
 		template<typename T>
 		concept Class = std::is_class_v<T>;
+
+		/**
+		 * @brief Concept to check if a type is a variant.
+		 * @tparam T Type to check.
+		 *
+		 * A type satisfies Variant if it is an instance of std::variant.
+		 * @code
+		 * template<Type::Variant T>
+		 * void process(T var) { ... }
+		 * @endcode
+		 */
+		template<typename T>
+		concept Variant = is_variant<std::remove_cvref_t<T>>::value;
+
+		/**
+		 * @brief Concept to check if a variant type contains a specific type.
+		 * @tparam T Variant type to check.
+		 * @tparam U Type to look for within the variant.
+		 *
+		 * A type satisfies VariantHasType if U is one of the alternative types in the variant T.
+		 * @code
+		 * template<Type::VariantHasType<T, U> T, U>
+		 * void handle_variant(T var) { ... }
+		 * @endcode
+		 */
+		template<typename T, typename U>
+		concept VariantHasType = Variant<T> && variant_has_type<std::remove_cvref_t<T>, U>::value;
 
 		/**
 		 * @brief Concept to check if a type is trivially copyable.
