@@ -42,8 +42,8 @@ jobs:
         cxx: ${{ steps.install-toolchain.outputs.cxx_compiler }}
         configure-options: >-
           -G Ninja
-          -DENABLE_TEST=ON
           -DENABLE_ASAN=ON
+          -DENABLE_TEST=ON
           ${{ matrix.compiler == 'clang' && format('-DCMAKE_CXX_FLAGS=-stdlib={0}', matrix.stdlib) || '' }}
         run-test: true
         ctest-options: --output-on-failure --test-dir ${{ github.workspace }}/build/test

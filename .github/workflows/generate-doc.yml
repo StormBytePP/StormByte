@@ -67,7 +67,7 @@ jobs:
           cxx: /usr/bin/clang++
           configure-options: >-
             -G Ninja
-            -DWITH_SYSTEM_STORMBYTE=OFF
+            -DWITH_STORMBYTE=BUNDLED
             -DENABLE_DOC=ON
             ${{ inputs.extra-cmake-options }}
           build-type: Release
