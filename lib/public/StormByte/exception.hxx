@@ -114,7 +114,20 @@ namespace StormByte {
 		void 													free_str() noexcept;
 	};
 
+	/**
+	 * @class DeserializeError
+	 * @brief Exception thrown during deserialization errors.
+	 */
 	class STORMBYTE_PUBLIC DeserializeError: public Exception {
+		public:
+			using Exception::Exception;
+	};
+
+	/**
+	 * @class OutOfBoundsError
+	 * @brief Exception thrown when an out-of-bounds access is attempted.
+	 */
+	class STORMBYTE_PUBLIC OutOfBoundsError: public Exception {
 		public:
 			using Exception::Exception;
 	};
