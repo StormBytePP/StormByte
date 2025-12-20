@@ -1,10 +1,12 @@
-name: CMake
+name: Compile & Test
 
 on:
   push:
     branches: [ "master" ]
   pull_request:
     branches: [ "master" ]
+  
+  workflow_dispatch:
 
 env:
   BUILD_TYPE: Debug
@@ -15,24 +17,22 @@ jobs:
 
     strategy:
       matrix:
-        compiler: [gcc, clang]
-        stdlib: [libstdc++, libc++]
-        exclude:
-        - compiler: gcc
-          stdlib: libc++
-    name: ${{ matrix.compiler }}-${{ matrix.stdlib }}
+        compiler: [gcc, clang, clang-libc++]
+    
+    name: ${{ matrix.compiler }}
 
     steps:
     - name: Checkout repository and submodules
       uses: actions/checkout@v4
       with:
+        fetch-depth: 0
         submodules: true
 
     - name: Install toolchain
       id: install-toolchain
-      uses: stormbytepp/install-toolchain@v1
+      uses: stormbytepp/githubactions/.github/actions/install-toolchain@master
       with:
-        compiler: ${{ matrix.compiler }}
+        toolchain: ${{ matrix.compiler }}
 
     - name: Build with CMake
       uses: ashutoshvarma/action-cmake-build@master
@@ -44,7 +44,7 @@ jobs:
           -G Ninja
           -DENABLE_ASAN=ON
           -DENABLE_TEST=ON
-          ${{ matrix.compiler == 'clang' && format('-DCMAKE_CXX_FLAGS=-stdlib={0}', matrix.stdlib) || '' }}
+          ${{ matrix.compiler == 'clang-libc++' && format('-DCMAKE_CXX_FLAGS=-stdlib={0}', 'libc++') || '' }}
         run-test: true
         ctest-options: --output-on-failure --test-dir ${{ github.workspace }}/build/test
         build-type: ${{ env.BUILD_TYPE }}
@@ -64,10 +64,9 @@ jobs:
 
       - name: Install toolchain
         id: install-toolchain
-        uses: stormbytepp/install-toolchain@v1
+        uses: stormbytepp/githubactions/.github/actions/install-toolchain@master
         with:
-          compiler: msvc
-          arch: ${{ matrix.arch }}
+          toolchain: msvc
 
       - name: Build with CMake
         uses: ashutoshvarma/action-cmake-build@master
@@ -84,3 +83,4 @@ jobs:
 
       - name: Run unit tests
         run: ctest --output-on-failure --test-dir ${{ github.workspace }}\build\test
+
