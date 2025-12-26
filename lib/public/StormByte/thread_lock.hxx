@@ -30,7 +30,7 @@ namespace StormByte {
 			 * and makes the lock available to other threads. If a thread that does not own the
 			 * lock calls `Unlock()`, the call is a no-op (it does not throw or alter state).
 			 */
-			constexpr ThreadLock() noexcept = default;
+			ThreadLock() noexcept = default;
 
 			ThreadLock(const ThreadLock&) = delete;
 			// std::mutex is nor movable in Windows.
