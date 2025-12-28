@@ -83,9 +83,8 @@ jobs:
             -DENABLE_TEST=ON
           build-type: ${{ env.BUILD_TYPE }}
 
-      - name: Copy DLLs
-        run: |
-          Copy-Item -Path "${{ github.workspace }}\build\lib\StormByte.dll" -Destination "${{ github.workspace }}\build\test" -Force
+      - name: Add DLL directory to PATH
+        run: echo "${{ github.workspace }}\build\lib" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Run unit tests
         run: ctest --output-on-failure --test-dir ${{ github.workspace }}\build\test
