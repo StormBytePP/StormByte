@@ -246,6 +246,24 @@ namespace StormByte::String {
 		return out;
 	}
 
+	bool IsInteger(const std::string& str) noexcept {
+		if (str.empty()) return false;
+
+		size_t start = 0;
+		if (str[0] == '-' || str[0] == '+') {
+			if (str.size() == 1) return false; // Only sign, no digits
+			start = 1;
+		}
+
+		for (size_t i = start; i < str.size(); ++i) {
+			if (!std::isdigit(static_cast<unsigned char>(str[i]))) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	// Explicit instantiations for `HumanReadable` (ordered by category).
 	// Note: `wchar_t`, `char16_t`, and `char32_t` are excluded because they are not
 	// streamed to `std::ostringstream` on many standard library implementations.

@@ -179,4 +179,14 @@ namespace StormByte::String {
 	 * @return The string with all whitespace characters removed.
 	 */
 	STORMBYTE_PUBLIC std::string RemoveWhitespace(const std::string& str) noexcept;
+
+	/**
+	 * @brief Checks if a string represents a valid integer.
+	 * 
+	 * This function determines whether the given string can be interpreted as an integer.
+	 * 
+	 * @param str The string to check.
+	 * @return `true` if the string represents an integer, `false` otherwise.
+	 */
+	STORMBYTE_PUBLIC bool IsInteger(const std::string& str) noexcept;
 }
