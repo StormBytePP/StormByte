@@ -121,39 +121,6 @@ namespace StormByte::String {
 		return result;
 	}
 
-	StormByte::Expected<std::pair<int, int>, StormByte::Exception> SplitFraction(const std::string& fraction) {
-		std::size_t slashPos = fraction.find('/');
-		if (slashPos == std::string::npos) // MSVC needs explicit string namespace
-			return StormByte::Unexpected<Exception>("Invalid fraction format: '/' not found.");
-	
-		const std::string numeratorStr = fraction.substr(0, slashPos);
-		const std::string denominatorStr = fraction.substr(slashPos + 1);
-
-		if (!IsNumeric(numeratorStr) || !IsNumeric(denominatorStr))
-			return StormByte::Unexpected<Exception>("Invalid fraction format: numerator ({}) and denominator ({}) must be numeric.", numeratorStr, denominatorStr);
-
-		if (denominatorStr == "0")
-			return StormByte::Unexpected<Exception>("Invalid fraction format: denominator cannot be zero.");
-
-		return std::make_pair<int, int>(std::stoi(numeratorStr), std::stoi(denominatorStr));
-	}
-
-	StormByte::Expected<std::pair<int, int>, StormByte::Exception> SplitFraction(const std::string& fraction, const int& desired_denominator) {
-		auto expected_fraction = SplitFraction(fraction);
-		if (!expected_fraction)
-			return StormByte::Unexpected(expected_fraction.error());
-
-		auto [numerator, denominator] = expected_fraction.value();
-		if (denominator == desired_denominator)
-			return std::make_pair(numerator, denominator);
-		else if (desired_denominator == 0)
-			return StormByte::Unexpected<Exception>("Invalid desired denominator: cannot be zero.");
-		else {
-			const double factor = static_cast<double>(desired_denominator) / static_cast<double>(denominator);
-			return std::make_pair(static_cast<int>(numerator * factor), desired_denominator);
-		}
-	}
-
 	std::string ToLower(const std::string& str) noexcept {
 		std::string result = str;
 		std::transform(result.begin(), result.end(), result.begin(), ::tolower);

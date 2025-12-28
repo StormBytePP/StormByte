@@ -104,31 +104,6 @@ namespace StormByte::String {
 	STORMBYTE_PUBLIC std::vector<std::string> Split(const std::string& str);
 
 	/**
-	 * @brief Splits a fraction string into a pair of integers.
-	 * 
-	 * This function parses a fraction string (e.g., "3/4") and returns the numerator
-	 * and denominator as a pair of integers.
-	 * 
-	 * @param fraction The fraction string to split (e.g., "3/4").
-	 * @return An `Expected` object containing a pair of integers (numerator and denominator)
-	 *         on success, or an `Exception` on failure.
-	 */
-	STORMBYTE_PUBLIC StormByte::Expected<std::pair<int, int>, Exception> SplitFraction(const std::string& fraction);
-
-	/**
-	 * @brief Splits a fraction string into a pair of integers and scales it to a desired denominator.
-	 * 
-	 * This function parses a fraction string (e.g., "3/4") and scales it to a specified denominator.
-	 * If the scaling is not possible, an exception is returned.
-	 * 
-	 * @param str The fraction string to split (e.g., "3/4").
-	 * @param denominator The desired denominator to scale the fraction to.
-	 * @return An `Expected` object containing a pair of integers (numerator and denominator)
-	 *         on success, or an `Exception` on failure.
-	 */
-	STORMBYTE_PUBLIC StormByte::Expected<std::pair<int, int>, Exception> SplitFraction(const std::string& str, const int& denominator);
-
-	/**
 	 * @brief Converts a number into a human-readable string format.
 	 * 
 	 * This template function formats a numeric value into a human-readable string based on the specified format.
