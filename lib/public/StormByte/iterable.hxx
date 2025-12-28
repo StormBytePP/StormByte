@@ -1,6 +1,7 @@
 #pragma once
 
 #include <StormByte/exception.hxx>
+#include <StormByte/type_traits.hxx>
 
 #include <iterator>
 #include <utility>
@@ -308,16 +309,16 @@ namespace StormByte {
 			iterator 											begin() noexcept { return iterator(m_data.begin()); }
 
 			/**
-			 * @brief Gets end iterator
-			 * @return Iterator to the end of the container
-			 */
-			iterator 											end() noexcept { return iterator(m_data.end()); }
-
-			/**
 			 * @brief Gets const begin iterator
 			 * @return Const iterator to the beginning of the container
 			 */
 			const_iterator 										begin() const noexcept { return const_iterator(m_data.begin()); }
+
+			/**
+			 * @brief Gets end iterator
+			 * @return Iterator to the end of the container
+			 */
+			iterator 											end() noexcept { return iterator(m_data.end()); }
 
 			/**
 			 * @brief Gets const end iterator
@@ -390,7 +391,71 @@ namespace StormByte {
 			 * @param i Index of the element to access
 			 * @return Reference to the element at index i
 			 */
-			reference 											operator[](size_type i) {
+			reference 											operator[](size_type i)
+			requires Type::HasSubscript<Container, size_type> {
+				if (i >= m_data.size())
+					throw OutOfBoundsError("Index {} out of bounds in Iterable::operator[]", i);
+				return m_data[i];
+			}
+
+			reference 											operator[](size_type i)
+			requires (!Type::HasSubscript<Container, size_type>) {
+				if (i >= m_data.size())
+					throw OutOfBoundsError("Index {} out of bounds in Iterable::operator[]", i);
+				auto it = m_data.begin();
+				std::advance(it, i);
+				return *it;
+			}
+
+			/**
+			 * @brief Access element at given index (non-const version)
+			 * @param i Index of the element to access
+			 * @return Reference to the element at index i
+			 * @note This overload is for when container does not support operator[] or mapped_type
+			 */
+			auto 												operator[](size_type i) -> decltype(auto)
+			requires (!Type::HasSubscript<Container, size_type> && !Type::HasMappedType<Container>) {
+				if (i >= m_data.size())
+					throw OutOfBoundsError("Index {} out of bounds in Iterable::operator[]", i);
+				auto it = m_data.begin();
+				std::advance(it, i);
+				return *it;
+			}
+
+
+			/*
+			* @brief Key-based access for associative containers (non-const)
+			* @param key The key to access in the underlying container
+			* @return Reference to the mapped value (forward to container's operator[])
+			*/
+			template<typename K>
+			auto 												operator[](K const &key) -> decltype(auto)
+			requires (Type::HasMappedType<Container>) {
+				return m_data[static_cast<typename Container::key_type>(key)];
+			}
+
+			/*
+			* @brief Key-based access for associative containers (const)
+			* @param key The key to access in the underlying container
+			* @return Const reference to the mapped value (searches and throws if not found)
+			*/
+			template<typename K>
+			auto 												operator[](K const &key) const -> decltype(auto)
+			requires (Type::HasMappedType<const Container>) {
+				auto k = static_cast<typename Container::key_type>(key);
+				auto it = m_data.find(k);
+				if (it == m_data.cend())
+					throw OutOfBoundsError("Key not found in Iterable::operator[]");
+				return it->second;
+			}
+
+			/**
+			 * @brief Access element at given index (const version)
+			 * @param i Index of the element to access
+			 * @return Const reference to the element at index i
+			 */
+			const_reference 									operator[](size_type i) const
+			requires Type::HasSubscript<const Container, size_type> {
 				if (i >= m_data.size())
 					throw OutOfBoundsError("Index {} out of bounds in Iterable::operator[]", i);
 				return m_data[i];
@@ -400,23 +465,117 @@ namespace StormByte {
 			 * @brief Access element at given index (const version)
 			 * @param i Index of the element to access
 			 * @return Const reference to the element at index i
+			 * @note This overload is for when container does not support operator[] or mapped_type
 			 */
-			const_reference 									operator[](size_type i) const {
+			const_reference 									operator[](size_type i) const
+			requires (!Type::HasSubscript<const Container, size_type>) {
 				if (i >= m_data.size())
 					throw OutOfBoundsError("Index {} out of bounds in Iterable::operator[]", i);
-				return m_data[i];
+				auto it = m_data.cbegin();
+				std::advance(it, i);
+				return *it;
+			}
+
+			/**
+			 * @brief Access element at given index (const version)
+			 * @param i Index of the element to access
+			 * @return Const reference to the element at index i
+			 * @note This overload is for when container does not support operator[] or mapped_type
+			 */
+			auto 												operator[](size_type i) const -> decltype(auto)
+			requires (!Type::HasSubscript<const Container, size_type> && !Type::HasMappedType<const Container>) {
+				if (i >= m_data.size())
+					throw OutOfBoundsError("Index {} out of bounds in Iterable::operator[]", i);
+				auto it = m_data.cbegin();
+				std::advance(it, i);
+				return *it;
 			}
 
 			/**
 			 * @brief Adds an element to the container
 			 * @param value The element to add
 			 */
-			void 												add(const value_type& value) { m_data.push_back(value); }
+			void 												add(const value_type& value) requires Type::HasPushBack<decltype(m_data)> {
+				m_data.push_back(value);
+			}
+
+			/**
+			 * @brief Adds an element to the container
+			 * @param value The element to add
+			 */
+			void 												add(const value_type& value) requires (!Type::HasPushBack<decltype(m_data)> and Type::HasPushFront<decltype(m_data)>) {
+				m_data.push_front(value);
+			}
+
+			/**
+			 * @brief Adds an element to associative containers via `insert`
+			 */
+			void 												add(const value_type& value) requires (!Type::HasPushBack<decltype(m_data)> and !Type::HasPushFront<decltype(m_data)> and Type::HasInsert<decltype(m_data)>) {
+				m_data.insert(value);
+			}
 
 			/**
 			 * @brief Adds an element to the container (move version)
 			 * @param value The element to add
 			 */
-			void 												add(value_type&& value) { m_data.push_back(std::move(value)); }
-		};
+			void 												add(value_type&& value) requires Type::HasPushBack<decltype(m_data)> {
+				m_data.push_back(std::move(value));
+			}
+
+			/**
+			 * @brief Adds an element to the container (move version)
+			 * @param value The element to add
+			 */
+			void 												add(value_type&& value) requires (!Type::HasPushBack<decltype(m_data)> and Type::HasPushFront<decltype(m_data)>) {
+				m_data.push_front(std::move(value));
+			}
+
+			/**
+			 * @brief Adds an element to associative containers via `insert` (move version)
+			 */
+			void 												add(value_type&& value) requires (!Type::HasPushBack<decltype(m_data)> and !Type::HasPushFront<decltype(m_data)> and Type::HasInsert<decltype(m_data)>) {
+				m_data.insert(std::move(value));
+			}
+
+			/**
+			 * @brief Checks if the container has a specific item
+			 * @param value The item to check for
+			 * @return True if the item exists in the container, false otherwise
+			 */
+			bool 												has_item(const value_type& value) const {
+				for (const auto& item : m_data) {
+					if (item == value) {
+						return true;
+					}
+				}
+				return false;
+			}
+
+			/**
+			 * @brief Checks if the container has a specific item (for associative containers)
+			 * @param value The item to check for
+			 * @return True if the item exists in the container, false otherwise
+			 */
+			template<typename M>
+			bool has_item(M const &value) const
+			requires Type::HasMappedType<const Container> && std::convertible_to<M, typename Container::mapped_type> {
+				for (const auto &item : m_data) {
+					if (item.second == value) return true;
+				}
+				return false;
+			}
+
+			/**
+			 * @brief Checks if the container has a specific key (for associative containers)
+			 * @param key The key to check for
+			 * @return True if the key exists in the container, false otherwise
+			 */
+			template<typename K>
+			bool 												has_key(const K& key) const
+			requires Type::HasMappedType<const Container> {
+				auto k = static_cast<typename Container::key_type>(key);
+				return m_data.find(k) != m_data.cend();
+
+			}
+	};
 }

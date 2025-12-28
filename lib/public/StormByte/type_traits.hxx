@@ -96,6 +96,66 @@ namespace StormByte {
 		concept Container = is_container<T>::value;
 
 		/**
+		 * @brief Concept that checks whether a container supports `push_back`.
+		 *
+		 * Satisfied when the expression `c.push_back(v)` is valid where `v` is
+		 * convertible to the container's `value_type`.
+		 */
+		template<typename C>
+		concept HasPushBack = Container<C> && requires(C& c, typename C::value_type const& v) {
+			c.push_back(v);
+		};
+
+		/**
+		 * @brief Concept that checks whether a container supports `push_front`.
+		 */
+		template<typename C>
+		concept HasPushFront = Container<C> && requires(C& c, typename C::value_type const& v) {
+			c.push_front(v);
+		};
+
+		/**
+		 * @brief Concept that checks whether a container supports `insert` with a value.
+		 */
+		template<typename C>
+		concept HasInsert = Container<C> && requires(C& c, typename C::value_type const& v) {
+			c.insert(v);
+		};
+
+		/**
+		 * @brief Concept that checks whether a container supports operator[] for a given key/index type `U`.
+		 *
+		 * Example: `HasSubscript<std::vector<int>, std::size_t>` is true, and
+		 * `HasSubscript<std::map<Key, T>, Key>` is also true because `std::map` provides `operator[]`.
+		 */
+		template<typename C, typename U>
+		concept HasSubscript = Container<C> && requires(C& c, U const& u) {
+			{ c[u] };
+		};
+
+		/**
+		 * @brief Concept to check if a container has a `key_type` member type.
+		 * @tparam Container The container type to check.
+		 *
+		 * A type satisfies HasKeyType if it defines a `key_type` member type.
+		 * @code
+		 * template<Type::HasKeyType T>
+		 * void process(T container) { ... }
+		 * @endcode
+		 */
+		template<typename C>
+		concept HasKeyType = Container<C> && requires { typename C::key_type; };
+
+		/**
+		 * @brief Concept to check if a container has a `mapped_type` member type.
+		 * @tparam C The container type to check.
+		 *
+		 * Typical associative containers (like `std::map`) provide a `mapped_type`.
+		 */
+		template<typename C>
+		concept HasMappedType = Container<C> && requires { typename C::mapped_type; };
+
+		/**
 		 * @brief Concept to check if a type is an optional.
 		 * @tparam T The type to check.
 		 *
