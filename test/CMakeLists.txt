@@ -2,6 +2,10 @@ option(ENABLE_TEST "Enable Unit Tests" OFF)
 if(ENABLE_TEST AND NOT STORMBYTE_AS_DEPENDENCY)
 	enable_testing()
 
+	add_executable(BitmaskTests bitmask_test.cxx)
+	target_link_libraries(BitmaskTests StormByte)
+	add_test(NAME BitmaskTests COMMAND BitmaskTests)
+
 	add_executable(IterableTests iterable_test.cxx)
 	target_link_libraries(IterableTests StormByte)
 	add_test(NAME IterableTests COMMAND IterableTests)

@@ -208,6 +208,21 @@ namespace StormByte {
 		concept Enum = std::is_enum_v<std::remove_cv_t<E>>;
 
 		/**
+		 * @brief Concept to check if a type is an unsigned enumeration.
+		 * @tparam E Type to check.
+		 *
+		 * A type satisfies UnsignedEnum if it is an enumeration with an unsigned underlying type.
+		 * @code
+		 * template<Type::UnsignedEnum E>
+		 * void process(E value) { ... }
+		 * @endcode
+		 */
+		template<typename E>
+		concept UnsignedEnum =
+			Enum<E> &&
+			std::is_unsigned_v<std::underlying_type_t<std::remove_cv_t<E>>>;
+
+		/**
 		 * @brief Concept to check if a type is a scoped enumeration (enum class).
 		 * @tparam E Type to check.
 		 *
@@ -219,6 +234,26 @@ namespace StormByte {
 		 */
 		template<typename E>
 		concept ScopedEnum = std::is_scoped_enum_v<E>;
+
+		/**
+		 * @brief Alias type giving the underlying integer type of an enum `E`.
+		 *
+		 * Usage:
+		 * enum class Foo : uint16_t { A };
+		 * Type::underlying_type<Foo> value = 0;
+		 */
+		template<typename E>
+		requires Enum<E>
+		using UnderlyingType = std::underlying_type_t<std::remove_cv_t<E>>;
+
+		/**
+		 * @brief Convert an enum value to its underlying integer representation.
+		 */
+		template<typename E>
+		requires Enum<E>
+		constexpr UnderlyingType<E> ToUnderlying(E e) noexcept {
+			return static_cast<UnderlyingType<E>>(e);
+		}
 
 		/**
 		 * @brief Concept to check if a type is a pointer.

@@ -778,6 +778,53 @@ int main() {
 }
 ```
 
+### Bitmask
+
+The `Bitmask` utility provides a type-safe, convenient way to work with flag enums. It uses a CRTP pattern so derived bitmask types preserve their concrete type when performing bitwise operations (so `a | b` returns the derived bitmask type, not the base class).
+
+Key points:
+
+- Uses `enum class` underlying values safely via `Type::ToUnderlying`.
+- Operators `|`, `&`, `^`, and `~` return the derived bitmask type (CRTP).
+- Provides helpers `Add`, `Remove`, `Has`, `Any`, `None`, and `Value()`.
+
+#### Example
+
+```cpp
+#include <StormByte/bitmask.hxx>
+#include <iostream>
+
+using namespace StormByte;
+
+enum class MyFlags : uint8_t {
+    FlagA = 0x01,
+    FlagB = 0x02,
+    FlagC = 0x04
+};
+
+class MyBitmask: public Bitmask<MyBitmask, MyFlags> {
+public:
+    using Bitmask<MyBitmask, MyFlags>::Bitmask;
+};
+
+int main() {
+    MyBitmask a(MyFlags::FlagA);
+    MyBitmask b(MyFlags::FlagB);
+
+    MyBitmask c = a | b; // returns MyBitmask
+
+    if (c.Value() == (MyFlags::FlagA | MyFlags::FlagB)) {
+        std::cout << "Flags A and B set\n";
+    }
+
+    c |= MyBitmask(MyFlags::FlagC);
+    c.Remove(MyFlags::FlagB);
+
+    std::cout << "Final value: " << static_cast<int>(Type::ToUnderlying(c.Value())) << std::endl;
+    return 0;
+}
+```
+
 ### Type Traits
 
 StormByte provides several custom type traits for compile-time type inspection, particularly useful for template metaprogramming and serialization.
