@@ -303,6 +303,20 @@ namespace StormByte {
 			Iterable& 											operator=(Iterable&&) = default;
 
 			/**
+			 * @brief Equality operator
+			 * @param other The Iterable to compare with
+			 * @return True if the underlying containers are equal, false otherwise
+			 */
+			bool 												operator==(const Iterable& other) const { return m_data == other.m_data; }
+
+			/**
+			 * @brief Inequality operator
+			 * @param other The Iterable to compare with
+			 * @return True if the underlying containers are not equal, false otherwise
+			 */
+			bool 												operator!=(const Iterable& other) const { return m_data != other.m_data; }
+
+			/**
 			 * @brief Gets begin iterator
 			 * @return Iterator to the beginning of the container
 			 */
