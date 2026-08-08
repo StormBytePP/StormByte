@@ -58,6 +58,26 @@ namespace StormByte {
 		struct variant_has_type : std::bool_constant<
 			variant_has_type_impl<VariantT, U>(std::make_index_sequence<std::variant_size_v<VariantT>>())
 		> {};
+
+		/**
+		 * @brief Swaps the endianness of a value.
+		 * @tparam U The type of the value to swap.
+		 * @param val The value to swap.
+		 * @return The value with swapped endianness.
+		 */
+		template<typename U>
+		constexpr U swap_endian(U val) noexcept {
+			union {
+				U value;
+				unsigned char bytes[sizeof(U)];
+			} src, dest;
+
+			src.value = val;
+			for (std::size_t i = 0; i < sizeof(U); ++i) {
+				dest.bytes[i] = src.bytes[sizeof(U) - 1 - i];
+			}
+			return dest.value;
+		}
 	}
 
 	/**

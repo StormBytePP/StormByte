@@ -5,7 +5,9 @@
 #include <StormByte/helpers.hxx>
 #include <StormByte/type_traits.hxx>
 
+#include <bit>
 #include <cstring>
+#include <cstdint>
 #include <optional>
 #include <span>
 #include <utility>
@@ -159,7 +161,14 @@ namespace StormByte {
 			 * @return A vector of bytes containing the serialized data.
 			 */
 			std::vector<std::byte>											SerializeTrivial() const noexcept {
-				return { reinterpret_cast<const std::byte*>(&m_data), reinterpret_cast<const std::byte*>(&m_data) + sizeof(m_data) };
+				DecayedT value = m_data;
+
+				if constexpr (std::endian::native != std::endian::little) {
+					value = swap_endian(value);
+				}
+
+				return { reinterpret_cast<const std::byte*>(&value), 
+						reinterpret_cast<const std::byte*>(&value) + sizeof(value) };
 			}
 
 			/**
@@ -181,8 +190,8 @@ namespace StormByte {
 			 * @return A vector of bytes containing the serialized container data.
 			 */
 			std::vector<std::byte> 											SerializeContainer() const noexcept {
-				std::size_t size = m_data.size();
-				Serializable<std::size_t> size_serial(size);
+				std::uint64_t size = static_cast<std::uint64_t>(m_data.size());
+				Serializable<std::uint64_t> size_serial(size);
 				std::vector<std::byte> buffer = size_serial.Serialize();
 				buffer.reserve(buffer.size() + SizeContainer(m_data));
 				for (const auto& element: m_data) {
@@ -249,14 +258,13 @@ namespace StormByte {
 			/**
 			 * @brief Calculates the serialized size of container data.
 			 * 
-			 * This function computes the size in bytes for container types, including
-			 * the size field and all contained elements.
+			 * This function computes the serialized size of container data.
 			 * 
 			 * @param data The container data to calculate the size for.
 			 * @return The size in bytes of the serialized container data.
 			 */
 			static std::size_t												SizeContainer(const DecayedT& data) noexcept {
-				std::size_t size = sizeof(std::size_t);
+				std::size_t size = sizeof(std::uint64_t);
 				for (const auto& element: data) {
 					size += Serializable<std::decay_t<decltype(element)>>::Size(element);
 				}
@@ -310,6 +318,11 @@ namespace StormByte {
 					return StormByte::Unexpected<DeserializeError>("Insufficient data for deserialization");
 				T result;
 				std::memcpy(&result, data.data(), sizeof(T));
+
+				if constexpr (std::endian::native != std::endian::little) {
+					result = swap_endian(result);
+				}
+
 				return result;
 			}
 
