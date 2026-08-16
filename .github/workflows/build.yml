@@ -14,7 +14,6 @@ on:
 env:
   BUILD_TYPE: Debug
 
-
 jobs:
   build-linux:
     runs-on: ubuntu-latest
@@ -49,8 +48,8 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        compiler: [clang, clang-libc++, gcc]
-    name: macos-${{ matrix.compiler }}
+        compiler: [gcc, clang]
+    name: macos-${{ matrix.compiler == 'clang' && 'clang-libc++' || matrix.compiler }}
     env:
       DYLD_LIBRARY_PATH: ${{ github.workspace }}/build/thirdparty/buildmaster/install/lib:${{ github.workspace }}/build/lib
 
@@ -70,7 +69,6 @@ jobs:
           configure-options: >-
             -DENABLE_ASAN=ON
             -DENABLE_TEST=ON
-            ${{ matrix.compiler == 'clang-libc++' && '-DCMAKE_CXX_FLAGS=-stdlib=libc++' || '' }}
           run-tests: true
           ctest-options: --output-on-failure --test-dir ${{ github.workspace }}/build/test
 
