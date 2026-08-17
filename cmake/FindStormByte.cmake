@@ -9,7 +9,7 @@
 # Provides:
 #   - Imported targets: StormByte and StormByte::<Component>
 #   - Variables: STORMBYTE_FOUND, STORMBYTE_INCLUDE_DIR, STORMBYTE_LIBRARY
-#                <Component>_FOUND, STORMBYTE_<Component>_LIBRARY
+#                StormByte_<Component>_FOUND, STORMBYTE_<Component>_LIBRARY
 
 include(FindPackageHandleStandardArgs)
 include(FeatureSummary)
@@ -136,21 +136,32 @@ set(_missing_components)
 foreach(component IN LISTS _requested_components)
 	string(TOLOWER "${component}" _comp_lower)
 
-	set(${component}_FOUND FALSE)
+	set(StormByte_${component}_FOUND FALSE)
 	unset(STORMBYTE_${component}_LIBRARY CACHE)
 
-	# 1. Header-based detection
+	# 1. Header-based detection (robust)
 	if(STORMBYTE_INCLUDE_DIR)
-		set(_hdr1 "${STORMBYTE_INCLUDE_DIR}/StormByte/${_comp_lower}/visibility.h")
-		set(_hdr2 "${STORMBYTE_INCLUDE_DIR}/${_comp_lower}/visibility.h")
-		if(EXISTS "${_hdr1}" OR EXISTS "${_hdr2}")
-			set(${component}_FOUND TRUE)
-		endif()
+		set(_possible_headers
+			"${STORMBYTE_INCLUDE_DIR}/StormByte/${_comp_lower}/visibility.h"
+			"${STORMBYTE_INCLUDE_DIR}/${_comp_lower}/visibility.h"
+			"${STORMBYTE_INCLUDE_DIR}/StormByte/${component}/visibility.h"
+			"${STORMBYTE_INCLUDE_DIR}/${component}/visibility.h"
+		)
+		foreach(_hdr IN LISTS _possible_headers)
+			if(EXISTS "${_hdr}")
+				set(StormByte_${component}_FOUND TRUE)
+				break()
+			endif()
+		endforeach()
 	endif()
 
 	# 2. Library detection
 	find_library(STORMBYTE_${component}_LIBRARY
-		NAMES StormByte-${component} StormByte_${component}
+		NAMES
+			StormByte-${component}
+			StormByte_${component}
+			stormbyte-${_comp_lower}
+			stormbyte_${_comp_lower}
 		PATH_SUFFIXES lib lib64
 		PATHS
 			${CMAKE_PREFIX_PATH}
@@ -159,10 +170,10 @@ foreach(component IN LISTS _requested_components)
 	)
 
 	if(STORMBYTE_${component}_LIBRARY)
-		set(${component}_FOUND TRUE)
+		set(StormByte_${component}_FOUND TRUE)
 	endif()
 
-	if(${component}_FOUND)
+	if(StormByte_${component}_FOUND)
 		if(NOT TARGET StormByte::${component})
 			add_library(StormByte-${component} UNKNOWN IMPORTED GLOBAL)
 			add_library(StormByte::${component} ALIAS StormByte-${component})
@@ -217,11 +228,7 @@ if(NOT STORMBYTE_LIBRARY)
 	set(STORMBYTE_FOUND FALSE)
 endif()
 
-# If any requested component is missing → fail when REQUIRED
-if(_missing_components)
-	set(STORMBYTE_FOUND FALSE)
-endif()
-
+# HANDLE_COMPONENTS se encarga de fallar si falta algún componente requerido
 find_package_handle_standard_args(StormByte
 	REQUIRED_VARS STORMBYTE_LIBRARY STORMBYTE_INCLUDE_DIR
 	HANDLE_COMPONENTS
