@@ -1,235 +1,230 @@
-include(FeatureSummary)
-
-# FindStormByte.cmake - finder for installed StormByte core and optional modules
+# FindStormByte.cmake
+# Finder for the StormByte core library and its optional modules.
+#
 # Usage:
 #   find_package(StormByte REQUIRED)
-#   find_package(StormByte REQUIRED Buffer Logger)
+#   find_package(StormByte REQUIRED COMPONENTS Buffer Logger)
+#   find_package(StormByte COMPONENTS Crypto)   # will automatically pull Buffer
 #
-# Behavior:
-# - Locates the core StormByte library and include directory (via visibility.h).
-# - For requested modules, verifies presence by checking for a module visibility header
-#   under the discovered include tree and/or by locating a library named StormByte-<Module>.
-# - Creates imported targets: `StormByte` (core) and `StormByte-<Module>` plus alias
-#   `StormByte::<Module>` for convenience.
-# - Sets variables: STORMBYTE_FOUND, STORMBYTE_INCLUDE_DIR, STORMBYTE_LIBRARY,
-#   <Module>_FOUND and STORMBYTE_<Module>_LIBRARIES.
-# - Honors a hardcoded (but editable) list of available components and a simple
-#   transitive dependency map used to populate INTERFACE_LINK_LIBRARIES.
+# Provides:
+#   - Imported targets: StormByte and StormByte::<Component>
+#   - Variables: STORMBYTE_FOUND, STORMBYTE_INCLUDE_DIR, STORMBYTE_LIBRARY
+#                <Component>_FOUND, STORMBYTE_<Component>_LIBRARY
 
-# -----------------------------
-# User-editable lists
-# -----------------------------
-# List of components that this finder understands. Edit to add/remove modules.
-set(_available_components
-    Buffer
-    Config
-    Crypto
-    Database
-    Logger
-    Multimedia
-    Network
-    System
+include(FindPackageHandleStandardArgs)
+include(FeatureSummary)
+
+# ----------------------------------------------------------------------
+# User-editable section
+# ----------------------------------------------------------------------
+
+set(_STORMBYTE_AVAILABLE_COMPONENTS
+	Buffer
+	Config
+	Crypto
+	Database
+	Logger
+	Multimedia
+	Network
+	System
 )
 
-# Simple map of transitive link dependencies: component -> space-separated list
-# Example: Crypto depends on Buffer
-set(_component_dependencies_Buffer "Logger")
-set(_component_dependencies_Crypto "Buffer")
-set(_component_dependencies_Network "Buffer")
+# Transitive dependencies (component → list of components it needs)
+set(_STORMBYTE_COMPONENT_DEPS_Buffer    "Logger")
+set(_STORMBYTE_COMPONENT_DEPS_Crypto    "Buffer")
+set(_STORMBYTE_COMPONENT_DEPS_Network   "Buffer")
+# Add more as needed...
 
-# -----------------------------
-# Helper: normalize requested components from find_package arguments or variable
-# -----------------------------
-if (DEFINED StormByte_FIND_COMPONENTS)
-    set(_requested_components ${StormByte_FIND_COMPONENTS})
-else()
-    set(_requested_components)
-    if (ARGN)
-        foreach(_arg IN LISTS ARGN)
-            string(TOUPPER "${_arg}" _ARG_UP)
-            if (_ARG_UP STREQUAL "REQUIRED" OR _ARG_UP STREQUAL "QUIET" OR _ARG_UP STREQUAL "COMPONENTS" OR _ARG_UP STREQUAL "EXACT" OR _ARG_UP STREQUAL "NO_MODULE")
-                continue()
-            endif()
-            list(APPEND _requested_components ${_arg})
-        endforeach()
-    endif()
-endif()
+# ----------------------------------------------------------------------
+# Internal helpers
+# ----------------------------------------------------------------------
 
-# Validate requested components
-foreach(_c IN LISTS _requested_components)
-    if (NOT _c IN_LIST _available_components)
-        message(FATAL_ERROR "Requested component '$_c' is not valid. Available components: ${_available_components}.")
-    endif()
-endforeach()
+# Expand requested components with their transitive dependencies
+function(_stormbyte_expand_dependencies components_var)
+	set(_result ${${components_var}})
+	set(_changed TRUE)
 
-# -----------------------------
-# Find core include dir (visibility.h) and library
-# -----------------------------
+	while(_changed)
+		set(_changed FALSE)
+		foreach(_comp IN LISTS _result)
+			if(DEFINED _STORMBYTE_COMPONENT_DEPS_${_comp})
+				foreach(_dep IN LISTS _STORMBYTE_COMPONENT_DEPS_${_comp})
+					if(NOT _dep IN_LIST _result)
+						list(APPEND _result ${_dep})
+						set(_changed TRUE)
+					endif()
+				endforeach()
+			endif()
+		endforeach()
+	endwhile()
+
+	list(REMOVE_DUPLICATES _result)
+	set(${components_var} ${_result} PARENT_SCOPE)
+endfunction()
+
+# ----------------------------------------------------------------------
+# Find core library + headers
+# ----------------------------------------------------------------------
+
 find_path(STORMBYTE_INCLUDE_DIR
-    NAMES visibility.h
-    PATH_SUFFIXES StormByte
-    PATHS ${CMAKE_PREFIX_PATH} /usr/include /usr/local/include
+	NAMES visibility.h
+	PATH_SUFFIXES StormByte
+	PATHS
+		${CMAKE_PREFIX_PATH}
+		/usr/include
+		/usr/local/include
 )
 
 find_library(STORMBYTE_LIBRARY
-    NAMES StormByte
-    PATH_SUFFIXES lib lib64
-    PATHS ${CMAKE_PREFIX_PATH} /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64
+	NAMES StormByte
+	PATH_SUFFIXES lib lib64
+	PATHS
+		${CMAKE_PREFIX_PATH}
+		/usr/lib /usr/lib64
+		/usr/local/lib /usr/local/lib64
 )
 
-# If the library was found but include dir not, attempt reasonable nearby include
-if (STORMBYTE_LIBRARY AND NOT STORMBYTE_INCLUDE_DIR)
-    get_filename_component(_storm_lib_dir "${STORMBYTE_LIBRARY}" PATH)
-    set(_candidate_dirs
-        "${_storm_lib_dir}/../include"
-        "${_storm_lib_dir}/../../include"
-        "${_storm_lib_dir}/include"
-    )
-    foreach(_cand IN LISTS _candidate_dirs)
-        if (EXISTS "${_cand}/StormByte/visibility.h" OR EXISTS "${_cand}/visibility.h")
-            set(STORMBYTE_INCLUDE_DIR "${_cand}")
-            break()
-        endif()
-    endforeach()
+# Fallback for include dir when only the library was found
+if(STORMBYTE_LIBRARY AND NOT STORMBYTE_INCLUDE_DIR)
+	get_filename_component(_libdir "${STORMBYTE_LIBRARY}" DIRECTORY)
+	foreach(_cand IN ITEMS
+			"${_libdir}/../include"
+			"${_libdir}/../../include"
+			"${_libdir}/include")
+		if(EXISTS "${_cand}/StormByte/visibility.h")
+			set(STORMBYTE_INCLUDE_DIR "${_cand}")
+			break()
+		endif()
+	endforeach()
 endif()
 
-mark_as_advanced(STORMBYTE_LIBRARY STORMBYTE_INCLUDE_DIR)
+# ----------------------------------------------------------------------
+# Process requested components + transitive deps
+# ----------------------------------------------------------------------
 
-# -----------------------------
-# Prepare output containers
-# -----------------------------
-unset(_found_components)
-unset(_missing_components)
+set(_requested_components ${StormByte_FIND_COMPONENTS})
+_stormbyte_expand_dependencies(_requested_components)
 
-# -----------------------------
-# Create core imported target if we found the library
-# -----------------------------
-if (STORMBYTE_LIBRARY)
-    add_library(StormByte UNKNOWN IMPORTED GLOBAL)
-    set_target_properties(StormByte PROPERTIES
-        IMPORTED_LOCATION "${STORMBYTE_LIBRARY}"
-    )
+# ----------------------------------------------------------------------
+# Create core target
+# ----------------------------------------------------------------------
 
-    if (STORMBYTE_INCLUDE_DIR AND EXISTS "${STORMBYTE_INCLUDE_DIR}")
-        set_target_properties(StormByte PROPERTIES
-            INTERFACE_INCLUDE_DIRECTORIES "${STORMBYTE_INCLUDE_DIR}"
-        )
-    endif()
-
-    if (MSVC)
-        target_compile_definitions(StormByte INTERFACE UNICODE NOMINMAX)
-    endif()
-
-    set(STORMBYTE_FOUND TRUE)
-else()
-    set(STORMBYTE_FOUND FALSE)
+if(STORMBYTE_LIBRARY)
+	if(NOT TARGET StormByte)
+		add_library(StormByte UNKNOWN IMPORTED GLOBAL)
+		set_target_properties(StormByte PROPERTIES
+			IMPORTED_LOCATION "${STORMBYTE_LIBRARY}"
+		)
+		if(STORMBYTE_INCLUDE_DIR)
+			set_target_properties(StormByte PROPERTIES
+				INTERFACE_INCLUDE_DIRECTORIES "${STORMBYTE_INCLUDE_DIR}"
+			)
+		endif()
+		if(MSVC)
+			target_compile_definitions(StormByte INTERFACE UNICODE NOMINMAX)
+		endif()
+	endif()
 endif()
 
-# -----------------------------
-# For each requested component: detect header under the include tree or library
-# -----------------------------
+# ----------------------------------------------------------------------
+# Find and create component targets
+# ----------------------------------------------------------------------
+
+set(_found_components)
+set(_missing_components)
+
 foreach(component IN LISTS _requested_components)
-    # normalized names
-    string(TOUPPER ${component} _UPCOMP)
+	string(TOLOWER "${component}" _comp_lower)
 
-    # default not found
-    set(${component}_FOUND FALSE)
-    unset(STORMBYTE_${component}_LIBRARIES)
+	set(${component}_FOUND FALSE)
+	unset(STORMBYTE_${component}_LIBRARY CACHE)
 
-    # 1) Check for a component header under the discovered include dir (preferred)
-    if (STORMBYTE_INCLUDE_DIR AND EXISTS "${STORMBYTE_INCLUDE_DIR}")
-        # Module include directories are lowercase under the StormByte include tree
-        string(TOLOWER "${component}" _comp_lower)
-        # Common layouts: <include>/StormByte/<component_lower>/visibility.h
-        # or <include>/<component_lower>/visibility.h
-        set(_candidate1 "${STORMBYTE_INCLUDE_DIR}/StormByte/${_comp_lower}/visibility.h")
-        set(_candidate2 "${STORMBYTE_INCLUDE_DIR}/${_comp_lower}/visibility.h")
-        if (EXISTS "${_candidate1}")
-            set(${component}_FOUND TRUE)
-        elseif (EXISTS "${_candidate2}")
-            set(${component}_FOUND TRUE)
-        endif()
-    endif()
+	# 1. Header-based detection
+	if(STORMBYTE_INCLUDE_DIR)
+		set(_hdr1 "${STORMBYTE_INCLUDE_DIR}/StormByte/${_comp_lower}/visibility.h")
+		set(_hdr2 "${STORMBYTE_INCLUDE_DIR}/${_comp_lower}/visibility.h")
+		if(EXISTS "${_hdr1}" OR EXISTS "${_hdr2}")
+			set(${component}_FOUND TRUE)
+		endif()
+	endif()
 
-    # 2) Regardless, try to find a component library (StormByte-<Component>)
-    find_library(STORMBYTE_${component}_LIBRARY
-        NAMES StormByte-${component} StormByte_${component}
-        PATH_SUFFIXES lib lib64
-        PATHS ${CMAKE_PREFIX_PATH} /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64
-    )
-    if (STORMBYTE_${component}_LIBRARY)
-        set(STORMBYTE_${component}_LIBRARIES "${STORMBYTE_${component}_LIBRARY}")
-        set(${component}_FOUND TRUE)
-    endif()
+	# 2. Library detection
+	find_library(STORMBYTE_${component}_LIBRARY
+		NAMES StormByte-${component} StormByte_${component}
+		PATH_SUFFIXES lib lib64
+		PATHS
+			${CMAKE_PREFIX_PATH}
+			/usr/lib /usr/lib64
+			/usr/local/lib /usr/local/lib64
+	)
 
-    # If found by header or library, create imported target and alias
-    if (${component}_FOUND)
-        add_library(StormByte-${component} UNKNOWN IMPORTED GLOBAL)
-        add_library(StormByte::${component} ALIAS StormByte-${component})
+	if(STORMBYTE_${component}_LIBRARY)
+		set(${component}_FOUND TRUE)
+	endif()
 
-        if (STORMBYTE_${component}_LIBRARIES)
-            set_target_properties(StormByte-${component} PROPERTIES
-                IMPORTED_LOCATION "${STORMBYTE_${component}_LIBRARIES}"
-            )
-        endif()
+	if(${component}_FOUND)
+		if(NOT TARGET StormByte::${component})
+			add_library(StormByte-${component} UNKNOWN IMPORTED GLOBAL)
+			add_library(StormByte::${component} ALIAS StormByte-${component})
 
-        # attach include dir from core if present
-        if (STORMBYTE_INCLUDE_DIR AND EXISTS "${STORMBYTE_INCLUDE_DIR}")
-            set_target_properties(StormByte-${component} PROPERTIES
-                INTERFACE_INCLUDE_DIRECTORIES "${STORMBYTE_INCLUDE_DIR}"
-            )
-        endif()
+			if(STORMBYTE_${component}_LIBRARY)
+				set_target_properties(StormByte-${component} PROPERTIES
+					IMPORTED_LOCATION "${STORMBYTE_${component}_LIBRARY}"
+				)
+			endif()
 
-        list(APPEND _found_components ${component})
-    else()
-        list(APPEND _missing_components ${component})
-    endif()
+			if(STORMBYTE_INCLUDE_DIR)
+				set_target_properties(StormByte-${component} PROPERTIES
+					INTERFACE_INCLUDE_DIRECTORIES "${STORMBYTE_INCLUDE_DIR}"
+				)
+			endif()
+		endif()
 
-    mark_as_advanced(STORMBYTE_${component}_LIBRARY)
+		list(APPEND _found_components ${component})
+	else()
+		list(APPEND _missing_components ${component})
+	endif()
+
+	mark_as_advanced(STORMBYTE_${component}_LIBRARY)
 endforeach()
 
-# -----------------------------
-# Populate transitive INTERFACE_LINK_LIBRARIES for component targets
-# -----------------------------
+# ----------------------------------------------------------------------
+# Wire transitive INTERFACE_LINK_LIBRARIES
+# ----------------------------------------------------------------------
+
 foreach(component IN LISTS _found_components)
-    set(_link_libraries StormByte)
-    if (DEFINED _component_dependencies_${component})
-        foreach(dep IN LISTS _component_dependencies_${component})
-            if (dep IN_LIST _found_components)
-                list(APPEND _link_libraries StormByte-${dep})
-            endif()
-        endforeach()
-    endif()
-    set_target_properties(StormByte-${component} PROPERTIES
-        INTERFACE_LINK_LIBRARIES "${_link_libraries}"
-    )
+	set(_link_libs StormByte)
+
+	if(DEFINED _STORMBYTE_COMPONENT_DEPS_${component})
+		foreach(dep IN LISTS _STORMBYTE_COMPONENT_DEPS_${component})
+			if(TARGET StormByte::${dep})
+				list(APPEND _link_libs StormByte::${dep})
+			endif()
+		endforeach()
+	endif()
+
+	set_target_properties(StormByte-${component} PROPERTIES
+		INTERFACE_LINK_LIBRARIES "${_link_libs}"
+	)
 endforeach()
 
-# -----------------------------
-# Final status reporting
-# -----------------------------
-set(_error_message "")
-if (NOT STORMBYTE_FOUND)
-    set(_error_message "StormByte library not found.")
-endif()
-if (_missing_components)
-    string(JOIN ", " _missing_components_text ${_missing_components})
-    if (_error_message)
-        set(_error_message "${_error_message}\nSome requested components were not found: ${_missing_components_text}.")
-    else()
-        set(_error_message "Some requested components were not found: ${_missing_components_text}.")
-    endif()
+# ----------------------------------------------------------------------
+# Final result handling (standard way)
+# ----------------------------------------------------------------------
+
+set(STORMBYTE_FOUND TRUE)
+if(NOT STORMBYTE_LIBRARY)
+	set(STORMBYTE_FOUND FALSE)
 endif()
 
-if (_error_message)
-    message(FATAL_ERROR "${_error_message}")
-else()
-    if (_found_components)
-        string(JOIN ", " _found_components_text ${_found_components})
-        message(STATUS "StormByte library found. Enabled components: ${_found_components_text}.")
-    elseif (STORMBYTE_FOUND)
-        message(STATUS "StormByte library found.")
-    endif()
+# If any requested component is missing → fail when REQUIRED
+if(_missing_components)
+	set(STORMBYTE_FOUND FALSE)
 endif()
+
+find_package_handle_standard_args(StormByte
+	REQUIRED_VARS STORMBYTE_LIBRARY STORMBYTE_INCLUDE_DIR
+	HANDLE_COMPONENTS
+)
 
 mark_as_advanced(STORMBYTE_INCLUDE_DIR STORMBYTE_LIBRARY)
