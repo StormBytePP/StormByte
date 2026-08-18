@@ -389,6 +389,10 @@ namespace StormByte {
 				
 				std::size_t size = expected_container_size.value();
 				offset += sizeof(std::size_t);
+
+				// Reject malicious / absurd sizes early
+				if (size > data.size() - offset)
+					return StormByte::Unexpected<DeserializeError>("Claimed container size exceeds remaining buffer");
 	
 				T container;
 				for (std::size_t i = 0; i < size; ++i) {

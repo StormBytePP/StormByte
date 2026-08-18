@@ -30,8 +30,8 @@ namespace StormByte {
 		std::size_t size = expected_size.value();
 		offset += sizeof(std::size_t);
 		
-		// Check if we have enough data
-		if (offset + size > data.size())
+		// Anti-overflow check: never do (offset + size > data.size())
+		if (size > data.size() - offset)
 			return StormByte::Unexpected<DeserializeError>("Insufficient data for string content");
 		
 		// Construct string directly from the data (contiguous memory)
@@ -75,7 +75,8 @@ namespace StormByte {
 		std::size_t size = expected_size.value();
 		offset += sizeof(std::size_t);
 		
-		if (offset + size * sizeof(wchar_t) > data.size())
+		// Anti-overflow: size * sizeof(wchar_t) must not wrap and must fit
+		if (size > (data.size() - offset) / sizeof(wchar_t))
 			return StormByte::Unexpected<DeserializeError>("Insufficient data for wstring content");
 		
 		std::wstring result(reinterpret_cast<const wchar_t*>(data.data() + offset), size);
@@ -102,4 +103,7 @@ namespace StormByte {
 		
 		return buffer;
 	}
+
+	// Add Deserialize + Size for u16string if you use it; same anti-overflow pattern:
+	// if (size > (data.size() - offset) / sizeof(char16_t)) return Unexpected(...);
 }
