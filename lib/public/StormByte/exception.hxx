@@ -131,4 +131,16 @@ namespace StormByte {
 		public:
 			using Exception::Exception;
 	};
+
+	/**
+	 * @class Base64Error
+	 * @brief Exception thrown when a Base64 encode/decode operation fails.
+	 *
+	 * This exception is raised when the input contains invalid characters,
+	 * incorrect padding, or any other Base64-related error.
+	 */
+	class STORMBYTE_PUBLIC Base64Error: public Exception {
+		public:
+			using Exception::Exception;
+	};
 }

@@ -2,6 +2,10 @@ option(ENABLE_TEST "Enable Unit Tests" OFF)
 if(ENABLE_TEST)
 	enable_testing()
 
+	add_executable(Base64Tests base64_test.cxx)
+	target_link_libraries(Base64Tests StormByte)
+	add_test(NAME Base64Tests COMMAND Base64Tests)
+
 	add_executable(BitmaskTests bitmask_test.cxx)
 	target_link_libraries(BitmaskTests StormByte)
 	add_test(NAME BitmaskTests COMMAND BitmaskTests)
