@@ -152,34 +152,34 @@ namespace StormByte::String {
 
 		std::mbstate_t state = std::mbstate_t();
 		const wchar_t* src = wstr.data();
-		size_t len;
+		std::size_t len = 0;
 
 	#ifdef WINDOWS
-		// Use safer alternative on Windows
 		errno_t err = wcsrtombs_s(&len, nullptr, 0, &src, 0, &state);
-		if (err != 0) {
+		if (err != 0)
 			throw std::runtime_error("Wide to multibyte conversion failed");
-		}
+		// wcsrtombs_s includes the terminating null in the count
+		if (len == 0)
+			return {};
+		--len;
 	#else
-		// Use standard wcsrtombs for other platforms
 		len = std::wcsrtombs(nullptr, &src, 0, &state);
-		if (len == static_cast<size_t>(-1)) {
+		if (len == static_cast<std::size_t>(-1))
 			throw std::runtime_error("Wide to multibyte conversion failed");
-		}
 	#endif
 
 		std::string result(len, '\0');
-		src = wstr.data(); // Reset src pointer
+		src = wstr.data();
+		state = std::mbstate_t();
 
 	#ifdef WINDOWS
-		// Perform conversion with wcsrtombs_s
-		err = wcsrtombs_s(&len, result.data(), result.size() + 1, &src, result.size(), &state);
-		if (err != 0) {
+		std::size_t written = 0;
+		err = wcsrtombs_s(&written, result.data(), result.size() + 1, &src, result.size(), &state);
+		if (err != 0)
 			throw std::runtime_error("Wide to multibyte conversion failed");
-		}
 	#else
-		// Perform conversion with wcsrtombs
-		std::wcsrtombs(result.data(), &src, len, &state);
+		if (std::wcsrtombs(result.data(), &src, len, &state) == static_cast<std::size_t>(-1))
+			throw std::runtime_error("Wide to multibyte conversion failed");
 	#endif
 
 		return result;
@@ -190,34 +190,34 @@ namespace StormByte::String {
 
 		std::mbstate_t state = std::mbstate_t();
 		const char* src = str.data();
-		size_t len;
+		std::size_t len = 0;
 
 	#ifdef WINDOWS
-		// Use safer alternative on Windows
 		errno_t err = mbsrtowcs_s(&len, nullptr, 0, &src, 0, &state);
-		if (err != 0) {
+		if (err != 0)
 			throw std::runtime_error("Multibyte to wide conversion failed");
-		}
+		// mbsrtowcs_s includes the terminating null in the count
+		if (len == 0)
+			return {};
+		--len;
 	#else
-		// Use standard mbsrtowcs for other platforms
 		len = std::mbsrtowcs(nullptr, &src, 0, &state);
-		if (len == static_cast<size_t>(-1)) {
+		if (len == static_cast<std::size_t>(-1))
 			throw std::runtime_error("Multibyte to wide conversion failed");
-		}
 	#endif
 
 		std::wstring result(len, L'\0');
-		src = str.data(); // Reset src pointer
+		src = str.data();
+		state = std::mbstate_t();
 
 	#ifdef WINDOWS
-		// Perform conversion with mbsrtowcs_s
-		err = mbsrtowcs_s(&len, result.data(), result.size() + 1, &src, result.size(), &state);
-		if (err != 0) {
+		std::size_t written = 0;
+		err = mbsrtowcs_s(&written, result.data(), result.size() + 1, &src, result.size(), &state);
+		if (err != 0)
 			throw std::runtime_error("Multibyte to wide conversion failed");
-		}
 	#else
-		// Perform conversion with mbsrtowcs
-		std::mbsrtowcs(result.data(), &src, len, &state);
+		if (std::mbsrtowcs(result.data(), &src, len, &state) == static_cast<std::size_t>(-1))
+			throw std::runtime_error("Multibyte to wide conversion failed");
 	#endif
 
 		return result;
