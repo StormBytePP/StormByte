@@ -455,6 +455,71 @@ int test_base_corruption_random_stress() {
 }
 
 // =============================================================================
+// std::u16string tests
+// =============================================================================
+
+int test_serialize_u16string() {
+	std::u16string data = u"Hello, StormByte!";
+	Serializable<std::u16string> serialization(data);
+	std::vector<std::byte> buffer = serialization.Serialize();
+	if (buffer.empty())
+		RETURN_TEST("test_serialize_u16string", 1);
+
+	auto expected = Serializable<std::u16string>::Deserialize(buffer);
+	if (!expected) {
+		std::cerr << expected.error()->what() << std::endl;
+		RETURN_TEST("test_serialize_u16string", 1);
+	}
+
+	ASSERT_TRUE("test_serialize_u16string", data == expected.value());
+	RETURN_TEST("test_serialize_u16string", 0);
+}
+
+int test_serialize_u16string_empty() {
+	std::u16string data;
+	auto buffer = Serializable<std::u16string>(data).Serialize();
+	auto expected = Serializable<std::u16string>::Deserialize(buffer);
+	if (!expected) {
+		std::cerr << expected.error()->what() << std::endl;
+		RETURN_TEST("test_serialize_u16string_empty", 1);
+	}
+	ASSERT_TRUE("test_serialize_u16string_empty", expected.value().empty());
+	RETURN_TEST("test_serialize_u16string_empty", 0);
+}
+
+int test_serialize_u16string_truncated() {
+	std::u16string data = u"TruncationTest";
+	auto buffer = Serializable<std::u16string>(data).Serialize();
+
+	for (std::size_t len = 0; len < buffer.size(); ++len) {
+		auto truncated = std::vector<std::byte>(buffer.begin(), buffer.begin() + static_cast<std::ptrdiff_t>(len));
+		auto result = Serializable<std::u16string>::Deserialize(truncated);
+		if (result) {
+			std::cerr << "test_serialize_u16string_truncated: size " << len << " accepted\n";
+			RETURN_TEST("test_serialize_u16string_truncated", 1);
+		}
+	}
+	RETURN_TEST("test_serialize_u16string_truncated", 0);
+}
+
+int test_serialize_u16string_huge_size() {
+	auto clean = Serializable<std::u16string>(u"safe").Serialize();
+	if (clean.size() < sizeof(std::size_t))
+		RETURN_TEST("test_serialize_u16string_huge_size", 1);
+
+	auto buf = clean;
+	std::size_t huge = static_cast<std::size_t>(-1);
+	std::memcpy(buf.data(), &huge, sizeof(huge));
+
+	auto result = Serializable<std::u16string>::Deserialize(buf);
+	if (result) {
+		std::cerr << "test_serialize_u16string_huge_size: huge size was accepted\n";
+		RETURN_TEST("test_serialize_u16string_huge_size", 1);
+	}
+	RETURN_TEST("test_serialize_u16string_huge_size", 0);
+}
+
+// =============================================================================
 // main
 // =============================================================================
 
@@ -488,6 +553,11 @@ int main() {
 	result += test_base_corruption_no_crash_bit_flip();
 	result += test_base_corruption_no_crash_byte_overwrite();
 	result += test_base_corruption_random_stress();
+
+	result += test_serialize_u16string();
+	result += test_serialize_u16string_empty();
+	result += test_serialize_u16string_truncated();
+	result += test_serialize_u16string_huge_size();
 
 	if (result == 0) {
 		std::cout << "All tests passed!" << std::endl;
