@@ -520,6 +520,86 @@ int test_serialize_u16string_huge_size() {
 }
 
 // =============================================================================
+// EXTRA MONSTER TESTS (base)
+// =============================================================================
+
+int test_base_cross_type_vector_as_string() {
+	auto vec_buf = MakeStringVectorBuffer();
+	auto as_string = Serializable<std::string>::Deserialize(vec_buf);
+	// May fail or succeed with garbage — must not crash
+	(void)as_string;
+	RETURN_TEST("test_base_cross_type_vector_as_string", 0);
+}
+
+int test_base_idempotent_roundtrip_vector() {
+	std::vector<std::string> original = {"a", "b", "StormByte"};
+	auto buf1 = Serializable<std::vector<std::string>>(original).Serialize();
+	auto d1 = Serializable<std::vector<std::string>>::Deserialize(buf1);
+	if (!d1) {
+		std::cerr << d1.error()->what() << std::endl;
+		RETURN_TEST("test_base_idempotent_roundtrip_vector", 1);
+	}
+	auto buf2 = Serializable<std::vector<std::string>>(d1.value()).Serialize();
+	ASSERT_TRUE("test_base_idempotent_roundtrip_vector", original == d1.value());
+	ASSERT_TRUE("test_base_idempotent_roundtrip_vector", buf1 == buf2);
+	RETURN_TEST("test_base_idempotent_roundtrip_vector", 0);
+}
+
+int test_base_idempotent_roundtrip_pair() {
+	std::pair<int, std::string> original{42, "answer"};
+	auto buf1 = Serializable<std::pair<int, std::string>>(original).Serialize();
+	auto d1 = Serializable<std::pair<int, std::string>>::Deserialize(buf1);
+	if (!d1) {
+		std::cerr << d1.error()->what() << std::endl;
+		RETURN_TEST("test_base_idempotent_roundtrip_pair", 1);
+	}
+	auto buf2 = Serializable<std::pair<int, std::string>>(d1.value()).Serialize();
+	ASSERT_TRUE("test_base_idempotent_roundtrip_pair", original == d1.value());
+	ASSERT_TRUE("test_base_idempotent_roundtrip_pair", buf1 == buf2);
+	RETURN_TEST("test_base_idempotent_roundtrip_pair", 0);
+}
+
+int test_base_trailing_garbage() {
+	auto clean = MakeStringBuffer();
+	auto dirty = clean;
+	dirty.push_back(std::byte{0xDE});
+	dirty.push_back(std::byte{0xAD});
+	auto result = Serializable<std::string>::Deserialize(dirty);
+	(void)result; // success or controlled failure, never crash
+	RETURN_TEST("test_base_trailing_garbage", 0);
+}
+
+int test_base_double_corruption() {
+	auto clean = MakeStringVectorBuffer();
+	if (clean.size() < 8)
+		RETURN_TEST("test_base_double_corruption", 0);
+
+	auto buf = clean;
+	for (std::size_t i = 0; i < 4; ++i)
+		buf[i] = std::byte{0xFF};
+	for (std::size_t i = 0; i < 4; ++i)
+		buf[buf.size() - 1 - i] = std::byte{0xAA};
+
+	auto result = Serializable<std::vector<std::string>>::Deserialize(buf);
+	(void)result;
+	RETURN_TEST("test_base_double_corruption", 0);
+}
+
+int test_base_nested_vector_of_pairs() {
+	std::vector<std::pair<int, std::string>> data = {
+		{1, "one"}, {2, "two"}, {3, "three"}
+	};
+	auto buf = Serializable<std::vector<std::pair<int, std::string>>>(data).Serialize();
+	auto expected = Serializable<std::vector<std::pair<int, std::string>>>::Deserialize(buf);
+	if (!expected) {
+		std::cerr << expected.error()->what() << std::endl;
+		RETURN_TEST("test_base_nested_vector_of_pairs", 1);
+	}
+	ASSERT_TRUE("test_base_nested_vector_of_pairs", data == expected.value());
+	RETURN_TEST("test_base_nested_vector_of_pairs", 0);
+}
+
+// =============================================================================
 // main
 // =============================================================================
 
@@ -558,6 +638,13 @@ int main() {
 	result += test_serialize_u16string_empty();
 	result += test_serialize_u16string_truncated();
 	result += test_serialize_u16string_huge_size();
+
+	result += test_base_cross_type_vector_as_string();
+	result += test_base_idempotent_roundtrip_vector();
+	result += test_base_idempotent_roundtrip_pair();
+	result += test_base_trailing_garbage();
+	result += test_base_double_corruption();
+	result += test_base_nested_vector_of_pairs();
 
 	if (result == 0) {
 		std::cout << "All tests passed!" << std::endl;
