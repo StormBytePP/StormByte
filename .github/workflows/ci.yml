@@ -1,23 +1,62 @@
-name: Compile & Test
+name: CI
 
 permissions:
   actions: write
   contents: read
+  pages: write
+  id-token: write
 
 on:
   push:
-    branches: [ "master" ]
+    branches: ["master"]
   pull_request:
-    branches: [ "master" ]
+    branches: ["master"]
   workflow_dispatch:
 
 env:
   BUILD_TYPE: Release
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  ###########################################################################
+  # Bootstraps (warm shared caches; other jobs still check out on their runner)
+  # Submodule cache is OS-scoped by Actions — one warm job per OS.
+  ###########################################################################
+  checkout-bootstrap:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    name: checkout-bootstrap (${{ matrix.os }})
+    steps:
+      - name: Warm submodule / checkout cache
+        uses: stormbytepp/githubactions/.github/actions/checkout-cached@master
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+  apt-bootstrap:
+    runs-on: ubuntu-latest
+    name: apt-bootstrap
+    steps:
+      - name: Warm APT lists cache
+        uses: stormbytepp/githubactions/.github/actions/update-apt-cached@master
+        with:
+          cache-key: apt-lists
+          rotate-weekly: true
+
+  ###########################################################################
+  # Linux
+  ###########################################################################
   build-linux:
+    needs: [checkout-bootstrap, apt-bootstrap]
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         compiler: [gcc, clang, clang-libc++]
     name: linux-${{ matrix.compiler }}
@@ -35,7 +74,7 @@ jobs:
         uses: stormbytepp/githubactions/.github/actions/build-with-toolchain@master
         with:
           toolchain: ${{ matrix.compiler }}
-          ccache-key: v1-release
+          ccache-key: v1-release-${{ matrix.compiler }}
           build-type: ${{ env.BUILD_TYPE }}
           configure-options: >-
             -DENABLE_TEST=ON
@@ -43,12 +82,17 @@ jobs:
           run-tests: true
           ctest-options: --output-on-failure --test-dir ${{ github.workspace }}/build/test
 
+  ###########################################################################
+  # macOS (Apple Clang for "clang"; no apt bootstrap)
+  ###########################################################################
   build-macos:
+    needs: [checkout-bootstrap]
     runs-on: macos-latest
     strategy:
+      fail-fast: false
       matrix:
         compiler: [gcc, clang]
-    name: macos-${{ matrix.compiler == 'clang' && 'clang-libc++' || matrix.compiler }}
+    name: macos-${{ matrix.compiler }}
     env:
       DYLD_LIBRARY_PATH: ${{ github.workspace }}/build/lib:${{ github.workspace }}/build/thirdparty/buildmaster/install/lib
 
@@ -63,14 +107,18 @@ jobs:
         uses: stormbytepp/githubactions/.github/actions/build-with-toolchain@master
         with:
           toolchain: ${{ matrix.compiler }}
-          ccache-key: v1-release
+          ccache-key: v1-release-${{ matrix.compiler }}
           build-type: ${{ env.BUILD_TYPE }}
           configure-options: >-
             -DENABLE_TEST=ON
           run-tests: true
           ctest-options: --output-on-failure --test-dir ${{ github.workspace }}/build/test
 
+  ###########################################################################
+  # Windows
+  ###########################################################################
   build-windows:
+    needs: [checkout-bootstrap]
     runs-on: windows-latest
     name: windows-msvc
 
@@ -91,8 +139,20 @@ jobs:
         uses: stormbytepp/githubactions/.github/actions/build-with-toolchain@master
         with:
           toolchain: msvc
-          ccache-key: v1-release
+          ccache-key: v1-release-msvc
           build-type: ${{ env.BUILD_TYPE }}
           configure-options: -DENABLE_TEST=ON
           run-tests: true
           ctest-options: --output-on-failure --test-dir ${{ github.workspace }}/build/test
+
+  ###########################################################################
+  # Docs (StormByteDoc) — Linux + same APT lists cache
+  ###########################################################################
+  docs:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: [checkout-bootstrap, apt-bootstrap]
+    uses: stormbytepp/githubactions/.github/workflows/generate-and-deploy-docs.yml@master
+    with:
+      doc_target: StormByteDoc
+      extra-cmake-options: -DENABLE_DOC=ON
+      docs_output_dir: ./_site
