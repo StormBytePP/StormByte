@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 project("StormByte C++ Library"
-	VERSION 0.0.9999
+	VERSION 1.0.0
 	DESCRIPTION "StormByte is a comprehensive, cross-platform C++ library aimed at easing system programming, configuration management, logging, and database handling tasks. This library provides a unified API that abstracts away the complexities and inconsistencies of different platforms (Windows, Linux)."
 	HOMEPAGE_URL "https://dev.stormbyte.org/StormByte"
 )
