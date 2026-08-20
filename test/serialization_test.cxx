@@ -599,6 +599,65 @@ int test_base_nested_vector_of_pairs() {
 	RETURN_TEST("test_base_nested_vector_of_pairs", 0);
 }
 
+int test_base_bool_rejects_invalid_byte() {
+	// Wire format for bool is a single byte: only 0 and 1 are valid.
+	// Any other value (e.g. 17) must be rejected without throwing.
+	std::vector<std::byte> buf = { std::byte{17} };
+
+	bool threw = false;
+	bool accepted = false;
+	try {
+		auto result = Serializable<bool>::Deserialize(buf);
+		if (result)
+			accepted = true;
+	} catch (...) {
+		threw = true;
+	}
+
+	if (threw) {
+		std::cerr << "test_base_bool_rejects_invalid_byte: threw instead of returning error\n";
+		RETURN_TEST("test_base_bool_rejects_invalid_byte", 1);
+	}
+	if (accepted) {
+		std::cerr << "test_base_bool_rejects_invalid_byte: invalid byte 17 was accepted\n";
+		RETURN_TEST("test_base_bool_rejects_invalid_byte", 1);
+	}
+	RETURN_TEST("test_base_bool_rejects_invalid_byte", 0);
+}
+
+int test_base_bool_accepts_0_and_1() {
+	auto z = Serializable<bool>::Deserialize(std::vector<std::byte>{ std::byte{0} });
+	auto o = Serializable<bool>::Deserialize(std::vector<std::byte>{ std::byte{1} });
+	if (!z || z.value() != false) {
+		std::cerr << "test_base_bool_accepts_0_and_1: 0 not decoded as false\n";
+		RETURN_TEST("test_base_bool_accepts_0_and_1", 1);
+	}
+	if (!o || o.value() != true) {
+		std::cerr << "test_base_bool_accepts_0_and_1: 1 not decoded as true\n";
+		RETURN_TEST("test_base_bool_accepts_0_and_1", 1);
+	}
+	RETURN_TEST("test_base_bool_accepts_0_and_1", 0);
+}
+
+int test_base_optional_flag_rejects_invalid_bool() {
+	// optional starts with a bool has_value flag; 17 must not load as true/false.
+	std::vector<std::byte> buf = { std::byte{17} };
+	bool threw = false;
+	bool accepted = false;
+	try {
+		auto result = Serializable<std::optional<int>>::Deserialize(buf);
+		if (result)
+			accepted = true;
+	} catch (...) {
+		threw = true;
+	}
+	if (threw || accepted) {
+		std::cerr << "test_base_optional_flag_rejects_invalid_bool: invalid flag not rejected cleanly\n";
+		RETURN_TEST("test_base_optional_flag_rejects_invalid_bool", 1);
+	}
+	RETURN_TEST("test_base_optional_flag_rejects_invalid_bool", 0);
+}
+
 // =============================================================================
 // main
 // =============================================================================
@@ -645,6 +704,10 @@ int main() {
 	result += test_base_trailing_garbage();
 	result += test_base_double_corruption();
 	result += test_base_nested_vector_of_pairs();
+
+	result += test_base_bool_rejects_invalid_byte();
+	result += test_base_bool_accepts_0_and_1();
+	result += test_base_optional_flag_rejects_invalid_bool();
 
 	if (result == 0) {
 		std::cout << "All tests passed!" << std::endl;

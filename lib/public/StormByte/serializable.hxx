@@ -306,20 +306,35 @@ namespace StormByte {
 			/**
 			 * @brief Deserializes trivially copyable data.
 			 *
+			 * Bool is special-cased: only 0 and 1 are accepted. Loading any other
+			 * byte into a bool is undefined behaviour and is rejected instead.
+			 *
 			 * @param data The byte span containing the serialized data.
 			 * @return An Expected with the value, or DeserializeError.
 			 */
 			static StormByte::Expected<T, DeserializeError> DeserializeTrivial(std::span<const std::byte> data) noexcept {
-				if (data.size() < sizeof(T))
-					return StormByte::Unexpected<DeserializeError>("Insufficient data for deserialization");
-				T result;
-				std::memcpy(&result, data.data(), sizeof(T));
+				if constexpr (std::is_same_v<T, bool>) {
+					if (data.empty())
+						return StormByte::Unexpected<DeserializeError>("Insufficient data for bool");
 
-				if constexpr (std::endian::native != std::endian::little) {
-					result = swap_endian(result);
+					const auto raw = static_cast<unsigned char>(data[0]);
+					if (raw != 0 && raw != 1)
+						return StormByte::Unexpected<DeserializeError>("Invalid bool value in stream");
+
+					return raw != 0;
+				} else {
+					if (data.size() < sizeof(T))
+						return StormByte::Unexpected<DeserializeError>("Insufficient data for deserialization");
+
+					T result;
+					std::memcpy(&result, data.data(), sizeof(T));
+
+					if constexpr (std::endian::native != std::endian::little) {
+						result = swap_endian(result);
+					}
+
+					return result;
 				}
-
-				return result;
 			}
 
 			/**
