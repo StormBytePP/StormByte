@@ -379,23 +379,23 @@ namespace StormByte {
 			static StormByte::Expected<T, DeserializeError> 				DeserializeContainer(std::span<const std::byte> data) noexcept {
 				std::size_t offset = 0;
 				
-				// Deserialize the container size
-				if (offset + sizeof(std::size_t) > data.size())
+				// Deserialize the container size (always uint64_t on the wire)
+				if (offset + sizeof(std::uint64_t) > data.size())
 					return StormByte::Unexpected<DeserializeError>("Insufficient data for container size");
 				
-				auto expected_container_size = Serializable<std::size_t>::Deserialize(data.subspan(offset, sizeof(std::size_t)));
+				auto expected_container_size = Serializable<std::uint64_t>::Deserialize(data.subspan(offset, sizeof(std::uint64_t)));
 				if (!expected_container_size)
 					return StormByte::Unexpected(expected_container_size.error());
 				
-				std::size_t size = expected_container_size.value();
-				offset += sizeof(std::size_t);
+				std::uint64_t size = expected_container_size.value();
+				offset += sizeof(std::uint64_t);
 
 				// Reject malicious / absurd sizes early
-				if (size > data.size() - offset)
+				if (size > static_cast<std::uint64_t>(data.size() - offset))
 					return StormByte::Unexpected<DeserializeError>("Claimed container size exceeds remaining buffer");
 	
 				T container;
-				for (std::size_t i = 0; i < size; ++i) {
+				for (std::uint64_t i = 0; i < size; ++i) {
 					using ElementT = std::decay_t<typename T::value_type>;
 					
 					if (offset >= data.size())
