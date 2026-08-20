@@ -23,9 +23,15 @@ namespace StormByte::System {
 
 	/**
 	 * @brief Gets the current working directory.
-	 * @return The current path.
+	 * @return The current working directory path.
 	 */
 	STORMBYTE_PUBLIC std::filesystem::path CurrentPath();
+
+	/**
+	 * @brief Gets the directory that contains the running executable.
+	 * @return The directory path of the executable, or "NOPATH" on failure.
+	 */
+	STORMBYTE_PUBLIC std::filesystem::path ExecutablePath();
 
 	/**
 	 * @brief Sleeps for a specific duration.

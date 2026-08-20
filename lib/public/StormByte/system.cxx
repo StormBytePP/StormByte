@@ -49,6 +49,10 @@ namespace StormByte::System {
 	}
 
 	std::filesystem::path CurrentPath() {
+		return std::filesystem::current_path();
+	}
+
+	std::filesystem::path ExecutablePath() {
 		// Directory that contains the running executable
 	#ifdef WINDOWS
 		char path[MAX_PATH];
