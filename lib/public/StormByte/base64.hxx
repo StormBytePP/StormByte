@@ -2,7 +2,7 @@
 
 #include <StormByte/visibility.h>
 
-#include <cstddef>		// std::byte
+#include <cstddef>
 #include <span>
 #include <string>
 #include <vector>
@@ -16,12 +16,14 @@ namespace StormByte {
 	 * @brief Decodes a Base64-encoded string into raw bytes.
 	 *
 	 * The input may contain the standard Base64 alphabet (A-Z, a-z, 0-9, +, /)
-	 * and the padding character '='. Whitespace is ignored.
+	 * and the padding character '='. Whitespace (space, tab, newline, carriage return)
+	 * is ignored. Decoding stops at the first '=' character.
+	 *
+	 * Padding is accepted but not strictly validated (the decoder is lenient).
 	 *
 	 * @param input Base64-encoded string.
 	 * @return Decoded binary data as a vector of std::byte.
-	 * @throws StormByte::Exception if the input contains invalid characters
-	 *         or has incorrect padding.
+	 * @throws StormByte::Base64Error if the input contains invalid characters.
 	 *
 	 * @note Accepts both std::string and const char* (via implicit conversion).
 	 */
