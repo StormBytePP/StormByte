@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0] - 2026-08-20
 
-Initial public release of **StormByte** (Base module): the foundational C++23 library that provides cross-platform utilities, exception handling, serialization, string helpers, system functions and other core building blocks used by the rest of the StormByte ecosystem.
+Initial public release of **StormByte** (Base module): the foundational C++26 library that provides cross-platform utilities, exception handling, serialization, string helpers, system functions and other core building blocks used by the rest of the StormByte ecosystem.
 
 ### Added
 
@@ -54,7 +54,7 @@ Initial public release of **StormByte** (Base module): the foundational C++23 li
 
 - This is the first stable release of the StormByte Base library.
 - The binary serialization format is now considered stable.
-- Requires a C++23 compliant compiler and CMake ≥ 3.12.
+- Requires a C++26 compliant compiler and CMake ≥ 3.12.
 - The library is designed as the foundation for the rest of the StormByte modules (Buffer, Config, Crypto, Database, Logger, Multimedia, Network, System…).
 
 [1.0.0]: https://github.com/StormBytePP/StormByte/releases/tag/1.0.0
