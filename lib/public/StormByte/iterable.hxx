@@ -36,8 +36,11 @@ namespace StormByte {
 	 * @tparam Container Underlying container type (e.g. `std::vector`, `std::map`, `std::deque`).
 	 *
 	 * Provides iterator adapters, size/empty queries, subscript access (index or key, depending on
-	 * @p Container) and `add()` overloads selected by @ref Type concepts so the correct insertion
+	 * @p Container) and `add()` selected by @ref Type concepts so the correct insertion
 	 * API (`push_back`, `push_front` or associative `insert`) is used on every standard library.
+	 *
+	 * Insertion uses a single `add` with `if constexpr` (not constrained overloads) so MSVC STL
+	 * and clang-cl do not instantiate bodies that call APIs the container does not provide.
 	 *
 	 * Constraints use the template parameter @p Container directly (not `decltype(m_data)`) so
 	 * concept checks remain stable under the MSVC STL and clang-cl.
@@ -541,64 +544,43 @@ namespace StormByte {
 			}
 
 			/**
-			 * @brief Appends @p value using `push_back`.
-			 * @param value Element to copy into the container.
+			 * @brief Appends a copy of @p value using the best available container API.
+			 * @param value Element to add.
 			 *
-			 * Selected when @ref Type::HasPushBack is satisfied (e.g. `std::vector`).
+			 * Prefers `push_back`, then `push_front`, then associative `insert`.
+			 * Implemented with `if constexpr` so clang-cl / MSVC STL never instantiate
+			 * insertion paths the container does not support.
 			 */
-			void add(const value_type& value)
-			requires Type::HasPushBack<Container> {
-				m_data.push_back(value);
+			void add(const value_type& value) {
+				if constexpr (Type::HasPushBack<Container>) {
+					m_data.push_back(value);
+				} else if constexpr (Type::HasPushFront<Container>) {
+					m_data.push_front(value);
+				} else if constexpr (Type::HasInsert<Container>) {
+					m_data.insert(value);
+				} else {
+					static_assert(Type::HasPushBack<Container> || Type::HasPushFront<Container> || Type::HasInsert<Container>,
+						"StormByte::Iterable: container must support push_back, push_front, or insert");
+				}
 			}
 
 			/**
-			 * @brief Prepends @p value using `push_front`.
-			 * @param value Element to copy into the container.
+			 * @brief Appends @p value by move using the best available container API.
+			 * @param value Element to add.
 			 *
-			 * Selected when the container has no `push_back` but does have `push_front`
-			 * (unusual; most sequence types prefer the `push_back` overload).
+			 * Same selection rules as the const overload; uses moves into the container.
 			 */
-			void add(const value_type& value)
-			requires (!Type::HasPushBack<Container> && Type::HasPushFront<Container>) {
-				m_data.push_front(value);
-			}
-
-			/**
-			 * @brief Inserts @p value via associative `insert(value)`.
-			 * @param value Element (typically a key/value pair) to insert.
-			 *
-			 * Selected for map/set-like containers that satisfy @ref Type::HasInsert.
-			 */
-			void add(const value_type& value)
-			requires (!Type::HasPushBack<Container> && !Type::HasPushFront<Container> && Type::HasInsert<Container>) {
-				m_data.insert(value);
-			}
-
-			/**
-			 * @brief Appends @p value using `push_back` (move).
-			 * @param value Element to move into the container.
-			 */
-			void add(value_type&& value)
-			requires Type::HasPushBack<Container> {
-				m_data.push_back(std::move(value));
-			}
-
-			/**
-			 * @brief Prepends @p value using `push_front` (move).
-			 * @param value Element to move into the container.
-			 */
-			void add(value_type&& value)
-			requires (!Type::HasPushBack<Container> && Type::HasPushFront<Container>) {
-				m_data.push_front(std::move(value));
-			}
-
-			/**
-			 * @brief Inserts @p value via associative `insert(value)` (move).
-			 * @param value Element to move into the container.
-			 */
-			void add(value_type&& value)
-			requires (!Type::HasPushBack<Container> && !Type::HasPushFront<Container> && Type::HasInsert<Container>) {
-				m_data.insert(std::move(value));
+			void add(value_type&& value) {
+				if constexpr (Type::HasPushBack<Container>) {
+					m_data.push_back(std::move(value));
+				} else if constexpr (Type::HasPushFront<Container>) {
+					m_data.push_front(std::move(value));
+				} else if constexpr (Type::HasInsert<Container>) {
+					m_data.insert(std::move(value));
+				} else {
+					static_assert(Type::HasPushBack<Container> || Type::HasPushFront<Container> || Type::HasInsert<Container>,
+						"StormByte::Iterable: container must support push_back, push_front, or insert");
+				}
 			}
 
 			/**
