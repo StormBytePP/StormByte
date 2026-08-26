@@ -30,6 +30,10 @@ if(ENABLE_TEST)
 	target_link_libraries(ThreadLockTests StormByte)
 	add_test(NAME ThreadLockTests COMMAND ThreadLockTests)
 
+	add_executable(TypeTraitsTests type_traits_test.cxx)
+	target_link_libraries(TypeTraitsTests StormByte)
+	add_test(NAME TypeTraitsTests COMMAND TypeTraitsTests)
+
 	add_executable(UUIDTest uuid_test.cxx)
 	target_link_libraries(UUIDTest StormByte)
 	add_test(NAME UUIDTest COMMAND UUIDTest)
