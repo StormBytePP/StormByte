@@ -39,8 +39,9 @@ namespace StormByte {
 	 * @p Container) and `add()` selected by @ref Type concepts so the correct insertion
 	 * API (`push_back`, `push_front` or associative `insert`) is used on every standard library.
 	 *
-	 * Insertion uses a single `add` with `if constexpr` (not constrained overloads) so MSVC STL
-	 * and clang-cl do not instantiate bodies that call APIs the container does not provide.
+	 * Insertion and index subscript use a single definition with `if constexpr` (not constrained
+	 * overloads that only differ by `requires`) so MSVC STL and clang-cl do not instantiate
+	 * unsupported APIs and do not emit duplicate mangled symbols under the MSVC ABI.
 	 *
 	 * Constraints use the template parameter @p Container directly (not `decltype(m_data)`) so
 	 * concept checks remain stable under the MSVC STL and clang-cl.
@@ -429,46 +430,26 @@ namespace StormByte {
 			bool empty() const noexcept { return m_data.empty(); }
 
 			/**
-			 * @brief Index access when the container supports `operator[]`.
-			 * @param i Zero-based index.
+			 * @brief Zero-based index access.
+			 * @param i Index into the underlying container.
 			 * @return Reference to the element at @p i.
 			 * @throws OutOfBoundsError If @p i is not less than `size()`.
+			 *
+			 * Uses `Container::operator[]` when @ref Type::HasSubscript holds; otherwise
+			 * advances iterators. Implemented as one function with `if constexpr` so the
+			 * MSVC ABI / clang-cl do not emit duplicate mangled names for constrained
+			 * overloads that only differ by `requires`.
 			 */
-			reference operator[](size_type i)
-			requires Type::HasSubscript<Container, size_type> {
+			reference operator[](size_type i) {
 				if (i >= m_data.size())
 					throw OutOfBoundsError("Index {} out of bounds in Iterable::operator[]", i);
-				return m_data[i];
-			}
-
-			/**
-			 * @brief Index access by advancing iterators when `operator[]` is unavailable.
-			 * @param i Zero-based index.
-			 * @return Reference to the element at @p i.
-			 * @throws OutOfBoundsError If @p i is not less than `size()`.
-			 */
-			reference operator[](size_type i)
-			requires (!Type::HasSubscript<Container, size_type>) {
-				if (i >= m_data.size())
-					throw OutOfBoundsError("Index {} out of bounds in Iterable::operator[]", i);
-				auto it = m_data.begin();
-				std::advance(it, i);
-				return *it;
-			}
-
-			/**
-			 * @brief Index access for non-subscript, non-associative containers (deduced return).
-			 * @param i Zero-based index.
-			 * @return Element at @p i.
-			 * @throws OutOfBoundsError If @p i is not less than `size()`.
-			 */
-			auto operator[](size_type i) -> decltype(auto)
-			requires (!Type::HasSubscript<Container, size_type> && !Type::HasMappedType<Container>) {
-				if (i >= m_data.size())
-					throw OutOfBoundsError("Index {} out of bounds in Iterable::operator[]", i);
-				auto it = m_data.begin();
-				std::advance(it, i);
-				return *it;
+				if constexpr (Type::HasSubscript<Container, size_type>) {
+					return m_data[i];
+				} else {
+					auto it = m_data.begin();
+					std::advance(it, static_cast<difference_type>(i));
+					return *it;
+				}
 			}
 
 			/**
@@ -501,46 +482,23 @@ namespace StormByte {
 			}
 
 			/**
-			 * @brief Const index access when the container supports `operator[]`.
-			 * @param i Zero-based index.
+			 * @brief Zero-based const index access.
+			 * @param i Index into the underlying container.
 			 * @return Const reference to the element at @p i.
 			 * @throws OutOfBoundsError If @p i is not less than `size()`.
+			 *
+			 * Same selection rules as the non-const overload.
 			 */
-			const_reference operator[](size_type i) const
-			requires Type::HasSubscript<const Container, size_type> {
+			const_reference operator[](size_type i) const {
 				if (i >= m_data.size())
 					throw OutOfBoundsError("Index {} out of bounds in Iterable::operator[]", i);
-				return m_data[i];
-			}
-
-			/**
-			 * @brief Const index access by advancing iterators when `operator[]` is unavailable.
-			 * @param i Zero-based index.
-			 * @return Const reference to the element at @p i.
-			 * @throws OutOfBoundsError If @p i is not less than `size()`.
-			 */
-			const_reference operator[](size_type i) const
-			requires (!Type::HasSubscript<const Container, size_type>) {
-				if (i >= m_data.size())
-					throw OutOfBoundsError("Index {} out of bounds in Iterable::operator[]", i);
-				auto it = m_data.cbegin();
-				std::advance(it, i);
-				return *it;
-			}
-
-			/**
-			 * @brief Const index access for non-subscript, non-associative containers (deduced return).
-			 * @param i Zero-based index.
-			 * @return Element at @p i.
-			 * @throws OutOfBoundsError If @p i is not less than `size()`.
-			 */
-			auto operator[](size_type i) const -> decltype(auto)
-			requires (!Type::HasSubscript<const Container, size_type> && !Type::HasMappedType<const Container>) {
-				if (i >= m_data.size())
-					throw OutOfBoundsError("Index {} out of bounds in Iterable::operator[]", i);
-				auto it = m_data.cbegin();
-				std::advance(it, i);
-				return *it;
+				if constexpr (Type::HasSubscript<const Container, size_type>) {
+					return m_data[i];
+				} else {
+					auto it = m_data.cbegin();
+					std::advance(it, static_cast<difference_type>(i));
+					return *it;
+				}
 			}
 
 			/**
