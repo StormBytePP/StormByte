@@ -19,7 +19,19 @@
 
 #pragma once
 
+/**
+ * @file type_traits.hxx
+ * @brief Compile-time type introspection for StormByte (concepts, C++26).
+ *
+ * Public surface is @ref StormByte::Type. Detection uses `concept` +
+ * `requires`, not `void_t` / `enable_if`. Cv/ref handling is explicit so
+ * libstdc++, libc++ and the MSVC STL (including clang-cl) agree.
+ */
+
+#include <array>
+#include <bit>
 #include <concepts>
+#include <cstddef>
 #include <optional>
 #include <string>
 #include <type_traits>
@@ -29,143 +41,110 @@
 /**
  * @namespace StormByte
  * @brief Root namespace of the StormByte library.
- *
- * Houses foundational types, concepts and utilities shared by every StormByte module.
  */
 namespace StormByte {
 	/**
-	 * @brief Implementation details for @ref StormByte::Type concepts.
+	 * @namespace StormByte::Type
+	 * @brief Named concepts and small type utilities used across the suite.
 	 *
-	 * These helpers are not part of the public API. Prefer the concepts in
-	 * @ref StormByte::Type from user code.
-	 */
-	namespace {
-		/**
-		 * @brief Trait that is true when @p T is `std::string` or `std::wstring`.
-		 * @tparam T Type to test.
-		 */
-		template<typename T>
-		struct is_string : std::bool_constant<std::is_same_v<T, std::string> || std::is_same_v<T, std::wstring>> {};
-
-		/**
-		 * @brief Primary template: @p T is not treated as a container.
-		 * @tparam T Type to test.
-		 * @tparam _ SFINAE placeholder.
-		 */
-		template<typename T, typename _ = void>
-		struct is_container : std::false_type {};
-
-		/**
-		 * @brief Specialization: @p T has `begin()`, `end()` and `value_type`, and is not a string.
-		 * @tparam T Type to test.
-		 */
-		template<typename T>
-		struct is_container<T, std::void_t<decltype(std::declval<T>().begin()), decltype(std::declval<T>().end()), typename T::value_type>>
-			: std::bool_constant<!is_string<std::decay_t<T>>::value> {};
-
-		/**
-		 * @brief Primary template: @p T is not `std::optional`.
-		 * @tparam T Type to test.
-		 * @tparam _ SFINAE placeholder.
-		 */
-		template<typename T, typename _ = void>
-		struct is_optional : std::false_type {};
-
-		/**
-		 * @brief Specialization: @p T is exactly `std::optional<U>` for some `U`.
-		 * @tparam T Type to test.
-		 */
-		template<typename T>
-		struct is_optional<T, std::void_t<typename T::value_type>>
-			: std::is_same<T, std::optional<typename T::value_type>> {};
-
-		/**
-		 * @brief Primary template: @p T is not pair-like.
-		 * @tparam T Type to test.
-		 * @tparam _ SFINAE placeholder.
-		 */
-		template<typename T, typename _ = void>
-		struct is_pair : std::false_type {};
-
-		/**
-		 * @brief Specialization: @p T exposes `first` and `second` members.
-		 * @tparam T Type to test.
-		 */
-		template<typename T>
-		struct is_pair<T, std::void_t<
-			decltype(std::declval<T>().first),
-			decltype(std::declval<T>().second)
-		>> : std::true_type {};
-
-		/**
-		 * @brief Primary template: @p T is not a `std::variant`.
-		 * @tparam T Type to test.
-		 */
-		template<typename T>
-		struct is_variant : std::false_type {};
-
-		/**
-		 * @brief Specialization: @p T is `std::variant<Ts...>`.
-		 * @tparam Ts Variant alternatives.
-		 */
-		template<typename... Ts>
-		struct is_variant<std::variant<Ts...>> : std::true_type {};
-
-		/**
-		 * @brief Returns whether any alternative of @p VariantT is the same as @p U (cv/ref stripped).
-		 * @tparam VariantT Variant type.
-		 * @tparam U Candidate alternative.
-		 * @tparam I Index pack over the variant alternatives.
-		 * @return `true` if @p U is one of the alternatives.
-		 */
-		template<typename VariantT, typename U, std::size_t... I>
-		constexpr bool variant_has_type_impl(std::index_sequence<I...>) noexcept {
-			return ((std::is_same_v<std::remove_cvref_t<U>, std::remove_cvref_t<std::variant_alternative_t<I, VariantT>>>) || ...);
-		}
-
-		/**
-		 * @brief Trait that is true when @p U is an alternative of variant @p VariantT.
-		 * @tparam VariantT Variant type.
-		 * @tparam U Candidate alternative.
-		 */
-		template<typename VariantT, typename U>
-		struct variant_has_type : std::bool_constant<
-			variant_has_type_impl<VariantT, U>(std::make_index_sequence<std::variant_size_v<VariantT>>())
-		> {};
-
-		/**
-		 * @brief Swaps the endianness of a trivially copyable value.
-		 * @tparam U Value type.
-		 * @param val Value whose bytes should be reversed.
-		 * @return @p val with reversed byte order.
-		 */
-		template<typename U>
-		constexpr U swap_endian(U val) noexcept {
-			union {
-				U value;
-				unsigned char bytes[sizeof(U)];
-			} src, dest;
-
-			src.value = val;
-			for (std::size_t i = 0; i < sizeof(U); ++i) {
-				dest.bytes[i] = src.bytes[sizeof(U) - 1 - i];
-			}
-			return dest.value;
-		}
-	}
-
-	/**
-	 * @namespace Type
-	 * @brief C++20 concepts for compile-time type introspection.
-	 *
-	 * Prefer these concepts over ad-hoc SFINAE in public APIs. Container-related
-	 * concepts decay cv-qualifiers and references so constraints stay stable
-	 * across libstdc++, libc++ and the MSVC STL (including clang-cl).
+	 * Prefer these names in public templates. Do not reintroduce
+	 * `std::enable_if` / `void_t` traits next to them.
 	 */
 	namespace Type {
 		/**
-		 * @brief Matches `std::string` or `std::wstring` exactly.
+		 * @namespace StormByte::Type::Detail
+		 * @brief Private helpers. Not a supported API.
+		 *
+		 * @note Other modules may call @ref swap_endian. Do not depend on
+		 *       any other name in this namespace.
+		 */
+		namespace Detail {
+			/**
+			 * @brief `true` when @p T is exactly `std::variant<Ts...>` after cv/ref strip.
+			 * @tparam T Type to test.
+			 *
+			 * Partial specialization of a variable template — not SFINAE.
+			 * Needed because there is no standard `std::is_variant`.
+			 */
+			template<typename T>
+			constexpr bool is_variant_v = false;
+
+			/**
+			 * @brief Specialization for every `std::variant` alternative list.
+			 * @tparam Ts Variant alternatives.
+			 */
+			template<typename... Ts>
+			constexpr bool is_variant_v<std::variant<Ts...>> = true;
+
+			/**
+			 * @brief Fold: is cv/ref-stripped @p U one of @p VariantT's alternatives?
+			 * @tparam VariantT A `std::variant<…>` (already stripped by the caller).
+			 * @tparam U Candidate alternative.
+			 * @tparam I Index pack over `std::variant_size_v<VariantT>`.
+			 * @param[in] seq Index sequence; unused except to expand @p I.
+			 * @return `true` if @p U matches any alternative.
+			 */
+			template<typename VariantT, typename U, std::size_t... I>
+			constexpr bool variant_has_type_impl(std::index_sequence<I...> seq) noexcept {
+				(void)seq;
+				return ((std::is_same_v<
+					std::remove_cvref_t<U>,
+					std::remove_cvref_t<std::variant_alternative_t<I, VariantT>>
+				>) || ...);
+			}
+
+			/**
+			 * @brief Convenience wrapper around @ref variant_has_type_impl.
+			 * @tparam VariantT A `std::variant<…>`.
+			 * @tparam U Candidate alternative.
+			 */
+			template<typename VariantT, typename U>
+			constexpr bool variant_has_type_v =
+				variant_has_type_impl<VariantT, U>(
+					std::make_index_sequence<std::variant_size_v<VariantT>>()
+				);
+
+			/**
+			 * @brief Reverses the object-representation byte order of @p val.
+			 * @tparam U Trivially copyable value type.
+			 * @param[in] val Value whose bytes are reversed.
+			 * @return @p val with endianness swapped.
+			 *
+			 * @note This **always** reverses bytes. Whether the caller should
+			 *       invoke it (host ≠ little-endian) is Serializable's job.
+			 *       Integrals go through `std::byteswap`; every other trivial
+			 *       type goes through `std::bit_cast` + reverse so `float`,
+			 *       `enum` and small POD structs stay defined.
+			 *
+			 * @warning Not a format detector. No BOM, no `std::endian` test.
+			 */
+			template<typename U>
+			requires std::is_trivially_copyable_v<U> && (sizeof(U) > 0)
+			constexpr U swap_endian(U val) noexcept {
+				if constexpr (sizeof(U) == 1) {
+					return val;
+				} else if constexpr (std::integral<U>) {
+					return std::byteswap(val);
+				} else {
+					auto bytes = std::bit_cast<std::array<std::byte, sizeof(U)>>(val);
+					for (std::size_t i = 0, j = sizeof(U); i < j; ++i) {
+						--j;
+						const std::byte tmp = bytes[i];
+						bytes[i] = bytes[j];
+						bytes[j] = tmp;
+					}
+					return std::bit_cast<U>(bytes);
+				}
+			}
+		}
+
+		/**
+		 * @brief Text string types that are not generic containers.
 		 * @tparam T Type to test.
+		 *
+		 * Includes `std::string`, `std::wstring`, `std::u16string` and
+		 * `std::u32string`. They must stay out of @ref Container so
+		 * @ref Serializable routes them through @ref Detail::Codec.
 		 *
 		 * @code
 		 * template<Type::String T>
@@ -173,13 +152,18 @@ namespace StormByte {
 		 * @endcode
 		 */
 		template<typename T>
-		concept String = is_string<T>::value;
+		concept String =
+			std::same_as<T, std::string> ||
+			std::same_as<T, std::wstring> ||
+			std::same_as<T, std::u16string> ||
+			std::same_as<T, std::u32string>;
 
 		/**
-		 * @brief Type with `begin()`, `end()` and `value_type`, excluding string types.
-		 * @tparam T Type to test.
+		 * @brief Has `begin()`, `end()` and `value_type`, and is not a @ref String.
+		 * @tparam T Type to test (cv/ref as written; strings use `std::decay_t`).
 		 *
-		 * Strings are excluded so they are not treated as generic sequences.
+		 * Strings are excluded so serialization / pretty-print do not treat
+		 * them as generic sequences of code units.
 		 *
 		 * @code
 		 * template<Type::Container T>
@@ -187,13 +171,19 @@ namespace StormByte {
 		 * @endcode
 		 */
 		template<typename T>
-		concept Container = is_container<T>::value;
+		concept Container =
+			requires(T t) {
+				t.begin();
+				t.end();
+				typename T::value_type;
+			} && !String<std::decay_t<T>>;
 
 		/**
-		 * @brief Container that defines a nested `key_type`.
-		 * @tparam C Container type.
+		 * @brief @ref Container that publishes a nested `key_type`.
+		 * @tparam C Container type (cv/ref ignored for the nested lookup).
 		 *
-		 * Typical matches: `std::map`, `std::set`, `std::unordered_map`, `std::unordered_set`.
+		 * Typical matches: `std::map`, `std::set`, `std::unordered_map`,
+		 * `std::unordered_set`.
 		 *
 		 * @code
 		 * template<Type::HasKeyType T>
@@ -201,12 +191,13 @@ namespace StormByte {
 		 * @endcode
 		 */
 		template<typename C>
-		concept HasKeyType = Container<std::remove_cvref_t<C>> &&
+		concept HasKeyType =
+			Container<std::remove_cvref_t<C>> &&
 			requires { typename std::remove_cvref_t<C>::key_type; };
 
 		/**
-		 * @brief Container that defines a nested `mapped_type`.
-		 * @tparam C Container type.
+		 * @brief @ref Container that publishes a nested `mapped_type`.
+		 * @tparam C Container type (cv/ref ignored for the nested lookup).
 		 *
 		 * Typical matches: `std::map`, `std::unordered_map`.
 		 *
@@ -216,11 +207,12 @@ namespace StormByte {
 		 * @endcode
 		 */
 		template<typename C>
-		concept HasMappedType = Container<std::remove_cvref_t<C>> &&
+		concept HasMappedType =
+			Container<std::remove_cvref_t<C>> &&
 			requires { typename std::remove_cvref_t<C>::mapped_type; };
 
 		/**
-		 * @brief Container that accepts `push_back(value)`.
+		 * @brief @ref Container that accepts `push_back(value)`.
 		 * @tparam C Container type (cv/ref ignored).
 		 *
 		 * Typical matches: `std::vector`, `std::deque`, `std::list`.
@@ -232,15 +224,17 @@ namespace StormByte {
 		template<typename C>
 		concept HasPushBack =
 			Container<std::remove_cvref_t<C>> &&
-			requires(std::remove_cvref_t<C>& c, typename std::remove_cvref_t<C>::value_type const& v) {
+			requires(std::remove_cvref_t<C>& c,
+					typename std::remove_cvref_t<C>::value_type const& v) {
 				c.push_back(v);
 			};
 
 		/**
-		 * @brief Container that accepts `push_front(value)`.
+		 * @brief @ref Container that accepts `push_front(value)`.
 		 * @tparam C Container type (cv/ref ignored).
 		 *
-		 * Typical matches: `std::deque`, `std::list`. `std::vector` does **not** match.
+		 * Typical matches: `std::deque`, `std::list`. `std::vector` does
+		 * **not** match.
 		 *
 		 * @code
 		 * static_assert(Type::HasPushFront<std::deque<int>>);
@@ -250,19 +244,21 @@ namespace StormByte {
 		template<typename C>
 		concept HasPushFront =
 			Container<std::remove_cvref_t<C>> &&
-			requires(std::remove_cvref_t<C>& c, typename std::remove_cvref_t<C>::value_type const& v) {
+			requires(std::remove_cvref_t<C>& c,
+					typename std::remove_cvref_t<C>::value_type const& v) {
 				c.push_front(v);
 			};
 
 		/**
-		 * @brief Associative container that accepts `insert(value)`.
+		 * @brief Associative @ref Container that accepts `insert(value)`.
 		 * @tparam C Container type (cv/ref ignored).
 		 *
-		 * Requires `key_type` and/or `mapped_type` so sequence containers whose
-		 * `insert` is positional (`insert(iterator, value)`, e.g. `std::vector`)
-		 * do not satisfy this concept on any standard library.
+		 * Requires @ref HasKeyType or @ref HasMappedType so positional
+		 * `insert(iterator, value)` on `std::vector` does not satisfy this
+		 * on any standard library.
 		 *
-		 * Typical matches: `std::map`, `std::set`, `std::unordered_map`, `std::unordered_set`.
+		 * Typical matches: `std::map`, `std::set`, `std::unordered_map`,
+		 * `std::unordered_set`.
 		 *
 		 * @code
 		 * static_assert(Type::HasInsert<std::map<int, int>>);
@@ -274,13 +270,14 @@ namespace StormByte {
 		concept HasInsert =
 			Container<std::remove_cvref_t<C>> &&
 			(HasKeyType<C> || HasMappedType<C>) &&
-			requires(std::remove_cvref_t<C>& c, typename std::remove_cvref_t<C>::value_type const& v) {
+			requires(std::remove_cvref_t<C>& c,
+					typename std::remove_cvref_t<C>::value_type const& v) {
 				c.insert(v);
 			};
 
 		/**
-		 * @brief Container that supports `operator[]` with key or index type @p U.
-		 * @tparam C Container type.
+		 * @brief @ref Container that supports `operator[]` with key/index @p U.
+		 * @tparam C Container type as written (no cv/ref strip — historical).
 		 * @tparam U Key or index type passed to `operator[]`.
 		 *
 		 * @code
@@ -294,8 +291,10 @@ namespace StormByte {
 		};
 
 		/**
-		 * @brief Matches `std::optional<U>` for some `U`.
-		 * @tparam T Type to test.
+		 * @brief Exactly `std::optional<U>` for some `U`.
+		 * @tparam T Type to test (no decay).
+		 *
+		 * A type that merely has `value_type` does not match.
 		 *
 		 * @code
 		 * template<Type::Optional T>
@@ -303,11 +302,16 @@ namespace StormByte {
 		 * @endcode
 		 */
 		template<typename T>
-		concept Optional = is_optional<T>::value;
+		concept Optional =
+			requires { typename T::value_type; } &&
+			std::same_as<T, std::optional<typename T::value_type>>;
 
 		/**
-		 * @brief Type with `first` and `second` members (e.g. `std::pair`).
+		 * @brief Type with accessible `first` and `second` members.
 		 * @tparam T Type to test.
+		 *
+		 * Broader than `std::pair`: any struct with those members matches.
+		 * That is intentional and must stay that way.
 		 *
 		 * @code
 		 * template<Type::Pair T>
@@ -315,7 +319,10 @@ namespace StormByte {
 		 * @endcode
 		 */
 		template<typename T>
-		concept Pair = is_pair<T>::value;
+		concept Pair = requires(T t) {
+			t.first;
+			t.second;
+		};
 
 		/**
 		 * @brief Lvalue or rvalue reference type.
@@ -330,8 +337,8 @@ namespace StormByte {
 		concept Reference = std::is_reference_v<T>;
 
 		/**
-		 * @brief Enumeration type (`enum` or `enum class`).
-		 * @tparam E Type to test.
+		 * @brief Unscoped or scoped enumeration (`enum` / `enum class`).
+		 * @tparam E Type to test (cv stripped).
 		 *
 		 * @code
 		 * template<Type::Enum E>
@@ -342,7 +349,7 @@ namespace StormByte {
 		concept Enum = std::is_enum_v<std::remove_cv_t<E>>;
 
 		/**
-		 * @brief Enumeration whose underlying type is unsigned.
+		 * @brief @ref Enum whose underlying type is unsigned.
 		 * @tparam E Type to test.
 		 *
 		 * @code
@@ -356,7 +363,7 @@ namespace StormByte {
 			std::is_unsigned_v<std::underlying_type_t<std::remove_cv_t<E>>>;
 
 		/**
-		 * @brief Scoped enumeration (`enum class`).
+		 * @brief Scoped enumeration (`enum class` / `enum struct`).
 		 * @tparam E Type to test.
 		 *
 		 * @code
@@ -369,7 +376,7 @@ namespace StormByte {
 
 		/**
 		 * @brief Underlying integer type of enumeration @p E.
-		 * @tparam E Enumeration type.
+		 * @tparam E Enumeration type satisfying @ref Enum.
 		 *
 		 * @code
 		 * enum class Foo : uint16_t { A };
@@ -382,8 +389,8 @@ namespace StormByte {
 
 		/**
 		 * @brief Converts an enumeration value to its underlying integer.
-		 * @tparam E Enumeration type.
-		 * @param e Value to convert.
+		 * @tparam E Enumeration type satisfying @ref Enum.
+		 * @param[in] e Value to convert.
 		 * @return Underlying integer representation of @p e.
 		 *
 		 * @code
@@ -398,7 +405,7 @@ namespace StormByte {
 		}
 
 		/**
-		 * @brief Raw pointer type.
+		 * @brief Raw (possibly cv-qualified) pointer type. Not a smart pointer.
 		 * @tparam T Type to test.
 		 *
 		 * @code
@@ -410,7 +417,7 @@ namespace StormByte {
 		concept Pointer = std::is_pointer_v<T>;
 
 		/**
-		 * @brief Integer type (`int`, `long`, `short`, …).
+		 * @brief Integral type (`bool`, `char`, `int`, `long`, …), including cv.
 		 * @tparam T Type to test.
 		 *
 		 * @code
@@ -446,8 +453,10 @@ namespace StormByte {
 		concept Arithmetic = std::is_arithmetic_v<T>;
 
 		/**
-		 * @brief Signed arithmetic type.
+		 * @brief Signed arithmetic type (`std::is_signed`).
 		 * @tparam T Type to test.
+		 *
+		 * @note Floating-point types are signed. `bool` is not.
 		 *
 		 * @code
 		 * template<Type::Signed T>
@@ -458,20 +467,23 @@ namespace StormByte {
 		concept Signed = std::is_signed_v<T>;
 
 		/**
-		 * @brief Unsigned arithmetic type.
+		 * @brief Unsigned arithmetic type (`std::is_unsigned`).
 		 * @tparam T Type to test.
 		 *
 		 * @code
 		 * template<Type::Unsigned T>
-		 * bool check(T value) { return value >= 0; }
+		 * bool non_negative(T value) { return value >= T{0}; }
 		 * @endcode
 		 */
 		template<typename T>
 		concept Unsigned = std::is_unsigned_v<T>;
 
 		/**
-		 * @brief Const-qualified type.
-		 * @tparam T Type to test.
+		 * @brief Top-level `const` qualifier (`std::is_const_v`).
+		 * @tparam T Type to test as written.
+		 *
+		 * `const int` matches. `int&` and `const int&` do not: a reference
+		 * type is never `const` itself.
 		 *
 		 * @code
 		 * template<Type::Const T>
@@ -482,7 +494,7 @@ namespace StormByte {
 		concept Const = std::is_const_v<T>;
 
 		/**
-		 * @brief Class or struct type.
+		 * @brief Class or struct type (not union, not enum).
 		 * @tparam T Type to test.
 		 *
 		 * @code
@@ -494,7 +506,7 @@ namespace StormByte {
 		concept Class = std::is_class_v<T>;
 
 		/**
-		 * @brief Instantiation of `std::variant`.
+		 * @brief Instantiation of `std::variant`, after stripping cv/ref.
 		 * @tparam T Type to test.
 		 *
 		 * @code
@@ -503,12 +515,12 @@ namespace StormByte {
 		 * @endcode
 		 */
 		template<typename T>
-		concept Variant = is_variant<std::remove_cvref_t<T>>::value;
+		concept Variant = Detail::is_variant_v<std::remove_cvref_t<T>>;
 
 		/**
-		 * @brief Variant @p T that lists @p U among its alternatives.
-		 * @tparam T Variant type.
-		 * @tparam U Alternative to look for.
+		 * @brief @ref Variant @p T that lists @p U among its alternatives.
+		 * @tparam T Variant type (cv/ref stripped before the lookup).
+		 * @tparam U Alternative to look for (cv/ref stripped).
 		 *
 		 * @code
 		 * template<typename T, typename U>
@@ -517,10 +529,12 @@ namespace StormByte {
 		 * @endcode
 		 */
 		template<typename T, typename U>
-		concept VariantHasType = Variant<T> && variant_has_type<std::remove_cvref_t<T>, U>::value;
+		concept VariantHasType =
+			Variant<T> &&
+			Detail::variant_has_type_v<std::remove_cvref_t<T>, U>;
 
 		/**
-		 * @brief Type that may be copied with `memcpy`.
+		 * @brief Type that may be copied with `memcpy` / as-if `memcpy`.
 		 * @tparam T Type to test.
 		 *
 		 * @code
@@ -544,7 +558,7 @@ namespace StormByte {
 		concept TriviallyDestructible = std::is_trivially_destructible_v<T>;
 
 		/**
-		 * @brief Type constructible without arguments.
+		 * @brief Type constructible from an empty initializer (`T{}` / `T()`).
 		 * @tparam T Type to test.
 		 *
 		 * @code
@@ -580,9 +594,9 @@ namespace StormByte {
 		concept MoveConstructible = std::is_move_constructible_v<T>;
 
 		/**
-		 * @brief Invocable with the given argument types.
+		 * @brief Invocable with argument types @p Args (`std::is_invocable`).
 		 * @tparam F Callable type.
-		 * @tparam Args Argument types.
+		 * @tparam Args Argument types passed to `F`.
 		 *
 		 * @code
 		 * template<typename F, typename... Args>
@@ -594,9 +608,12 @@ namespace StormByte {
 		concept Callable = std::is_invocable_v<F, Args...>;
 
 		/**
-		 * @brief Types that are the same after removing cv-qualifiers and references.
+		 * @brief Same type after stripping cv and references from both sides.
 		 * @tparam T First type.
 		 * @tparam U Second type.
+		 *
+		 * @note Not `std::same_as`: that does not strip. `int` and `const int&`
+		 *       match here.
 		 *
 		 * @code
 		 * template<typename T, typename U>
@@ -605,12 +622,16 @@ namespace StormByte {
 		 * @endcode
 		 */
 		template<typename T, typename U>
-		concept SameAs = std::is_same_v<std::remove_cvref_t<T>, std::remove_cvref_t<U>>;
+		concept SameAs =
+			std::is_same_v<std::remove_cvref_t<T>, std::remove_cvref_t<U>>;
 
 		/**
-		 * @brief @p From is implicitly convertible to @p To.
+		 * @brief @p From is implicitly convertible to @p To (`std::is_convertible`).
 		 * @tparam From Source type.
-		 * @tparam To Target type.
+		 * @tparam To Destination type.
+		 *
+		 * @note Not `std::convertible_to`: that also requires an explicit
+		 *       `To` construct from `From` and would tighten the contract.
 		 *
 		 * @code
 		 * template<typename From, typename To>
@@ -621,4 +642,12 @@ namespace StormByte {
 		template<typename From, typename To>
 		concept ConvertibleTo = std::is_convertible_v<From, To>;
 	}
+
+	/**
+	 * @brief Endian swap used by @ref Serializable on big-endian hosts.
+	 *
+	 * Alias of @ref Type::Detail::swap_endian so existing call sites that
+	 * include only this header keep compiling until Serializable is updated.
+	 */
+	using Type::Detail::swap_endian;
 }
