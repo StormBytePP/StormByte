@@ -3,23 +3,26 @@
 ![Windows](https://img.shields.io/badge/Windows-Supported-0078D6?logo=windows&logoColor=white)
 ![macOS](https://img.shields.io/badge/macOS-Supported-0078D6?logo=apple&logoColor=white)
 ![C++26](https://img.shields.io/badge/C%2B%2B-26-00599C?logo=c%2B%2B&logoColor=white)
-![CMake](https://img.shields.io/badge/CMake-3.12+-064F8C?logo=cmake&logoColor=white)
+![CMake](https://img.shields.io/badge/CMake-3.28+-064F8C?logo=cmake&logoColor=white)
 ![License: LGPL v3](https://img.shields.io/badge/License-LGPL_v3-blue.svg)
 [![CI](https://github.com/StormBytePP/StormByte/actions/workflows/ci.yml/badge.svg)](https://github.com/StormBytePP/StormByte/actions/workflows/ci.yml)
 
-StormByte is a comprehensive, cross-platform C++ library aimed at easing system programming, configuration management, logging, and database handling tasks. This library provides a unified API that abstracts away the complexities and inconsistencies of different platforms (Windows, Linux).
+StormByte is a comprehensive, cross-platform C++ library aimed at easing system programming, configuration management, logging, and database handling tasks. This library provides a unified API that abstracts away the complexities and inconsistencies of different platforms (Windows, Linux, macOS).
+
+This repository is **StormByte Base**: templates, exceptions, expected, serialization, strings, system helpers and type concepts. The other modules listed below live in their own repositories and depend on this one.
 
 ## Features
 
-- **Configuration Management**: Provides an intuitive API for reading and writing configuration files.
-- **Database Handling**: Includes SQLite support for embedded database management while hiding SQLite3 internals conveniently.
-- **Buffers**: Provides a variety of buffer types for managing byte data in both single-threaded and multi-threaded environments. This includes lightweight non-thread-safe buffers, thread-safe shared buffers, and robust producer/consumer models that track buffer status.
-- **Logging**: Offers various logging levels, customizable formats, and supports outputs to files, streams, or other destinations.
-- **Multimedia**: Includes a set of classes to work with multimedia files.
-- **Network**: Contains everything needed to handle network communication portable to Linux and Windows.
-- **System Operations**: Manages pipes, processes, and system variables seamlessly across different platforms.
-- **Serialization**: Provides a flexible serialization/deserialization framework that works with trivial types, standard containers, pairs, optionals, and can be extended for custom types through template specialization.
-- **Cryptographic functions**: Cryptographic functions for encrypting, decrypting, hashing, signing and verify signatures.
+- **Configuration Management**: Provides an intuitive API for reading and writing configuration files ([StormByte-Config](https://github.com/StormBytePP/StormByte-Config)).
+- **Database Handling**: Includes SQLite / PostgreSQL / MariaDB support while hiding vendor internals ([StormByte-Database](https://github.com/StormBytePP/StormByte-Database)).
+- **Buffers**: Provides a variety of buffer types for managing byte data in both single-threaded and multi-threaded environments ([StormByte-Buffer](https://github.com/StormBytePP/StormByte-Buffer)).
+- **Logging**: Offers various logging levels, customizable formats, and supports outputs to files, streams, or other destinations ([StormByte-Logger](https://github.com/StormBytePP/StormByte-Logger)).
+- **Multimedia**: Includes a set of classes to work with multimedia files ([StormByte-Multimedia](https://github.com/StormBytePP/StormByte-Multimedia)).
+- **Network**: Contains everything needed to handle network communication portable to Linux, Windows and macOS ([StormByte-Network](https://github.com/StormBytePP/StormByte-Network)).
+- **System Operations**: Manages pipes, processes, and system variables seamlessly across different platforms ([StormByte-System](https://github.com/StormBytePP/StormByte-System)).
+- **Serialization**: Little-endian binary encode/decode for trivial types, STL containers, pairs, optionals and text. Custom types extend via `StormByte::Detail::Codec<T>`.
+- **Cryptographic functions**: Encrypting, decrypting, hashing, signing and verifying signatures ([StormByte-Crypto](https://github.com/StormBytePP/StormByte-Crypto)).
+- **Type concepts**: C++26 concepts under `StormByte::Type` (`String`, `Container`, `Optional`, `Pair`, …) used by the rest of the suite.
 
 ## Table of Contents
 
@@ -57,7 +60,7 @@ You can visit the code repository at [GitHub](https://github.com/StormBytePP/Sto
 Ensure you have the following installed:
 
 - C++26 compatible compiler
-- CMake 3.12 or higher
+- CMake 3.28 or higher
 
 ### Building
 
@@ -78,7 +81,7 @@ StormByte Library is composed of several modules:
 
 ### Base
 
-The Base component is the core of the library containing only templates, string helpers, and the base exception framework.
+The Base component is the core of the library containing only templates, string helpers, serialization, system helpers and the base exception framework.
 
 ### Exception Handling
 
@@ -86,7 +89,7 @@ The `Exception` class provides a consistent, cross-platform mechanism for error 
 
 #### Features
 - **Formatted Messages**: Supports `std::format` for constructing exception messages
-- **Cross-Platform**: Works consistently across Windows and Linux
+- **Cross-Platform**: Works consistently across Windows, Linux and macOS
 - **DLL-Safe**: Uses `const char*` internally to avoid std::string ABI issues
 - **Inheritable**: Can be subclassed for domain-specific exceptions
 
@@ -113,13 +116,13 @@ int main() {
     } catch (const Exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
     }
-    
+
     try {
         process_data(150);
     } catch (const Exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
     }
-    
+
     return 0;
 }
 ```
@@ -167,12 +170,12 @@ int main() {
     } else {
         std::cerr << "Error: " << result.error()->what() << std::endl;
     }
-    
+
     auto config = read_config("");
     if (!config) {
         std::cerr << "Config error: " << config.error()->what() << std::endl;
     }
-    
+
     return 0;
 }
 ```
@@ -192,35 +195,38 @@ int main() {
     // Get the error category singleton
     const auto& cat = Error::category();
     std::cout << "Error category: " << cat.name() << std::endl;
-    
+
     // Create error codes (when codes are defined)
     // std::error_code ec = make_error_code(Error::Code::SomeError);
-    
+
     return 0;
 }
 ```
 
 ### Serialization
 
-The `Serializable` template class provides a flexible and efficient way to serialize and deserialize data into byte vectors (`std::vector<std::byte>`). It automatically handles trivially copyable types, standard containers (like `std::vector`, `std::map`), pairs, optionals, and can be extended for custom types through template specialization.
+The `Serializable` template class encodes and decodes a value into `std::vector<std::byte>`. Dispatch is by concept, in this order: optional, pair, container, trivially copyable, then `Detail::Codec<T>` for everything else.
+
+The wire format is always **little-endian**. There is no BOM, no version tag and no runtime endian sniff. `Read` consumes a prefix and leaves leftover bytes to the caller.
 
 #### Features
-- **Automatic Type Detection**: Automatically selects the appropriate serialization method based on the type
-- **Container Support**: Works seamlessly with STL containers
-- **Pair and Optional Support**: Built-in support for `std::pair` and `std::optional`
-- **Extensible**: Can be specialized for custom types
-- **Type-Safe**: Uses `Expected<T, DeserializeError>` for safe deserialization with error handling
-- **Zero-Copy Deserialization**: Supports `std::span<const std::byte>` for efficient deserialization without allocations
-- **Alignment-Safe**: Uses `std::memcpy` internally to avoid undefined behavior with misaligned data
+- **Automatic Type Detection**: Selects the path from `Type::Optional` / `Pair` / `Container` / trivial / `Codec`
+- **Container Support**: `std::vector`, `std::map`, `std::set`, … (`uint64` count LE, then elements)
+- **Pair and Optional Support**: Built-in. Optionals are `bool has_value` then the value; never a raw `optional` memcpy (padding on MSVC)
+- **Text**: `std::string` is `uint64` byte count LE + raw bytes. `wstring` / `u16string` / `u32string` use the same layout with a **UTF-8** payload (host `wchar_t` width never appears on the wire)
+- **Extensible**: Specialize `StormByte::Detail::Codec<T>` — do not specialize `Serializable<T>` itself
+- **Type-Safe**: Uses `Expected<T, DeserializeError>` for deserialization
+- **Span input**: `Deserialize(std::span<const std::byte>)` does not copy the input buffer
+- **Alignment-Safe**: Trivial types use `std::memcpy` plus `Type::Detail::swap_endian` on big-endian hosts
 
 #### Built-in Type Support
 
 The library automatically handles:
-- **Trivially copyable types**: `int`, `float`, `double`, `char`, etc.
-- **Containers**: `std::vector`, `std::list`, `std::map`, `std::set`, etc.
-- **Pairs**: `std::pair<T1, T2>`
+- **Trivially copyable types**: `int`, `float`, `double`, `bool` (only bytes `0` and `1`), enums, small PODs
+- **Containers**: anything matching `Type::Container` (has `begin` / `end` / `value_type` and is not a `Type::String`)
+- **Pairs**: anything matching `Type::Pair` (`first` and `second`)
 - **Optionals**: `std::optional<T>`
-- **Strings**: `std::string` (as a container of characters)
+- **Strings**: `std::string`, `std::wstring`, `std::u16string`, `std::u32string` via `Detail::Codec` — not as a container of code units
 
 #### Example Usage with Built-in Types
 
@@ -233,34 +239,31 @@ The library automatically handles:
 using namespace StormByte;
 
 int main() {
-    // Serialize an integer
+    // Serialize an integer (wire is little-endian: 42 → 2a 00 00 00)
     int number = 42;
     Serializable<int> intSer(number);
     std::vector<std::byte> intData = intSer.Serialize();
-    
-    // Deserialize the integer
+
     auto deserializedInt = Serializable<int>::Deserialize(intData);
     if (deserializedInt) {
         std::cout << "Deserialized int: " << deserializedInt.value() << std::endl;
     }
-    
-    // Serialize a string
+
+    // Serialize a string (uint64 length LE + raw bytes)
     std::string text = "Hello, World!";
     Serializable<std::string> strSer(text);
     std::vector<std::byte> strData = strSer.Serialize();
-    
-    // Deserialize the string
+
     auto deserializedStr = Serializable<std::string>::Deserialize(strData);
     if (deserializedStr) {
         std::cout << "Deserialized string: " << deserializedStr.value() << std::endl;
     }
-    
+
     // Serialize a vector
     std::vector<int> numbers = {1, 2, 3, 4, 5};
     Serializable<std::vector<int>> vecSer(numbers);
     std::vector<std::byte> vecData = vecSer.Serialize();
-    
-    // Deserialize the vector
+
     auto deserializedVec = Serializable<std::vector<int>>::Deserialize(vecData);
     if (deserializedVec) {
         std::cout << "Deserialized vector: ";
@@ -269,25 +272,27 @@ int main() {
         }
         std::cout << std::endl;
     }
-    
-    // Zero-copy deserialization using std::span
+
+    // Deserialize from a span (no extra copy of the input buffer)
     std::span<const std::byte> dataSpan(vecData.data(), vecData.size());
     auto spanResult = Serializable<std::vector<int>>::Deserialize(dataSpan);
     if (spanResult) {
-        std::cout << "Deserialized from span without copying!" << std::endl;
+        std::cout << "Deserialized from span" << std::endl;
     }
-    
+
     return 0;
 }
 ```
 
 #### Extending Serialization for Custom Types
 
-You can extend the serialization framework for your custom types by implementing the `SerializeComplex()` and `DeserializeComplex()` methods, or by providing template specializations. Here's an example:
+Specialize `StormByte::Detail::Codec<T>` with `Size`, `Write` and `Read`. `Serializable<T>` will pick it up on the complex path. The three members must agree: `Size(v) == Write(v).size()`, and `Read` consumes that prefix.
 
 ```cpp
+#include <StormByte/helpers.hxx>
 #include <StormByte/serializable.hxx>
 #include <iostream>
+#include <string>
 #include <vector>
 
 using namespace StormByte;
@@ -297,82 +302,69 @@ struct Point {
     int y;
 };
 
-// Specialize the Serializable class for Point
-namespace StormByte {
-    template<>
-    class Serializable<Point> {
-    public:
-        Serializable(const Point& data) : m_data(data) {}
+template<>
+struct StormByte::Detail::Codec<Point> {
+    static std::size_t Size(const Point& v) noexcept {
+        return Serializable<int>::Size(v.x) + Serializable<int>::Size(v.y);
+    }
 
-        std::vector<std::byte> Serialize() const noexcept {
-            std::vector<std::byte> buffer;
-            
-            // Serialize x coordinate
-            Serializable<int> xSer(m_data.x);
-            auto xData = xSer.Serialize();
-            buffer.insert(buffer.end(), xData.begin(), xData.end());
-            
-            // Serialize y coordinate
-            Serializable<int> ySer(m_data.y);
-            auto yData = ySer.Serialize();
-            buffer.insert(buffer.end(), yData.begin(), yData.end());
-            
-            return buffer;
-        }
+    static std::vector<std::byte> Write(const Point& v) noexcept {
+        std::vector<std::byte> buffer;
+        append_vector(buffer, Serializable<int>(v.x).Serialize());
+        append_vector(buffer, Serializable<int>(v.y).Serialize());
+        return buffer;
+    }
 
-        static Expected<Point, DeserializeError> Deserialize(std::span<const std::byte> data) noexcept {
-            std::size_t offset = 0;
-            
-            // Deserialize x coordinate
-            if (offset + sizeof(int) > data.size())
-                return Unexpected<DeserializeError>("Insufficient data for Point.x");
-            
-            auto x = Serializable<int>::Deserialize(data.subspan(offset, sizeof(int)));
-            if (!x) return Unexpected(x.error());
-            offset += sizeof(int);
-            
-            // Deserialize y coordinate
-            if (offset + sizeof(int) > data.size())
-                return Unexpected<DeserializeError>("Insufficient data for Point.y");
-            
-            auto y = Serializable<int>::Deserialize(data.subspan(offset, sizeof(int)));
-            if (!y) return Unexpected(y.error());
-            
-            return Point{x.value(), y.value()};
-        }
-        
-        // Convenience overload for vector
-        static Expected<Point, DeserializeError> Deserialize(const std::vector<std::byte>& data) noexcept {
-            return Deserialize(std::span<const std::byte>(data.data(), data.size()));
-        }
+    static Expected<Point, DeserializeError> Read(std::span<const std::byte> data) noexcept {
+        auto x = Serializable<int>::Deserialize(data);
+        if (!x)
+            return Unexpected(x.error());
 
-    private:
-        const Point& m_data;
-    };
-}
+        const std::size_t x_size = Serializable<int>::Size(x.value());
+        if (x_size > data.size())
+            return Unexpected<DeserializeError>("Insufficient data for Point.y");
+
+        auto y = Serializable<int>::Deserialize(data.subspan(x_size));
+        if (!y)
+            return Unexpected(y.error());
+
+        return Point{ x.value(), y.value() };
+    }
+};
 
 int main() {
     Point p = {10, 20};
     Serializable<Point> serializer(p);
 
-    // Serialize
     std::vector<std::byte> data = serializer.Serialize();
     std::cout << "Serialized Point (" << p.x << ", " << p.y << ")" << std::endl;
 
-    // Deserialize
     auto deserialized = Serializable<Point>::Deserialize(data);
     if (deserialized) {
         Point deserializedPoint = deserialized.value();
-        std::cout << "Deserialized Point: (" << deserializedPoint.x << ", " << deserializedPoint.y << ")" << std::endl;
+        std::cout << "Deserialized Point: ("
+                  << deserializedPoint.x << ", "
+                  << deserializedPoint.y << ")" << std::endl;
     } else {
-        std::cerr << "Deserialization failed: " << deserialized.error()->what() << std::endl;
+        std::cerr << "Deserialization failed: "
+                  << deserialized.error()->what() << std::endl;
     }
 
     return 0;
 }
 ```
 
-**Note**: By implementing template specializations in your library, you can extend serialization support to any custom type, making it seamlessly integrate with the built-in serialization framework.
+Wide text on the wire is UTF-8, so a `wstring` blob and a `u16string` blob of the same characters compare equal and survive Windows (`wchar_t` = 2) vs POSIX (`wchar_t` = 4):
+
+```cpp
+std::wstring wide = L"StormByte";
+std::u16string u16 = u"StormByte";
+auto a = Serializable<std::wstring>(wide).Serialize();
+auto b = Serializable<std::u16string>(u16).Serialize();
+assert(a == b);
+```
+
+**Note**: Specialize `Detail::Codec<T>` from other StormByte modules. Do not specialize `Serializable<T>` and do not reintroduce `SerializeComplex` / `DeserializeComplex`.
 
 ### String Utilities
 
@@ -381,7 +373,6 @@ The `String` namespace provides a comprehensive set of utilities for string mani
 #### Features
 - **Case Conversion**: Convert strings to uppercase or lowercase
 - **String Splitting**: Split strings by delimiters or whitespace
-- **Fraction Parsing**: Parse and scale fraction strings
 - **Human-Readable Formatting**: Format numbers and byte sizes in human-readable formats
 - **UTF-8 Encoding/Decoding**: Convert between wide strings and UTF-8
 - **Byte Vector Conversion**: Convert between strings and byte vectors
@@ -398,13 +389,13 @@ using namespace StormByte::String;
 
 int main() {
     std::string text = "Hello World";
-    
+
     std::string lower = ToLower(text);  // "hello world"
     std::string upper = ToUpper(text);  // "HELLO WORLD"
-    
+
     std::cout << "Lower: " << lower << std::endl;
     std::cout << "Upper: " << upper << std::endl;
-    
+
     return 0;
 }
 ```
@@ -421,20 +412,20 @@ int main() {
     // Split by delimiter into a queue
     std::string path = "path/to/file.txt";
     std::queue<std::string> parts = Explode(path, '/');
-    
+
     while (!parts.empty()) {
         std::cout << parts.front() << std::endl;
         parts.pop();
     }
-    
+
     // Split by whitespace into a vector
     std::string sentence = "Hello World from StormByte";
     std::vector<std::string> words = Split(sentence);
-    
+
     for (const auto& word : words) {
         std::cout << word << std::endl;
     }
-    
+
     return 0;
 }
 ```
@@ -451,12 +442,33 @@ int main() {
     uint64_t largeNumber = 1234567890;
     std::string formatted = HumanReadable(largeNumber, Format::HumanReadableNumber);
     std::cout << "Number: " << formatted << std::endl;  // "1,234,567,890"
-    
+
     // Format byte sizes in human-readable format
     uint64_t fileSize = 1536000;
     std::string readableSize = HumanReadable(fileSize, Format::HumanReadableBytes);
     std::cout << "Size: " << readableSize << std::endl;  // "1.46 MiB"
-    
+
+    return 0;
+}
+```
+
+##### UTF-8 Encoding/Decoding
+```cpp
+#include <StormByte/string.hxx>
+#include <iostream>
+
+using namespace StormByte::String;
+
+int main() {
+    // Convert wide string to UTF-8
+    std::wstring wide = L"Hello, 世界!";
+    std::string utf8 = UTF8Encode(wide);
+
+    std::cout << "UTF-8 encoded string" << std::endl;
+
+    // Convert UTF-8 back to wide string
+    std::wstring recovered = UTF8Decode(utf8);
+
     return 0;
 }
 ```
@@ -473,60 +485,13 @@ int main() {
     // Convert string to byte vector
     std::string text = "Hello, World!";
     std::vector<std::byte> bytes = ToByteVector(text);
-    
+
     std::cout << "Byte vector size: " << bytes.size() << std::endl;
-    
+
     // Convert byte vector back to string
     std::string recovered = FromByteVector(bytes);
     std::cout << "Recovered string: " << recovered << std::endl;
-    
-    return 0;
-}
-```
 
-##### Fraction Parsing
-```cpp
-#include <StormByte/string.hxx>
-#include <iostream>
-
-using namespace StormByte::String;
-
-int main() {
-    // Parse a fraction string
-    auto result = SplitFraction("3/4");
-    if (result) {
-        auto [numerator, denominator] = result.value();
-        std::cout << "Fraction: " << numerator << "/" << denominator << std::endl;
-    }
-    
-    // Parse and scale a fraction to a specific denominator
-    auto scaled = SplitFraction("3/4", 16);
-    if (scaled) {
-        auto [num, denom] = scaled.value();
-        std::cout << "Scaled: " << num << "/" << denom << std::endl;  // "12/16"
-    }
-    
-    return 0;
-}
-```
-
-##### UTF-8 Encoding/Decoding
-```cpp
-#include <StormByte/string.hxx>
-#include <iostream>
-
-using namespace StormByte::String;
-
-int main() {
-    // Convert wide string to UTF-8
-    std::wstring wide = L"Hello, 世界!";
-    std::string utf8 = UTF8Encode(wide);
-    
-    std::cout << "UTF-8 encoded string" << std::endl;
-    
-    // Convert UTF-8 back to wide string
-    std::wstring recovered = UTF8Decode(utf8);
-    
     return 0;
 }
 ```
@@ -537,7 +502,7 @@ The `System` namespace provides cross-platform utilities for common system opera
 
 #### Features
 - **Temporary File Management**: Safely create temporary files with custom prefixes
-- **Path Operations**: Get current working directory
+- **Path Operations**: Get current working directory and executable path
 - **Sleep Functions**: Cross-platform sleep with any `std::chrono::duration`
 
 #### Available Functions
@@ -554,19 +519,19 @@ int main() {
     // Create a temporary file with default prefix
     std::filesystem::path tempFile = TempFileName();
     std::cout << "Temp file: " << tempFile << std::endl;
-    
+
     // Create a temporary file with custom prefix
     std::filesystem::path customTemp = TempFileName("myapp");
     std::cout << "Custom temp file: " << customTemp << std::endl;
-    
+
     // Use the temporary file
     std::ofstream file(customTemp);
     file << "Temporary data" << std::endl;
     file.close();
-    
+
     // Clean up
     std::filesystem::remove(customTemp);
-    
+
     return 0;
 }
 ```
@@ -582,7 +547,7 @@ int main() {
     // Get the current working directory
     std::filesystem::path current = CurrentPath();
     std::cout << "Current directory: " << current << std::endl;
-    
+
     return 0;
 }
 ```
@@ -598,18 +563,18 @@ using namespace std::chrono_literals;
 
 int main() {
     std::cout << "Sleeping for 2 seconds..." << std::endl;
-    
+
     // Sleep for 2 seconds
     Sleep(2s);
-    
+
     std::cout << "Awake!" << std::endl;
-    
+
     // Sleep for 500 milliseconds
     Sleep(500ms);
-    
+
     // Sleep for 1 minute
     Sleep(std::chrono::minutes(1));
-    
+
     return 0;
 }
 ```
@@ -670,13 +635,13 @@ public:
         nested_operation();
         lock.Unlock();
     }
-    
+
     void nested_operation() {
         lock.Lock();  // Same thread, doesn't block
         value *= 2;
         lock.Unlock();
     }
-    
+
     int get_value() {
         lock.Lock();
         int v = value;
@@ -688,7 +653,7 @@ public:
 int main() {
     SharedResource resource;
     std::vector<std::thread> threads;
-    
+
     // Spawn multiple threads
     for (int i = 0; i < 10; ++i) {
         threads.emplace_back([&resource]() {
@@ -697,12 +662,12 @@ int main() {
             }
         });
     }
-    
+
     // Wait for all threads
     for (auto& t : threads) {
         t.join();
     }
-    
+
     std::cout << "Final value: " << resource.get_value() << std::endl;
     return 0;
 }
@@ -741,11 +706,11 @@ private:
 
 public:
     Circle(double r) : radius(r) {}
-    
+
     void draw() const override {
         std::cout << "Circle with radius: " << radius << std::endl;
     }
-    
+
     std::shared_ptr<Shape> Clone() const override {
         return MakePointer<Circle>(radius);
     }
@@ -757,11 +722,11 @@ private:
 
 public:
     Rectangle(double w, double h) : width(w), height(h) {}
-    
+
     void draw() const override {
         std::cout << "Rectangle " << width << "x" << height << std::endl;
     }
-    
+
     std::shared_ptr<Shape> Clone() const override {
         return MakePointer<Rectangle>(width, height);
     }
@@ -770,17 +735,69 @@ public:
 int main() {
     auto circle = Shape::MakePointer<Circle>(5.0);
     auto rect = Shape::MakePointer<Rectangle>(10.0, 20.0);
-    
+
     circle->draw();
     rect->draw();
-    
+
     // Clone shapes
     auto circle_copy = circle->Clone();
     auto rect_copy = rect->Clone();
-    
+
     circle_copy->draw();
     rect_copy->draw();
-    
+
+    return 0;
+}
+```
+
+### Type Traits
+
+StormByte exposes compile-time type inspection as **concepts** under `StormByte::Type`. There are no `is_string<T>::value` / `void_t` traits anymore.
+
+- **`Type::String`**: `std::string`, `std::wstring`, `std::u16string` or `std::u32string`
+- **`Type::Container`**: has `begin()`, `end()` and `value_type`, and is not a `Type::String`
+- **`Type::Optional`**: exactly `std::optional<U>`
+- **`Type::Pair`**: has accessible `first` and `second` (broader than `std::pair`)
+- **`Type::Reference`**: lvalue or rvalue reference
+- **`Type::Enum` / `Type::ScopedEnum` / `Type::ToUnderlying`**: enumerations
+- **`Type::Variant` / `Type::VariantHasType<T, U>`**: `std::variant` alternatives
+
+`Type::Detail::swap_endian` reverses the object representation of a trivially copyable value (`std::byteswap` for integrals, `std::bit_cast` otherwise). Serializable is the one that decides *when* to call it (host ≠ little-endian).
+
+#### Example Usage
+
+```cpp
+#include <StormByte/type_traits.hxx>
+#include <iostream>
+#include <vector>
+#include <optional>
+#include <string>
+
+using namespace StormByte;
+
+template<typename T>
+void process() {
+    if constexpr (Type::String<T>) {
+        std::cout << "String type" << std::endl;
+    } else if constexpr (Type::Container<T>) {
+        std::cout << "Container type" << std::endl;
+    } else if constexpr (Type::Optional<T>) {
+        std::cout << "Optional type" << std::endl;
+    } else if constexpr (Type::Pair<T>) {
+        std::cout << "Pair type" << std::endl;
+    } else {
+        std::cout << "Other type" << std::endl;
+    }
+}
+
+int main() {
+    process<std::string>();                    // String type
+    process<std::u16string>();                 // String type (not a container)
+    process<std::vector<int>>();               // Container type
+    process<std::optional<int>>();             // Optional type
+    process<std::pair<int, double>>();         // Pair type
+    process<int>();                            // Other type
+
     return 0;
 }
 ```
@@ -828,55 +845,6 @@ int main() {
     c.Remove(MyFlags::FlagB);
 
     std::cout << "Final value: " << static_cast<int>(Type::ToUnderlying(c.Value())) << std::endl;
-    return 0;
-}
-```
-
-### Type Traits
-
-StormByte provides several custom type traits for compile-time type inspection, particularly useful for template metaprogramming and serialization.
-
-#### Available Type Traits
-
-- **`is_string<T>`**: Checks if `T` is a string type (`std::string`, `std::wstring`, `std::u16string`, `std::u32string`)
-- **`is_container<T>`**: Checks if `T` is a container (has `begin()`, `end()`, `value_type`), excluding strings
-- **`is_optional<T>`**: Checks if `T` is `std::optional<U>`
-- **`is_pair<T>`**: Checks if `T` is `std::pair<U, V>` or has `first` and `second` members
-- **`is_reference<T>`**: Checks if `T` is a reference type
-
-#### Example Usage
-
-```cpp
-#include <StormByte/type_traits.hxx>
-#include <iostream>
-#include <vector>
-#include <optional>
-#include <string>
-
-using namespace StormByte;
-
-template<typename T>
-void process() {
-    if constexpr (is_string<T>::value) {
-        std::cout << "String type" << std::endl;
-    } else if constexpr (is_container<T>::value) {
-        std::cout << "Container type" << std::endl;
-    } else if constexpr (is_optional<T>::value) {
-        std::cout << "Optional type" << std::endl;
-    } else if constexpr (is_pair<T>::value) {
-        std::cout << "Pair type" << std::endl;
-    } else {
-        std::cout << "Other type" << std::endl;
-    }
-}
-
-int main() {
-    process<std::string>();                    // String type
-    process<std::vector<int>>();               // Container type
-    process<std::optional<int>>();             // Optional type
-    process<std::pair<int, double>>();         // Pair type
-    process<int>();                            // Other type
-    
     return 0;
 }
 ```
