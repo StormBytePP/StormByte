@@ -17,7 +17,6 @@ if(WIN32)
 endif()
 
 if(MSVC)
-	# /EHsc: optional; often already the default for CXX with MSVC/clang-cl
 	target_compile_options(StormByte PRIVATE
 		/EHsc
 		$<$<CONFIG:Release>:/O2>
@@ -25,7 +24,6 @@ if(MSVC)
 	)
 	target_compile_definitions(StormByte PUBLIC UNICODE NOMINMAX)
 else()
-	# Prefer target_ over mutating global CMAKE_CXX_FLAGS_DEBUG
 	target_compile_options(StormByte PRIVATE
 		$<$<CONFIG:Debug>:-pipe -g -ggdb -Wall -Wextra -Wnon-virtual-dtor -pedantic -pedantic-errors -O0>
 	)

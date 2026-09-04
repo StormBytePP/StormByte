@@ -1,8 +1,6 @@
 # StormByte
 
-![Linux](https://img.shields.io/badge/Linux-Supported-1793D1?logo=linux&logoColor=white)
-![Windows](https://img.shields.io/badge/Windows-Supported-0078D6?logo=windows&logoColor=white)
-![macOS](https://img.shields.io/badge/macOS-Supported-0078D6?logo=apple&logoColor=white)
+![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20macOS-lightgrey)
 ![C++26](https://img.shields.io/badge/C%2B%2B-26-00599C?logo=c%2B%2B&logoColor=white)
 ![CMake](https://img.shields.io/badge/CMake-3.28+-064F8C?logo=cmake&logoColor=white)
 ![License: LGPL v3](https://img.shields.io/badge/License-LGPL_v3-blue.svg)
