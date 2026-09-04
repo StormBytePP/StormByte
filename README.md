@@ -32,16 +32,16 @@ The suite is split on purpose. Buffer, Config, Crypto, Database, Logger, Multime
 | Module | Role |
 | --- | --- |
 | [Base](https://github.com/StormBytePP/StormByte) | This repository |
-| [Buffer](https://github.com/StormBytePP/StormByte-Buffer) | FIFO / shared buffers and pipelines |
-| [Config](https://github.com/StormBytePP/StormByte-Config) | Text and binary configuration documents |
-| [Crypto](https://github.com/StormBytePP/StormByte-Crypto) | Hash, compress, encrypt, sign — Crypto++ stays private |
-| [Database](https://github.com/StormBytePP/StormByte-Database) | SQLite / PostgreSQL / MariaDB behind one API |
-| [Logger](https://github.com/StormBytePP/StormByte-Logger) | Levels, sinks, format |
-| [Multimedia](https://github.com/StormBytePP/StormByte-Multimedia) | Decode / encode / containers without raw FFmpeg types |
-| [Network](https://github.com/StormBytePP/StormByte-Network) | Portable sockets |
-| [System](https://github.com/StormBytePP/StormByte-System) | Processes, pipes, environment |
+| [Buffer](https://github.com/StormBytePP/StormByte-Buffer) | FIFO, SharedFIFO, Ring, Producer/Consumer and multi-stage pipelines |
+| [Config](https://github.com/StormBytePP/StormByte-Config) | Human-readable text and versioned binary documents (groups, lists, raw bytes) |
+| [Crypto](https://github.com/StormBytePP/StormByte-Crypto) | Hash, compress, encrypt, sign and key agreement — Crypto++ never leaves the private tree |
+| [Database](https://github.com/StormBytePP/StormByte-Database) | One API for SQLite, PostgreSQL and MariaDB: prepared statements and RAII transactions |
+| [Logger](https://github.com/StormBytePP/StormByte-Logger) | Stream logger with levels, headers, human-readable sizes and redaction (`ThreadedLog`) |
+| [Multimedia](https://github.com/StormBytePP/StormByte-Multimedia) | Decode, encode and containers without raw FFmpeg types; codecs enabled only if present |
+| [Network](https://github.com/StormBytePP/StormByte-Network) | Framed packets, Client/Server, IPv4/IPv6 TCP and Buffer pipelines (compress/encrypt) |
+| [System](https://github.com/StormBytePP/StormByte-System) | Processes, pipes and environment variables across Linux, Windows and macOS |
 
-Docs sites (when published): [Base](https://dev.stormbyte.org/StormByte), [Buffer](https://dev.stormbyte.org/StormByte-Buffer), [Config](https://dev.stormbyte.org/StormByte-Config), [Crypto](https://dev.stormbyte.org/StormByte-Crypto), [Database](https://dev.stormbyte.org/StormByte-Database), [Multimedia](https://dev.stormbyte.org/StormByte-Multimedia), [Network](https://dev.stormbyte.org/StormByte-Network), [System](https://dev.stormbyte.org/StormByte-System).
+Docs sites (when published): [Base](https://dev.stormbyte.org/StormByte), [Buffer](https://dev.stormbyte.org/StormByte-Buffer), [Config](https://dev.stormbyte.org/StormByte-Config), [Crypto](https://dev.stormbyte.org/StormByte-Crypto), [Database](https://dev.stormbyte.org/StormByte-Database), [Logger](https://dev.stormbyte.org/StormByte-Logger), [Multimedia](https://dev.stormbyte.org/StormByte-Multimedia), [Network](https://dev.stormbyte.org/StormByte-Network), [System](https://dev.stormbyte.org/StormByte-System).
 
 ## Table of Contents
 
