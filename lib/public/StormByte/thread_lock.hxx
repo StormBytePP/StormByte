@@ -1,21 +1,21 @@
 /*
- * Copyright (C) 2024-2026 David C. Manuelda (StormBytePP)
- *
- * This file is part of StormByte.
- *
- * StormByte is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3
- * or later, as published by the Free Software Foundation.
- *
- * StormByte is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with StormByte. If not, see
- * <https://www.gnu.org/licenses/lgpl-3.0.html>.
- */
+* Copyright (C) 2024-2026 David C. Manuelda (StormBytePP)
+*
+* This file is part of StormByte.
+*
+* StormByte is free software: you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License version 3
+* or later, as published by the Free Software Foundation.
+*
+* StormByte is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU Lesser General Public License for more details.
+*
+* You should have received a copy of the GNU Lesser General Public License
+* along with StormByte. If not, see
+* <https://www.gnu.org/licenses/lgpl-3.0.html>.
+*/
 
 #pragma once
 
@@ -27,65 +27,68 @@
 
 /**
  * @namespace StormByte
- * @brief Main namespace for the StormByte library.
- *
- * The `StormByte` namespace serves as the root for all components and utilities in the StormByte library.
- * It provides foundational classes and tools for building robust, thread-safe, and efficient applications.
+ * @brief Root namespace of the StormByte suite.
  */
 namespace StormByte {
+	/**
+	 * @class ThreadLock
+	 * @brief Mutex with owner-thread reentry.
+	 *
+	 * The owning thread may call `Lock()` again without blocking.
+	 * Another thread blocks in `Lock()` until the owner calls `Unlock()`.
+	 * `Unlock()` from a thread that does not own the lock is a no-op.
+	 */
 	class STORMBYTE_PUBLIC ThreadLock final {
 		public:
 			/**
-			 * @class ThreadLock
-			 * @brief A lightweight thread-owned lock with reentrant semantics for the owning thread.
-			 *
-			 * ThreadLock tracks the owning thread and permits the owner thread to call `Lock()`
-			 * multiple times without blocking (reentrant behavior for the owner). If a different
-			 * thread calls `Lock()` while another thread owns the lock, that caller will block
-			 * until the owning thread calls `Unlock()` and releases ownership.
-			 *
-			 * This class is intended for simple ownership-based mutual exclusion where the same
-			 * thread may need to acquire the lock multiple times. `Unlock()` releases ownership
-			 * and makes the lock available to other threads. If a thread that does not own the
-			 * lock calls `Unlock()`, the call is a no-op (it does not throw or alter state).
+			 * @brief Unlocked lock, no owner.
 			 */
 			ThreadLock() noexcept = default;
 
+			/**
+			 * @brief Not copyable.
+			 */
 			ThreadLock(const ThreadLock&) = delete;
-			// std::mutex is nor movable in Windows.
+
+			/**
+			 * @brief Not movable (`std::mutex` is not movable on Windows).
+			 */
 			ThreadLock(ThreadLock&&) = delete;
 
 			/**
-			 * @brief Destroy the ThreadLock and release any held resources.
-			 *
-			 * The destructor releases internal resources. The owning thread should call
-			 * `Unlock()` before destruction if it currently holds the lock.
+			 * @brief Releases internal mutexes.
+			 * @note The owner should `Unlock()` before destruction if it still holds the lock.
 			 */
 			~ThreadLock() noexcept;
 
+			/**
+			 * @brief Not copy-assignable.
+			 */
 			ThreadLock& operator=(const ThreadLock&) = delete;
+
+			/**
+			 * @brief Not move-assignable.
+			 */
 			ThreadLock& operator=(ThreadLock&&) = delete;
 
 			/**
 			 * @brief Acquire the lock.
 			 *
-			 * If the calling thread already owns the lock, this call returns immediately.
-			 * Otherwise the call blocks until the lock becomes available and the calling
-			 * thread becomes the owner.
+			 * Returns immediately if this thread already owns it.
+			 * Otherwise blocks until ownership is taken.
 			 */
 			void Lock() noexcept;
 
 			/**
-			 * @brief Release the lock.
+			 * @brief Release ownership.
 			 *
-			 * Releases ownership and unlocks the mutex. After a successful call, other
-			 * blocked threads (if any) may acquire the lock. If the calling thread does
-			 * not own the lock, `Unlock()` is a no-op and returns immediately.
+			 * No-op if this thread is not the owner.
 			 */
 			void Unlock() noexcept;
 
 		private:
-			std::optional<std::thread::id> m_owner_thread_id;
-			std::mutex m_main_mutex, m_thread_owner_mutex;
+			std::optional<std::thread::id> m_owner_thread_id;	///< Owner, or empty when free.
+			std::mutex m_main_mutex;							///< Blocks non-owners.
+			std::mutex m_thread_owner_mutex;					///< Guards `m_owner_thread_id`.
 	};
 }
