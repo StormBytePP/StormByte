@@ -1,21 +1,21 @@
 /*
- * Copyright (C) 2024-2026 David C. Manuelda (StormBytePP)
- *
- * This file is part of StormByte.
- *
- * StormByte is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3
- * or later, as published by the Free Software Foundation.
- *
- * StormByte is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with StormByte. If not, see
- * <https://www.gnu.org/licenses/lgpl-3.0.html>.
- */
+* Copyright (C) 2024-2026 David C. Manuelda (StormBytePP)
+*
+* This file is part of StormByte.
+*
+* StormByte is free software: you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License version 3
+* or later, as published by the Free Software Foundation.
+*
+* StormByte is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU Lesser General Public License for more details.
+*
+* You should have received a copy of the GNU Lesser General Public License
+* along with StormByte. If not, see
+* <https://www.gnu.org/licenses/lgpl-3.0.html>.
+*/
 
 #pragma once
 
@@ -27,280 +27,261 @@
 
 /**
  * @namespace StormByte
- * @brief Root namespace of the StormByte library.
+ * @brief Root namespace of the StormByte suite.
  */
 namespace StormByte {
 	/**
 	 * @class Iterable
-	 * @brief Generic wrapper that adds a uniform iteration and mutation API around a standard container.
-	 * @tparam Container Underlying container type (e.g. `std::vector`, `std::map`, `std::deque`).
+	 * @brief Wrapper that adds a uniform iteration and mutation API around a standard container.
+	 * @tparam Container Underlying container (`std::vector`, `std::map`, `std::deque`, …).
 	 *
-	 * Provides iterator adapters, size/empty queries, subscript access (index or key, depending on
-	 * @p Container) and `add()` selected by @ref Type concepts so the correct insertion
-	 * API (`push_back`, `push_front` or associative `insert`) is used on every standard library.
+	 * Iterator adapters, size/empty, subscript (index or key) and `add()` chosen by `Type` concepts
+	 * (`push_back`, `push_front` or associative `insert`).
 	 *
-	 * Insertion and index subscript use a single definition with `if constexpr` (not constrained
-	 * overloads that only differ by `requires`) so MSVC STL and clang-cl do not instantiate
-	 * unsupported APIs and do not emit duplicate mangled symbols under the MSVC ABI.
+	 * Insertion and index subscript use one definition with `if constexpr` so MSVC STL and clang-cl
+	 * do not instantiate unsupported APIs or emit duplicate symbols under the MSVC ABI.
 	 *
-	 * Constraints use the template parameter @p Container directly (not `decltype(m_data)`) so
-	 * concept checks remain stable under the MSVC STL and clang-cl.
+	 * Constraints use the template parameter `Container` directly (not `decltype(m_data)`).
 	 */
 	template <typename Container>
 	class Iterable {
 		protected:
-			Container m_data; ///< Underlying container storage.
+			Container m_data; ///< Underlying container.
 
 		public:
-			using value_type = typename Container::value_type;
-			using size_type = typename Container::size_type;
-			using difference_type = typename Container::difference_type;
-			using reference = typename Container::reference;
-			using const_reference = typename Container::const_reference;
-			using pointer = typename Container::pointer;
-			using const_pointer = typename Container::const_pointer;
+			using value_type = typename Container::value_type;					///< `Container::value_type`.
+			using size_type = typename Container::size_type;					///< `Container::size_type`.
+			using difference_type = typename Container::difference_type;		///< `Container::difference_type`.
+			using reference = typename Container::reference;					///< `Container::reference`.
+			using const_reference = typename Container::const_reference;		///< `Container::const_reference`.
+			using pointer = typename Container::pointer;						///< `Container::pointer`.
+			using const_pointer = typename Container::const_pointer;			///< `Container::const_pointer`.
 
 			/**
 			 * @class Iterator
-			 * @brief Mutable random-access style iterator adapter for @ref Iterable.
-			 *
-			 * Wraps `Container::iterator` and exposes the usual increment, decrement and
-			 * arithmetic operators. Equality is defined in terms of the underlying iterator.
+			 * @brief Mutable iterator adapter over `Container::iterator`.
 			 */
 			class Iterator {
 				friend class Iterable;
 				public:
-					using iterator_category = std::random_access_iterator_tag;
-					using value_type = typename Container::value_type;
-					using difference_type = typename Container::difference_type;
-					using pointer = typename Container::pointer;
-					using reference = typename Container::reference;
+					using iterator_category = std::random_access_iterator_tag;	///< Category advertised to algorithms.
+					using value_type = typename Container::value_type;			///< Element type.
+					using difference_type = typename Container::difference_type;	///< Distance type.
+					using pointer = typename Container::pointer;				///< Mutable pointer.
+					using reference = typename Container::reference;			///< Mutable reference.
 
 					/**
-					 * @brief Dereferences the iterator.
+					 * @brief Dereference.
 					 * @return Reference to the current element.
 					 */
 					reference operator*() { return *m_it; }
 
 					/**
-					 * @brief Member access through the iterator.
+					 * @brief Member access.
 					 * @return Pointer to the current element.
 					 */
 					pointer operator->() { return m_it.operator->(); }
 
 					/**
 					 * @brief Pre-increment.
-					 * @return Reference to this iterator after advancing one position.
+					 * @return `*this` after advancing one.
 					 */
 					Iterator& operator++() { ++m_it; return *this; }
 
 					/**
 					 * @brief Post-increment.
-					 * @return Copy of the iterator before advancing.
+					 * @return Copy before advancing.
 					 */
 					Iterator operator++(int) { Iterator tmp = *this; ++m_it; return tmp; }
 
 					/**
 					 * @brief Pre-decrement.
-					 * @return Reference to this iterator after moving one position back.
+					 * @return `*this` after moving back one.
 					 */
 					Iterator& operator--() { --m_it; return *this; }
 
 					/**
 					 * @brief Post-decrement.
-					 * @return Copy of the iterator before moving back.
+					 * @return Copy before moving back.
 					 */
 					Iterator operator--(int) { Iterator tmp = *this; --m_it; return tmp; }
 
 					/**
-					 * @brief Advances this iterator by @p n positions.
-					 * @param n Number of positions to advance (may be negative).
-					 * @return Reference to this iterator.
+					 * @brief Advance in place.
+					 * @param n Positions (may be negative).
+					 * @return `*this`.
 					 */
 					Iterator& operator+=(difference_type n) { m_it += n; return *this; }
 
 					/**
-					 * @brief Moves this iterator back by @p n positions.
-					 * @param n Number of positions to retreat (may be negative).
-					 * @return Reference to this iterator.
+					 * @brief Retreat in place.
+					 * @param n Positions (may be negative).
+					 * @return `*this`.
 					 */
 					Iterator& operator-=(difference_type n) { m_it -= n; return *this; }
 
 					/**
-					 * @brief Returns a new iterator advanced by @p n positions.
-					 * @param n Number of positions to advance.
-					 * @return New iterator at the computed position.
+					 * @brief Iterator advanced by @p n.
+					 * @param n Positions.
 					 */
 					Iterator operator+(difference_type n) const { return Iterator(m_it + n); }
 
 					/**
-					 * @brief Returns a new iterator moved back by @p n positions.
-					 * @param n Number of positions to retreat.
-					 * @return New iterator at the computed position.
+					 * @brief Iterator moved back by @p n.
+					 * @param n Positions.
 					 */
 					Iterator operator-(difference_type n) const { return Iterator(m_it - n); }
 
 					/**
-					 * @brief Distance between this iterator and @p other.
+					 * @brief Distance to @p other.
 					 * @param other Iterator to subtract.
-					 * @return Number of positions from @p other to this iterator.
 					 */
 					difference_type operator-(const Iterator& other) const { return m_it - other.m_it; }
 
 					/**
-					 * @brief Equality comparison.
-					 * @param other Iterator to compare with.
-					 * @return `true` if both refer to the same element.
+					 * @brief Equality.
+					 * @param other Other iterator.
 					 */
 					bool operator==(const Iterator& other) const { return m_it == other.m_it; }
 
 					/**
-					 * @brief Inequality comparison.
-					 * @param other Iterator to compare with.
-					 * @return `true` if the iterators refer to different elements.
+					 * @brief Inequality.
+					 * @param other Other iterator.
 					 */
 					bool operator!=(const Iterator& other) const { return m_it != other.m_it; }
 
 				private:
-					typename Container::iterator m_it; ///< Underlying container iterator.
+					typename Container::iterator m_it; ///< Wrapped iterator.
 
 					/**
-					 * @brief Constructs an iterator from a container iterator.
-					 * @param it Underlying `Container::iterator`.
+					 * @brief Wraps a container iterator.
+					 * @param it `Container::iterator`.
 					 */
 					Iterator(typename Container::iterator it): m_it(it) {}
 			};
 
 			/**
 			 * @class ConstIterator
-			 * @brief Const random-access style iterator adapter for @ref Iterable.
-			 *
-			 * Wraps `Container::const_iterator`. Same interface as @ref Iterator but yields
-			 * const references and pointers.
+			 * @brief Const iterator adapter over `Container::const_iterator`.
 			 */
 			class ConstIterator {
 				friend class Iterable;
 				public:
-					using iterator_category = std::random_access_iterator_tag;
-					using value_type = typename Container::value_type;
-					using difference_type = typename Container::difference_type;
-					using pointer = typename Container::const_pointer;
-					using reference = typename Container::const_reference;
+					using iterator_category = std::random_access_iterator_tag;	///< Category advertised to algorithms.
+					using value_type = typename Container::value_type;			///< Element type.
+					using difference_type = typename Container::difference_type;	///< Distance type.
+					using pointer = typename Container::const_pointer;			///< Const pointer.
+					using reference = typename Container::const_reference;		///< Const reference.
 
 					/**
-					 * @brief Dereferences the iterator.
+					 * @brief Dereference.
 					 * @return Const reference to the current element.
 					 */
 					reference operator*() const { return *m_it; }
 
 					/**
-					 * @brief Member access through the iterator.
+					 * @brief Member access.
 					 * @return Const pointer to the current element.
 					 */
 					pointer operator->() const { return m_it.operator->(); }
 
 					/**
 					 * @brief Pre-increment.
-					 * @return Reference to this iterator after advancing one position.
+					 * @return `*this` after advancing one.
 					 */
 					ConstIterator& operator++() { ++m_it; return *this; }
 
 					/**
 					 * @brief Post-increment.
-					 * @return Copy of the iterator before advancing.
+					 * @return Copy before advancing.
 					 */
 					ConstIterator operator++(int) { ConstIterator tmp = *this; ++m_it; return tmp; }
 
 					/**
 					 * @brief Pre-decrement.
-					 * @return Reference to this iterator after moving one position back.
+					 * @return `*this` after moving back one.
 					 */
 					ConstIterator& operator--() { --m_it; return *this; }
 
 					/**
 					 * @brief Post-decrement.
-					 * @return Copy of the iterator before moving back.
+					 * @return Copy before moving back.
 					 */
 					ConstIterator operator--(int) { ConstIterator tmp = *this; --m_it; return tmp; }
 
 					/**
-					 * @brief Advances this iterator by @p n positions.
-					 * @param n Number of positions to advance (may be negative).
-					 * @return Reference to this iterator.
+					 * @brief Advance in place.
+					 * @param n Positions (may be negative).
+					 * @return `*this`.
 					 */
 					ConstIterator& operator+=(difference_type n) { m_it += n; return *this; }
 
 					/**
-					 * @brief Moves this iterator back by @p n positions.
-					 * @param n Number of positions to retreat (may be negative).
-					 * @return Reference to this iterator.
+					 * @brief Retreat in place.
+					 * @param n Positions (may be negative).
+					 * @return `*this`.
 					 */
 					ConstIterator& operator-=(difference_type n) { m_it -= n; return *this; }
 
 					/**
-					 * @brief Returns a new iterator advanced by @p n positions.
-					 * @param n Number of positions to advance.
-					 * @return New const iterator at the computed position.
+					 * @brief Iterator advanced by @p n.
+					 * @param n Positions.
 					 */
 					ConstIterator operator+(difference_type n) const { return ConstIterator(m_it + n); }
 
 					/**
-					 * @brief Returns a new iterator moved back by @p n positions.
-					 * @param n Number of positions to retreat.
-					 * @return New const iterator at the computed position.
+					 * @brief Iterator moved back by @p n.
+					 * @param n Positions.
 					 */
 					ConstIterator operator-(difference_type n) const { return ConstIterator(m_it - n); }
 
 					/**
-					 * @brief Distance between this iterator and @p other.
-					 * @param other Const iterator to subtract.
-					 * @return Number of positions from @p other to this iterator.
+					 * @brief Distance to @p other.
+					 * @param other Iterator to subtract.
 					 */
 					difference_type operator-(const ConstIterator& other) const { return m_it - other.m_it; }
 
 					/**
-					 * @brief Equality comparison.
-					 * @param other Const iterator to compare with.
-					 * @return `true` if both refer to the same element.
+					 * @brief Equality.
+					 * @param other Other iterator.
 					 */
 					bool operator==(const ConstIterator& other) const { return m_it == other.m_it; }
 
 					/**
-					 * @brief Inequality comparison.
-					 * @param other Const iterator to compare with.
-					 * @return `true` if the iterators refer to different elements.
+					 * @brief Inequality.
+					 * @param other Other iterator.
 					 */
 					bool operator!=(const ConstIterator& other) const { return m_it != other.m_it; }
 
 				private:
-					typename Container::const_iterator m_it; ///< Underlying container const iterator.
+					typename Container::const_iterator m_it; ///< Wrapped const iterator.
 
 					/**
-					 * @brief Constructs a const iterator from a container const iterator.
-					 * @param it Underlying `Container::const_iterator`.
+					 * @brief Wraps a container const iterator.
+					 * @param it `Container::const_iterator`.
 					 */
 					ConstIterator(typename Container::const_iterator it): m_it(it) {}
 			};
 
-			using iterator = Iterator;
-			using const_iterator = ConstIterator;
-			using reverse_iterator = std::reverse_iterator<iterator>;
-			using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+			using iterator = Iterator;											///< Mutable adapter.
+			using const_iterator = ConstIterator;								///< Const adapter.
+			using reverse_iterator = std::reverse_iterator<iterator>;			///< Mutable reverse adapter.
+			using const_reverse_iterator = std::reverse_iterator<const_iterator>;	///< Const reverse adapter.
 
 			/**
-			 * @brief Default-constructs an empty iterable.
+			 * @brief Empty iterable.
 			 */
 			Iterable() = default;
 
 			/**
-			 * @brief Constructs from a copy of an existing container.
+			 * @brief Copy from a container.
 			 * @param data Container to copy.
 			 */
 			explicit Iterable(const Container& data): m_data(data) {}
 
 			/**
-			 * @brief Constructs by moving an existing container.
-			 * @param data Container to move from.
+			 * @brief Move from a container.
+			 * @param data Container to move.
 			 */
 			explicit Iterable(Container&& data): m_data(std::move(data)) {}
 
@@ -315,130 +296,111 @@ namespace StormByte {
 			Iterable(Iterable&&) = default;
 
 			/**
-			 * @brief Virtual destructor.
+			 * @brief Destructor.
 			 */
 			virtual ~Iterable() = default;
 
 			/**
 			 * @brief Copy assignment.
-			 * @return Reference to this object.
+			 * @return `*this`.
 			 */
 			Iterable& operator=(const Iterable&) = default;
 
 			/**
 			 * @brief Move assignment.
-			 * @return Reference to this object.
+			 * @return `*this`.
 			 */
 			Iterable& operator=(Iterable&&) = default;
 
 			/**
-			 * @brief Equality comparison of the underlying containers.
-			 * @param other Iterable to compare with.
-			 * @return `true` if the underlying containers compare equal.
+			 * @brief Equality of the underlying containers.
+			 * @param other Other iterable.
 			 */
 			bool operator==(const Iterable& other) const { return m_data == other.m_data; }
 
 			/**
-			 * @brief Inequality comparison of the underlying containers.
-			 * @param other Iterable to compare with.
-			 * @return `true` if the underlying containers are not equal.
+			 * @brief Inequality of the underlying containers.
+			 * @param other Other iterable.
 			 */
 			bool operator!=(const Iterable& other) const { return m_data != other.m_data; }
 
 			/**
-			 * @brief Mutable begin iterator.
-			 * @return Iterator to the first element.
+			 * @brief Mutable begin.
 			 */
 			iterator begin() noexcept { return iterator(m_data.begin()); }
 
 			/**
-			 * @brief Const begin iterator.
-			 * @return Const iterator to the first element.
+			 * @brief Const begin.
 			 */
 			const_iterator begin() const noexcept { return const_iterator(m_data.begin()); }
 
 			/**
-			 * @brief Mutable end iterator.
-			 * @return Iterator past the last element.
+			 * @brief Mutable end.
 			 */
 			iterator end() noexcept { return iterator(m_data.end()); }
 
 			/**
-			 * @brief Const end iterator.
-			 * @return Const iterator past the last element.
+			 * @brief Const end.
 			 */
 			const_iterator end() const noexcept { return const_iterator(m_data.end()); }
 
 			/**
-			 * @brief Const begin iterator.
-			 * @return Const iterator to the first element.
+			 * @brief Const begin.
 			 */
 			const_iterator cbegin() const noexcept { return const_iterator(m_data.cbegin()); }
 
 			/**
-			 * @brief Const end iterator.
-			 * @return Const iterator past the last element.
+			 * @brief Const end.
 			 */
 			const_iterator cend() const noexcept { return const_iterator(m_data.cend()); }
 
 			/**
-			 * @brief Mutable reverse begin iterator.
-			 * @return Reverse iterator to the last element.
+			 * @brief Mutable reverse begin.
 			 */
 			reverse_iterator rbegin() noexcept { return reverse_iterator(end()); }
 
 			/**
-			 * @brief Mutable reverse end iterator.
-			 * @return Reverse iterator before the first element.
+			 * @brief Mutable reverse end.
 			 */
 			reverse_iterator rend() noexcept { return reverse_iterator(begin()); }
 
 			/**
-			 * @brief Const reverse begin iterator.
-			 * @return Const reverse iterator to the last element.
+			 * @brief Const reverse begin.
 			 */
 			const_reverse_iterator rbegin() const noexcept { return const_reverse_iterator(end()); }
 
 			/**
-			 * @brief Const reverse end iterator.
-			 * @return Const reverse iterator before the first element.
+			 * @brief Const reverse end.
 			 */
 			const_reverse_iterator rend() const noexcept { return const_reverse_iterator(begin()); }
 
 			/**
-			 * @brief Const reverse begin iterator.
-			 * @return Const reverse iterator to the last element.
+			 * @brief Const reverse begin.
 			 */
 			const_reverse_iterator crbegin() const noexcept { return const_reverse_iterator(cend()); }
 
 			/**
-			 * @brief Const reverse end iterator.
-			 * @return Const reverse iterator before the first element.
+			 * @brief Const reverse end.
 			 */
 			const_reverse_iterator crend() const noexcept { return const_reverse_iterator(cbegin()); }
 
 			/**
-			 * @brief Number of elements in the underlying container.
-			 * @return Element count.
+			 * @brief Element count.
 			 */
 			size_type size() const noexcept { return m_data.size(); }
 
 			/**
-			 * @brief Whether the underlying container holds no elements.
-			 * @return `true` if empty.
+			 * @brief Whether the container is empty.
 			 */
 			bool empty() const noexcept { return m_data.empty(); }
 
 			/**
-			 * @brief Zero-based index access.
-			 * @param i Index into the underlying container.
+			 * @brief Zero-based mutable index access.
+			 * @param i Index.
 			 * @return Reference to the element at @p i.
 			 * @throws OutOfBoundsError If @p i is not less than `size()`.
 			 *
-			 * Uses `Container::operator[]` when @ref Type::HasSubscript holds; otherwise
-			 * advances iterators. Implemented as one function with `if constexpr` so the
-			 * MSVC ABI / clang-cl do not emit duplicate mangled names for constrained
-			 * overloads that only differ by `requires`.
+			 * Uses `Container::operator[]` when `Type::HasSubscript` holds; otherwise advances iterators.
 			 */
 			reference operator[](size_type i) {
 				if (i >= m_data.size())
@@ -453,10 +415,10 @@ namespace StormByte {
 			}
 
 			/**
-			 * @brief Key-based mutable access for associative containers.
-			 * @tparam K Key type convertible to `Container::key_type`.
+			 * @brief Mutable key access for associative containers.
+			 * @tparam K Convertible to `Container::key_type`.
 			 * @param key Key to look up or insert.
-			 * @return Reference to the mapped value (`Container::operator[]`).
+			 * @return Mapped value (`Container::operator[]`).
 			 */
 			template<typename K>
 			auto operator[](K const& key) -> decltype(auto)
@@ -465,11 +427,11 @@ namespace StormByte {
 			}
 
 			/**
-			 * @brief Key-based const access for associative containers.
-			 * @tparam K Key type convertible to `Container::key_type`.
+			 * @brief Const key access for associative containers.
+			 * @tparam K Convertible to `Container::key_type`.
 			 * @param key Key to look up.
-			 * @return Const reference to the mapped value.
-			 * @throws OutOfBoundsError If @p key is not present.
+			 * @return Const mapped value.
+			 * @throws OutOfBoundsError If @p key is missing.
 			 */
 			template<typename K>
 			auto operator[](K const& key) const -> decltype(auto)
@@ -483,11 +445,9 @@ namespace StormByte {
 
 			/**
 			 * @brief Zero-based const index access.
-			 * @param i Index into the underlying container.
+			 * @param i Index.
 			 * @return Const reference to the element at @p i.
 			 * @throws OutOfBoundsError If @p i is not less than `size()`.
-			 *
-			 * Same selection rules as the non-const overload.
 			 */
 			const_reference operator[](size_type i) const {
 				if (i >= m_data.size())
@@ -502,12 +462,8 @@ namespace StormByte {
 			}
 
 			/**
-			 * @brief Appends a copy of @p value using the best available container API.
+			 * @brief Inserts a copy via `push_back`, else `push_front`, else associative `insert`.
 			 * @param value Element to add.
-			 *
-			 * Prefers `push_back`, then `push_front`, then associative `insert`.
-			 * Implemented with `if constexpr` so clang-cl / MSVC STL never instantiate
-			 * insertion paths the container does not support.
 			 */
 			void add(const value_type& value) {
 				if constexpr (Type::HasPushBack<Container>) {
@@ -523,10 +479,8 @@ namespace StormByte {
 			}
 
 			/**
-			 * @brief Appends @p value by move using the best available container API.
+			 * @brief Inserts by move via `push_back`, else `push_front`, else associative `insert`.
 			 * @param value Element to add.
-			 *
-			 * Same selection rules as the const overload; uses moves into the container.
 			 */
 			void add(value_type&& value) {
 				if constexpr (Type::HasPushBack<Container>) {
@@ -542,9 +496,9 @@ namespace StormByte {
 			}
 
 			/**
-			 * @brief Linear search for an element equal to @p value.
-			 * @param value Value to look for.
-			 * @return `true` if an equal element exists.
+			 * @brief Linear search for an equal element.
+			 * @param value Value to find.
+			 * @return `true` if found.
 			 */
 			bool has_item(const value_type& value) const {
 				for (const auto& item : m_data) {
@@ -556,10 +510,10 @@ namespace StormByte {
 			}
 
 			/**
-			 * @brief Linear search over mapped values of an associative container.
-			 * @tparam M Type comparable to `Container::mapped_type`.
-			 * @param value Mapped value to look for.
-			 * @return `true` if any element has a mapped value equal to @p value.
+			 * @brief Linear search over mapped values.
+			 * @tparam M Comparable to `Container::mapped_type`.
+			 * @param value Mapped value to find.
+			 * @return `true` if any mapped value equals @p value.
 			 */
 			template<typename M>
 			bool has_item(M const& value) const
@@ -572,8 +526,8 @@ namespace StormByte {
 
 			/**
 			 * @brief Key lookup for associative containers.
-			 * @tparam K Key type convertible to `Container::key_type`.
-			 * @param key Key to look for.
+			 * @tparam K Convertible to `Container::key_type`.
+			 * @param key Key to find.
 			 * @return `true` if @p key is present.
 			 */
 			template<typename K>
