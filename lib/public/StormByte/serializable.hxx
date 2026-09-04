@@ -19,15 +19,6 @@
 
 #pragma once
 
-/**
- * @file serializable.hxx
- * @brief Little-endian binary encode/decode for StormByte types.
- *
- * This is a mechanism, not a format detector. There is no BOM, no version
- * tag and no runtime endian sniffing. The consumer owns higher-level
- * framing. The only guarantee is: multi-byte values on the wire are
- * little-endian.
- */
 
 #include <StormByte/exception.hxx>
 #include <StormByte/expected.hxx>
@@ -47,7 +38,7 @@
 
 /**
  * @namespace StormByte
- * @brief Root namespace of the StormByte library.
+ * @brief Root namespace of the StormByte suite.
  */
 namespace StormByte {
 	class DeserializeError;

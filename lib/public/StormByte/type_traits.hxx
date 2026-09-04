@@ -19,14 +19,6 @@
 
 #pragma once
 
-/**
- * @file type_traits.hxx
- * @brief Compile-time type introspection for StormByte (concepts, C++26).
- *
- * Public surface is @ref StormByte::Type. Detection uses `concept` +
- * `requires`, not `void_t` / `enable_if`. Cv/ref handling is explicit so
- * libstdc++, libc++ and the MSVC STL (including clang-cl) agree.
- */
 
 #include <array>
 #include <bit>
@@ -40,7 +32,7 @@
 
 /**
  * @namespace StormByte
- * @brief Root namespace of the StormByte library.
+ * @brief Root namespace of the StormByte suite.
  */
 namespace StormByte {
 	/**
