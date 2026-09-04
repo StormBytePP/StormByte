@@ -1,34 +1,34 @@
 /*
- * Copyright (C) 2024-2026 David C. Manuelda (StormBytePP)
- *
- * This file is part of StormByte.
- *
- * StormByte is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3
- * or later, as published by the Free Software Foundation.
- *
- * StormByte is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with StormByte. If not, see
- * <https://www.gnu.org/licenses/lgpl-3.0.html>.
- */
+* Copyright (C) 2024-2026 David C. Manuelda (StormBytePP)
+*
+* This file is part of StormByte.
+*
+* StormByte is free software: you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License version 3
+* or later, as published by the Free Software Foundation.
+*
+* StormByte is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU Lesser General Public License for more details.
+*
+* You should have received a copy of the GNU Lesser General Public License
+* along with StormByte. If not, see
+* <https://www.gnu.org/licenses/lgpl-3.0.html>.
+*/
+
+#pragma once
 
 #include <StormByte/type_traits.hxx>
 
 using namespace StormByte;
 
 /**
- * @brief Bitwise OR operator for unsigned enum classes.
- * @tparam E The enumeration type.
- * @param a First enum value.
- * @param b Second enum value.
- * @return The result of the bitwise OR operation.
- *
- * This operator allows combining flags of an unsigned enum class using the bitwise OR operator.
+ * @brief Bitwise OR for unsigned scoped enumerations.
+ * @tparam E Enumeration type (`Type::UnsignedEnum`).
+ * @param a Left operand.
+ * @param b Right operand.
+ * @return `E` with bits of @p a or @p b.
  */
 template <Type::UnsignedEnum E>
 constexpr E operator|(E a, E b) noexcept {
@@ -36,13 +36,11 @@ constexpr E operator|(E a, E b) noexcept {
 }
 
 /**
- * @brief Bitwise AND operator for unsigned enum classes.
- * @tparam E The enumeration type.
- * @param a First enum value.
- * @param b Second enum value.
- * @return The result of the bitwise AND operation.
- *
- * This operator allows checking common flags of an unsigned enum class using the bitwise AND operator.
+ * @brief Bitwise AND for unsigned scoped enumerations.
+ * @tparam E Enumeration type (`Type::UnsignedEnum`).
+ * @param a Left operand.
+ * @param b Right operand.
+ * @return `E` with bits of @p a and @p b.
  */
 template <Type::UnsignedEnum E>
 constexpr E operator&(E a, E b) noexcept {
@@ -50,13 +48,11 @@ constexpr E operator&(E a, E b) noexcept {
 }
 
 /**
- * @brief Bitwise XOR operator for unsigned enum classes.
- * @tparam E The enumeration type.
- * @param a First enum value.
- * @param b Second enum value.
- * @return The result of the bitwise XOR operation.
- *
- * This operator allows toggling flags of an unsigned enum class using the bitwise XOR operator.
+ * @brief Bitwise XOR for unsigned scoped enumerations.
+ * @tparam E Enumeration type (`Type::UnsignedEnum`).
+ * @param a Left operand.
+ * @param b Right operand.
+ * @return `E` with bits of @p a xor @p b.
  */
 template <Type::UnsignedEnum E>
 constexpr E operator^(E a, E b) noexcept {
@@ -64,12 +60,10 @@ constexpr E operator^(E a, E b) noexcept {
 }
 
 /**
- * @brief Bitwise NOT operator for unsigned enum classes.
- * @tparam E The enumeration type.
- * @param a Enum value to invert.
- * @return The result of the bitwise NOT operation.
- *
- * This operator allows inverting flags of an unsigned enum class using the bitwise NOT operator.
+ * @brief Bitwise NOT for unsigned scoped enumerations.
+ * @tparam E Enumeration type (`Type::UnsignedEnum`).
+ * @param a Operand.
+ * @return `E` with bits of @p a inverted.
  */
 template <Type::UnsignedEnum E>
 constexpr E operator~(E a) noexcept {
@@ -78,245 +72,226 @@ constexpr E operator~(E a) noexcept {
 
 /**
  * @namespace StormByte
- * @brief Main namespace for the StormByte library.
- *
- * The `StormByte` namespace serves as the root for all components and utilities in the StormByte library.
- * It provides foundational classes and tools for building robust, thread-safe, and efficient applications.
+ * @brief Root namespace of the StormByte suite.
  */
 namespace StormByte {
 	/**
-	 * @brief Bitmask class template for managing enum class flags.
-	 * @tparam Derived The derived class type.
-	 * @tparam E The enumeration type representing the flags.
+	 * @class Bitmask
+	 * @brief CRTP wrapper that stores an unsigned enum as a flag set.
+	 * @tparam Derived Concrete bitmask type.
+	 * @tparam E Flag enumeration (`Type::UnsignedEnum`).
 	 *
-	 * This class provides bitwise operations for enum class types,
-	 * allowing easy manipulation of flag combinations.
-	 *
-	 * Example usage:
 	 * @code
-	 * enum class MyFlags : uint8_t {
-	 *     FlagA = 0x01,
-	 *     FlagB = 0x02,
-	 *     FlagC = 0x04
-	 * };
-	 *
+	 * enum class MyFlags : uint8_t { FlagA = 0x01, FlagB = 0x02 };
 	 * class MyBitmask : public Bitmask<MyBitmask, MyFlags> {
 	 * public:
 	 *     using Bitmask<MyBitmask, MyFlags>::Bitmask;
 	 * };
-	 *
 	 * MyBitmask mask(MyFlags::FlagA);
 	 * mask |= MyBitmask(MyFlags::FlagB);
-	 * if (mask.Has(MyFlags::FlagA)) { ... }
 	 * @endcode
 	 */
 	template<typename Derived, Type::UnsignedEnum E>
 	class Bitmask {
 		public:
-			/** 
-			 * @brief Default constructor initializes the bitmask to zero.
+			/**
+			 * @brief Empty mask (`static_cast<E>(0)`).
 			 */
 			constexpr Bitmask() noexcept: m_value(static_cast<E>(0)) {}
 
-			/** 
-			 * @brief Constructor initializes the bitmask with a specific enum value.
-			 * @param value The initial enum value for the bitmask.
+			/**
+			 * @brief Mask from a single enumerator (or already combined value).
+			 * @param value Initial flags.
 			 */
 			constexpr Bitmask(E value) noexcept: m_value(value) {}
 
-			/** 
+			/**
 			 * @brief Copy constructor.
-			 * @param other The other Bitmask to copy from.
+			 * @param other Source mask.
 			 */
 			constexpr Bitmask(const Bitmask& other) noexcept = default;
 
-			/** 
+			/**
 			 * @brief Move constructor.
-			 * @param other The other Bitmask to move from.
+			 * @param other Source mask.
 			 */
 			constexpr Bitmask(Bitmask&& other) noexcept = default;
 
-			/** 
+			/**
 			 * @brief Destructor.
 			 */
 			constexpr virtual ~Bitmask() noexcept = default;
 
-			/** 
-			 * @brief Copy assignment operator.
-			 * @param other The other Bitmask to copy from.
-			 * @return Reference to this Bitmask.
+			/**
+			 * @brief Copy assignment.
+			 * @param other Source mask.
+			 * @return `*this`.
 			 */
 			constexpr Bitmask& operator=(const Bitmask& other) noexcept = default;
 
-			/** 
-			 * @brief Move assignment operator.
-			 * @param other The other Bitmask to move from.
-			 * @return Reference to this Bitmask.
+			/**
+			 * @brief Move assignment.
+			 * @param other Source mask.
+			 * @return `*this`.
 			 */
 			constexpr Bitmask& operator=(Bitmask&& other) noexcept = default;
 
-			/** 
-			 * @brief Equality operator.
-			 * @param other The other Bitmask to compare with.
-			 * @return True if the bitmasks are equal, false otherwise.
+			/**
+			 * @brief Equality.
+			 * @param other Other mask.
+			 * @return `true` when both store the same `E`.
 			 */
 			constexpr bool operator==(const Bitmask& other) const noexcept {
 				return m_value == other.m_value;
 			}
 
-			/** 
-			 * @brief Inequality operator.
-			 * @param other The other Bitmask to compare with.
-			 * @return True if the bitmasks are not equal, false otherwise.
+			/**
+			 * @brief Inequality.
+			 * @param other Other mask.
+			 * @return `true` when the stored `E` differs.
 			 */
 			constexpr bool operator!=(const Bitmask& other) const noexcept {
 				return m_value != other.m_value;
 			}
 
-			/** 
-			 * @brief Bitwise OR operator.
-			 * @param other The other Bitmask to combine with.
-			 * @return A new Bitmask representing the result of the bitwise OR operation.
+			/**
+			 * @brief Bitwise OR; returns `Derived`.
+			 * @param other Other mask.
+			 * @return New `Derived` with union of flags.
 			 */
 			constexpr Derived operator|(const Bitmask& other) const noexcept {
 				return Derived(m_value | other.m_value);
 			}
 
-			/** 
-			 * @brief Bitwise AND operator.
-			 * @param other The other Bitmask to combine with.
-			 * @return A new Bitmask representing the result of the bitwise AND operation.
+			/**
+			 * @brief Bitwise AND; returns `Derived`.
+			 * @param other Other mask.
+			 * @return New `Derived` with intersection of flags.
 			 */
 			constexpr Derived operator&(const Bitmask& other) const noexcept {
 				return Derived(m_value & other.m_value);
 			}
 
-			/** 
-			 * @brief Bitwise XOR operator.
-			 * @param other The other Bitmask to combine with.
-			 * @return A new Bitmask representing the result of the bitwise XOR operation.
+			/**
+			 * @brief Bitwise XOR; returns `Derived`.
+			 * @param other Other mask.
+			 * @return New `Derived` with toggled flags.
 			 */
 			constexpr Derived operator^(const Bitmask& other) const noexcept {
 				return Derived(m_value ^ other.m_value);
 			}
 
-			/** 
-			 * @brief Bitwise NOT operator.
-			 * @return A new Bitmask representing the result of the bitwise NOT operation.
+			/**
+			 * @brief Bitwise NOT; returns `Derived`.
+			 * @return New `Derived` with inverted flags.
 			 */
 			constexpr Derived operator~() const noexcept {
 				return Derived(~m_value);
 			}
 
-			/** 
-			 * @brief Bitwise OR assignment operator.
-			 * @param other The other Bitmask to combine with.
-			 * @return Reference to this Bitmask after the operation.
+			/**
+			 * @brief OR-assign.
+			 * @param other Other mask.
+			 * @return `*this`.
 			 */
 			constexpr Bitmask& operator|=(const Bitmask& other) noexcept {
 				m_value = m_value | other.m_value;
 				return *this;
 			}
 
-			/** 
-			 * @brief Bitwise AND assignment operator.
-			 * @param other The other Bitmask to combine with.
-			 * @return Reference to this Bitmask after the operation.
+			/**
+			 * @brief AND-assign.
+			 * @param other Other mask.
+			 * @return `*this`.
 			 */
 			constexpr Bitmask& operator&=(const Bitmask& other) noexcept {
 				m_value = m_value & other.m_value;
 				return *this;
 			}
 
-			/** 
-			 * @brief Bitwise XOR assignment operator.
-			 * @param other The other Bitmask to combine with.
-			 * @return Reference to this Bitmask after the operation.
+			/**
+			 * @brief XOR-assign.
+			 * @param other Other mask.
+			 * @return `*this`.
 			 */
 			constexpr Bitmask& operator^=(const Bitmask& other) noexcept {
 				m_value = m_value ^ other.m_value;
 				return *this;
 			}
 
-			/** 
-			 * @brief Add a flag to the bitmask.
-			 * @param value The enum value to add.
+			/**
+			 * @brief Sets every bit in @p value.
+			 * @param value Flags to add.
 			 */
 			constexpr void Add(E value) noexcept {
 				m_value = m_value | value;
 			}
 
-			/** 
-			 * @brief Remove a flag from the bitmask.
-			 * @param value The enum value to remove.
+			/**
+			 * @brief Clears every bit in @p value.
+			 * @param value Flags to remove.
 			 */
 			constexpr void Remove(E value) noexcept {
 				m_value = m_value & ~value;
 			}
 
-			/** 
-			 * @brief Get the current value of the bitmask.
-			 * @return The current enum value of the bitmask.
+			/**
+			 * @brief Stored enumerators.
+			 * @return Current `E`.
 			 */
 			constexpr E Value() const noexcept {
 				return m_value;
 			}
 
-			/** 
-			 * @brief Check if the bitmask has a specific flag set.
-			 * @param value The enum value to check.
-			 * @return True if the flag is set, false otherwise.
+			/**
+			 * @brief `true` when every bit in @p value is set.
+			 * @param value Flags to test.
 			 */
 			constexpr bool Has(E value) const noexcept {
 				return (m_value & value) == value;
 			}
 
-			/** 
-			 * @brief Check if the bitmask has all flags set from another bitmask.
-			 * @param other The other Bitmask to check against.
-			 * @return True if all flags are set, false otherwise.
+			/**
+			 * @brief `true` when every bit in @p other is set.
+			 * @param other Other mask.
 			 */
 			constexpr bool Has(const Bitmask& other) const noexcept {
 				return Has(other.m_value);
 			}
 
-			/** 
-			 * @brief Check if any of the specified flags are set in the bitmask.
-			 * @param value The enum value(s) to check.
-			 * @return True if any of the flags are set, false otherwise.
+			/**
+			 * @brief `true` when any bit in @p value is set.
+			 * @param value Flags to test.
 			 */
 			constexpr bool HasAny(E value) const noexcept {
 				return (m_value & value) != static_cast<E>(0);
 			}
 
-			/** 
-			 * @brief Check if any of the flags from another bitmask are set in this bitmask.
-			 * @param other The other Bitmask to check against.
-			 * @return True if any of the flags are set, false otherwise.
+			/**
+			 * @brief `true` when any bit in @p other is set.
+			 * @param other Other mask.
 			 */
 			constexpr bool HasAny(const Bitmask& other) const noexcept {
 				return HasAny(other.m_value);
 			}
 
-			/** 
-			 * @brief Check if none of the specified flags are set in the bitmask.
-			 * @param value The enum value(s) to check.
-			 * @return True if none of the flags are set, false otherwise.
+			/**
+			 * @brief `true` when no bit in @p value is set.
+			 * @param value Flags to test.
 			 */
 			constexpr bool HasNone(E value) const noexcept {
 				return (m_value & value) == static_cast<E>(0);
 			}
 
-			/** 
-			 * @brief Check if none of the flags from another bitmask are set in this bitmask.
-			 * @param other The other Bitmask to check against.
-			 * @return True if none of the flags are set, false otherwise.
+			/**
+			 * @brief `true` when no bit in @p other is set.
+			 * @param other Other mask.
 			 */
 			constexpr bool HasNone(const Bitmask& other) const noexcept {
 				return HasNone(other.m_value);
 			}
 
 		protected:
-			E m_value;
+			E m_value;	///< Packed flags.
 	};
 }
