@@ -1,21 +1,21 @@
 /*
- * Copyright (C) 2024-2026 David C. Manuelda (StormBytePP)
- *
- * This file is part of StormByte.
- *
- * StormByte is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3
- * or later, as published by the Free Software Foundation.
- *
- * StormByte is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with StormByte. If not, see
- * <https://www.gnu.org/licenses/lgpl-3.0.html>.
- */
+* Copyright (C) 2024-2026 David C. Manuelda (StormBytePP)
+*
+* This file is part of StormByte.
+*
+* StormByte is free software: you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License version 3
+* or later, as published by the Free Software Foundation.
+*
+* StormByte is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU Lesser General Public License for more details.
+*
+* You should have received a copy of the GNU Lesser General Public License
+* along with StormByte. If not, see
+* <https://www.gnu.org/licenses/lgpl-3.0.html>.
+*/
 
 #pragma once
 
@@ -26,26 +26,18 @@
 
 /**
  * @namespace StormByte
- * @brief Main namespace for the StormByte library.
- *
- * The `StormByte` namespace serves as the root for all components and utilities in the StormByte library.
- * It provides foundational classes and tools for building robust, thread-safe, and efficient applications.
+ * @brief Root namespace of the StormByte suite.
  */
 namespace StormByte {
 	/**
-	 * @namespace Error
-	 * @brief Namespace for error handling in the StormByte library.
-	 *
-	 * The `StormByte::Error` namespace contains definitions and utilities related to error handling,
-	 * including error codes and custom error categories used throughout the StormByte library.
+	 * @namespace StormByte::Error
+	 * @brief `std::error_code` integration for suite-wide codes.
 	 */
 	namespace Error {
 		/**
 		 * @enum Code
-		 * @brief Enumeration of error codes used in the StormByte library.
-		 *
-		 * The `Code` enum defines various error codes that can be used throughout the StormByte library
-		 * to represent different error conditions in a standardized way.
+		 * @brief Suite error codes (`std::error_code` enum).
+		 * @note No enumerators are defined yet; the category and `make_error_code` are in place for when they are.
 		 */
 		enum class Code {
 			
@@ -53,45 +45,49 @@ namespace StormByte {
 
 		/**
 		 * @class Category
-		 * @brief Error category for StormByte errors.
-		 *
-		 * The `Category` class extends `std::error_category` to provide a custom category
-		 * for errors defined in the StormByte library. This allows for better integration with
-		 * the C++ standard library's error handling mechanisms.
+		 * @brief `std::error_category` for `StormByte::Error::Code`.
 		 */
 		class STORMBYTE_PUBLIC Category: public std::error_category {
 			public:
 				/**
-				 * @brief Get the name of the error category.
-				 * @return Name of the error category.
+				 * @brief Category name.
+				 * @return Stable C string identifying this category.
 				 */
 				const char* name() const noexcept override;
 
 				/**
-				 * @brief Get the message corresponding to an error value.
-				 * @param ev Error value.
-				 * @return Corresponding error message.
+				 * @brief Message for an enumerator value.
+				 * @param ev Integer value of `Code`.
+				 * @return Human-readable message.
 				 */
 				std::string message(int ev) const override;
 
 				/**
-				 * @brief Get the default error condition for an error value.
-				 * @param ev Error value.
-				 * @return Corresponding error condition.
+				 * @brief Default `std::error_condition` for an enumerator value.
+				 * @param ev Integer value of `Code`.
+				 * @return Matching condition.
 				 */
 				std::error_condition default_error_condition(int ev) const noexcept override;
 		};
 
 		/**
-		 * @brief Get the singleton instance of the error category.
-		 * @return Reference to the error category instance.
+		 * @brief Process-wide category singleton.
+		 * @return Reference to the suite category.
 		 */
 		STORMBYTE_PUBLIC const class Category& category() noexcept;
 	}
 
+	/**
+	 * @brief Builds an `std::error_code` from `Error::Code`.
+	 * @param e Suite error enumerator.
+	 * @return `std::error_code` in `Error::category()`.
+	 */
 	STORMBYTE_PUBLIC std::error_code make_error_code(Error::Code e);
 }
 
 namespace std {
+	/**
+	 * @brief Marks `StormByte::Error::Code` as an `std::error_code` enum.
+	 */
 	template<> struct is_error_code_enum<StormByte::Error::Code>: true_type {};
 }
