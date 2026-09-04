@@ -1,21 +1,21 @@
 /*
- * Copyright (C) 2024-2026 David C. Manuelda (StormBytePP)
- *
- * This file is part of StormByte.
- *
- * StormByte is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3
- * or later, as published by the Free Software Foundation.
- *
- * StormByte is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with StormByte. If not, see
- * <https://www.gnu.org/licenses/lgpl-3.0.html>.
- */
+* Copyright (C) 2024-2026 David C. Manuelda (StormBytePP)
+*
+* This file is part of StormByte.
+*
+* StormByte is free software: you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License version 3
+* or later, as published by the Free Software Foundation.
+*
+* StormByte is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU Lesser General Public License for more details.
+*
+* You should have received a copy of the GNU Lesser General Public License
+* along with StormByte. If not, see
+* <https://www.gnu.org/licenses/lgpl-3.0.html>.
+*/
 
 #pragma once
 
@@ -28,44 +28,32 @@
 
 /**
  * @namespace StormByte
- * @brief Main namespace for the StormByte library.
+ * @brief Root namespace of the StormByte suite.
  */
 namespace StormByte {
 	/**
-	 * @brief Decodes a Base64-encoded string into raw bytes.
+	 * @brief Decodes a Base64 string into bytes.
 	 *
-	 * The input may contain the standard Base64 alphabet (A-Z, a-z, 0-9, +, /)
-	 * and the padding character '='. Whitespace (space, tab, newline, carriage return)
-	 * is ignored. Decoding stops at the first '=' character.
+	 * Alphabet `A–Z a–z 0–9 + /` and padding `=`.
+	 * Space, tab, newline and CR are ignored.
+	 * Decoding stops at the first `=`.
+	 * Padding is accepted but not strictly checked.
 	 *
-	 * Padding is accepted but not strictly validated (the decoder is lenient).
-	 *
-	 * @param input Base64-encoded string.
-	 * @return Decoded binary data as a vector of std::byte.
-	 * @throws StormByte::Base64Error if the input contains invalid characters.
-	 *
-	 * @note Accepts both std::string and const char* (via implicit conversion).
+	 * @param input Base64 text (`std::string` or `const char*` via conversion).
+	 * @return Decoded bytes.
+	 * @throws StormByte::Base64Error If a character is outside the alphabet.
 	 */
 	std::vector<std::byte> STORMBYTE_PUBLIC Base64Decode(const std::string& input);
 
 	/**
-	 * @brief Encodes raw binary data into a Base64 string.
-	 *
-	 * Uses the standard Base64 alphabet and adds the required '=' padding.
-	 *
-	 * @param input Binary data to encode.
-	 * @return Base64-encoded string.
+	 * @brief Encodes bytes as Base64 with `=` padding.
+	 * @param input Bytes to encode.
 	 */
 	std::string STORMBYTE_PUBLIC Base64Encode(const std::vector<std::byte>& input);
 
 	/**
-	 * @brief Encodes raw binary data into a Base64 string (span overload).
-	 *
-	 * This overload avoids unnecessary copies when the data is already
-	 * available as a contiguous range (e.g. std::array, C array, etc.).
-	 *
-	 * @param input Binary data to encode.
-	 * @return Base64-encoded string.
+	 * @brief Encodes a contiguous byte span as Base64 with `=` padding.
+	 * @param input Bytes to encode.
 	 */
 	std::string STORMBYTE_PUBLIC Base64Encode(std::span<const std::byte> input);
 }
