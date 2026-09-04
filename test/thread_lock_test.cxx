@@ -1,3 +1,22 @@
+/*
+ * Copyright (C) 2024-2026 David C. Manuelda (StormBytePP)
+ *
+ * This file is part of StormByte.
+ *
+ * StormByte is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
+ * or later, as published by the Free Software Foundation.
+ *
+ * StormByte is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with StormByte. If not, see
+ * <https://www.gnu.org/licenses/lgpl-3.0.html>.
+ */
+
 #include <StormByte/exception.hxx>
 #include <StormByte/thread_lock.hxx>
 #include <StormByte/test_handlers.h>
@@ -7,81 +26,62 @@
 #include <iostream>
 #include <vector>
 #include <string>
-
 using namespace StormByte;
-
 // Test that the owning thread can call Lock() multiple times (reentrant behavior)
 int test_threadlock_reentrant() {
     int result = 0;
     try {
         ThreadLock lock;
-
         // Owner acquires lock twice
         lock.Lock();
         lock.Lock();
-
         std::atomic<bool> other_acquired(false);
-
         std::thread t([&]() {
             // This will block until the owner releases
             lock.Lock();
             other_acquired.store(true);
             lock.Unlock();
         });
-
         // Give the spawned thread time to attempt acquisition
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
         // Other thread should not have acquired the lock while owner still holds it
         ASSERT_FALSE("test_threadlock_reentrant", other_acquired.load());
-
         // Owner releases once; per design a single Unlock() fully releases ownership
         // even if Lock() was called multiple times by the same thread.
         lock.Unlock();
-
         t.join();
-
         ASSERT_TRUE("test_threadlock_reentrant", other_acquired.load());
-
     } catch (const std::exception& ex) {
         std::cerr << ex.what() << std::endl;
         result++;
     }
     RETURN_TEST("test_threadlock_reentrant", result);
 }
-
 // Test that a thread attempting to Lock() will block until the owning thread Unlocks()
 int test_threadlock_blocking() {
     int result = 0;
     try {
         ThreadLock lock;
         lock.Lock();
-
         std::atomic<bool> acquired(false);
-
         std::thread t([&]() {
             lock.Lock();
             acquired.store(true);
             lock.Unlock();
         });
-
         // Ensure the spawned thread has time to attempt acquisition and block
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         ASSERT_FALSE("test_threadlock_blocking", acquired.load());
-
         // Release lock: the other thread should then acquire it
         lock.Unlock();
         t.join();
-
         ASSERT_TRUE("test_threadlock_blocking", acquired.load());
-
     } catch (const std::exception& ex) {
         std::cerr << ex.what() << std::endl;
         result++;
     }
     RETURN_TEST("test_threadlock_blocking", result);
 }
-
 // Test multiple threads appending fixed-size tokens while using ThreadLock to ensure
 // each append is atomic (no interleaved writes). We verify final string length
 // and that each chunk is homogeneous (all characters in the chunk equal), which
@@ -94,7 +94,6 @@ int test_threadlock_many_writers() {
         const int thread_count = 8;
         const int iterations = 200;
         const int token_size = 8; // fixed-size token per write
-
         std::vector<std::thread> threads;
         for (int t = 0; t < thread_count; ++t) {
             threads.emplace_back([t, iterations, token_size, &lock, &shared]() {
@@ -108,12 +107,9 @@ int test_threadlock_many_writers() {
                 }
             });
         }
-
         for (auto &th : threads) th.join();
-
         const std::size_t expected_len = static_cast<std::size_t>(thread_count) * iterations * token_size;
         ASSERT_EQUAL("test_threadlock_many_writers", expected_len, shared.size());
-
         // Verify each token-sized chunk is homogeneous
         for (std::size_t pos = 0; pos < shared.size(); pos += token_size) {
             char first = shared[pos];
@@ -124,21 +120,17 @@ int test_threadlock_many_writers() {
                 }
             }
         }
-
     } catch (const std::exception& ex) {
         std::cerr << ex.what() << std::endl;
         result++;
     }
     RETURN_TEST("test_threadlock_many_writers", result);
 }
-
 int main() {
     int result = 0;
-
     result += test_threadlock_reentrant();
     result += test_threadlock_blocking();
     result += test_threadlock_many_writers();
-
     if (result == 0) {
         std::cout << "All tests passed!" << std::endl;
     } else {

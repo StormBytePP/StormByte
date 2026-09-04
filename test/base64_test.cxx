@@ -1,13 +1,29 @@
+/*
+ * Copyright (C) 2024-2026 David C. Manuelda (StormBytePP)
+ *
+ * This file is part of StormByte.
+ *
+ * StormByte is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
+ * or later, as published by the Free Software Foundation.
+ *
+ * StormByte is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with StormByte. If not, see
+ * <https://www.gnu.org/licenses/lgpl-3.0.html>.
+ */
+
 #include <StormByte/base64.hxx>
 #include <StormByte/exception.hxx>
 #include <StormByte/test_handlers.h>
-
 #include <string>
 #include <vector>
 #include <cstring>
-
 using namespace StormByte;
-
 // Helper to create a byte vector from a string literal
 static std::vector<std::byte> ToBytes(const std::string& str) {
 	std::vector<std::byte> result;
@@ -17,14 +33,12 @@ static std::vector<std::byte> ToBytes(const std::string& str) {
 	}
 	return result;
 }
-
 int test_base64_empty() {
 	int result = 0;
 	try {
 		// Empty input
 		std::string encoded = Base64Encode(std::vector<std::byte>{});
 		ASSERT_EQUAL("test_base64_empty", "", encoded);
-
 		std::vector<std::byte> decoded = Base64Decode("");
 		ASSERT_EQUAL("test_base64_empty", 0u, decoded.size());
 	} catch (const Exception& ex) {
@@ -33,16 +47,13 @@ int test_base64_empty() {
 	}
 	RETURN_TEST("test_base64_empty", result);
 }
-
 int test_base64_simple() {
 	int result = 0;
 	try {
 		const std::string original = "Hello";
 		auto bytes = ToBytes(original);
-
 		std::string encoded = Base64Encode(bytes);
 		ASSERT_EQUAL("test_base64_simple", "SGVsbG8=", encoded);
-
 		auto decoded = Base64Decode(encoded);
 		std::string recovered(reinterpret_cast<const char*>(decoded.data()), decoded.size());
 		ASSERT_EQUAL("test_base64_simple", original, recovered);
@@ -52,7 +63,6 @@ int test_base64_simple() {
 	}
 	RETURN_TEST("test_base64_simple", result);
 }
-
 int test_base64_padding_cases() {
 	int result = 0;
 	try {
@@ -67,7 +77,6 @@ int test_base64_padding_cases() {
 				static_cast<unsigned char>('A'),
 				static_cast<unsigned char>(decoded[0]));
 		}
-
 		// 2 bytes → one padding character
 		{
 			auto bytes = ToBytes("AB");
@@ -76,7 +85,6 @@ int test_base64_padding_cases() {
 			auto decoded = Base64Decode(encoded);
 			ASSERT_EQUAL("test_base64_padding_cases", 2u, decoded.size());
 		}
-
 		// 3 bytes → no padding
 		{
 			auto bytes = ToBytes("ABC");
@@ -91,7 +99,6 @@ int test_base64_padding_cases() {
 	}
 	RETURN_TEST("test_base64_padding_cases", result);
 }
-
 int test_base64_binary_data() {
 	int result = 0;
 	try {
@@ -100,10 +107,8 @@ int test_base64_binary_data() {
 		for (std::size_t i = 0; i < 256; ++i) {
 			original[i] = static_cast<std::byte>(i);
 		}
-
 		std::string encoded = Base64Encode(original);
 		auto decoded = Base64Decode(encoded);
-
 		ASSERT_EQUAL("test_base64_binary_data", original.size(), decoded.size());
 		ASSERT_TRUE("test_base64_binary_data", original == decoded);
 	} catch (const Exception& ex) {
@@ -112,17 +117,14 @@ int test_base64_binary_data() {
 	}
 	RETURN_TEST("test_base64_binary_data", result);
 }
-
 int test_base64_span_overload() {
 	int result = 0;
 	try {
 		const std::string original = "SpanTest";
 		auto bytes = ToBytes(original);
-
 		// Use the span overload
 		std::string encoded = Base64Encode(std::span<const std::byte>(bytes));
 		ASSERT_EQUAL("test_base64_span_overload", "U3BhblRlc3Q=", encoded);
-
 		auto decoded = Base64Decode(encoded);
 		std::string recovered(reinterpret_cast<const char*>(decoded.data()), decoded.size());
 		ASSERT_EQUAL("test_base64_span_overload", original, recovered);
@@ -132,14 +134,12 @@ int test_base64_span_overload() {
 	}
 	RETURN_TEST("test_base64_span_overload", result);
 }
-
 int test_base64_whitespace_in_input() {
 	int result = 0;
 	try {
 		// Base64 with whitespace should still decode correctly
 		std::string encoded_with_ws = "SGVs\nbG8=\t";
 		auto decoded = Base64Decode(encoded_with_ws);
-
 		std::string recovered(reinterpret_cast<const char*>(decoded.data()), decoded.size());
 		ASSERT_EQUAL("test_base64_whitespace_in_input", "Hello", recovered);
 	} catch (const Exception& ex) {
@@ -148,7 +148,6 @@ int test_base64_whitespace_in_input() {
 	}
 	RETURN_TEST("test_base64_whitespace_in_input", result);
 }
-
 int test_base64_invalid_character() {
 	int result = 0;
 	try {
@@ -165,17 +164,14 @@ int test_base64_invalid_character() {
 	}
 	RETURN_TEST("test_base64_invalid_character", result);
 }
-
 int test_base64_long_string() {
 	int result = 0;
 	try {
 		// Generate a longer string
 		std::string original(1000, 'X');
 		auto bytes = ToBytes(original);
-
 		std::string encoded = Base64Encode(bytes);
 		auto decoded = Base64Decode(encoded);
-
 		std::string recovered(reinterpret_cast<const char*>(decoded.data()), decoded.size());
 		ASSERT_EQUAL("test_base64_long_string", original, recovered);
 	} catch (const Exception& ex) {
@@ -184,17 +180,14 @@ int test_base64_long_string() {
 	}
 	RETURN_TEST("test_base64_long_string", result);
 }
-
 int test_base64_roundtrip_various_sizes() {
 	int result = 0;
 	try {
 		for (std::size_t len = 0; len <= 16; ++len) {
 			std::string original(len, static_cast<char>('A' + (len % 26)));
 			auto bytes = ToBytes(original);
-
 			std::string encoded = Base64Encode(bytes);
 			auto decoded = Base64Decode(encoded);
-
 			std::string recovered(reinterpret_cast<const char*>(decoded.data()), decoded.size());
 			ASSERT_EQUAL("test_base64_roundtrip_various_sizes", original, recovered);
 		}
@@ -204,7 +197,6 @@ int test_base64_roundtrip_various_sizes() {
 	}
 	RETURN_TEST("test_base64_roundtrip_various_sizes", result);
 }
-
 int main() {
 	int result = 0;
 	try {
@@ -221,7 +213,6 @@ int main() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
-
 	if (result == 0) {
 		std::cout << "All tests passed!" << std::endl;
 	} else {

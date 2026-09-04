@@ -1,10 +1,27 @@
-#include <StormByte/uuid.hxx>
+/*
+ * Copyright (C) 2024-2026 David C. Manuelda (StormBytePP)
+ *
+ * This file is part of StormByte.
+ *
+ * StormByte is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
+ * or later, as published by the Free Software Foundation.
+ *
+ * StormByte is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with StormByte. If not, see
+ * <https://www.gnu.org/licenses/lgpl-3.0.html>.
+ */
 
+#include <StormByte/uuid.hxx>
 #include <array>
 #include <cstdint>
 #include <cstring>
 #include <cstdio>
-
 #if defined(_WIN32)
 #include <windows.h>
 #include <bcrypt.h>
@@ -12,9 +29,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #endif
-
 #include <random>
-
 namespace {
 	inline bool FillRandomBytes(uint8_t* out, size_t len) noexcept {
 	#if defined(_WIN32)
@@ -29,7 +44,6 @@ namespace {
 	#endif
 	}
 } // anonymous
-
 namespace StormByte {
 	std::string GenerateUUIDv4() noexcept {
 		std::array<uint8_t, 16> b{};
@@ -42,12 +56,10 @@ namespace StormByte {
 			std::memcpy(b.data(), &r1, 8);
 			std::memcpy(b.data() + 8, &r2, 8);
 		}
-
 		// Set RFC4122 version = 4
 		b[6] = static_cast<uint8_t>((b[6] & 0x0F) | 0x40);
 		// Set RFC4122 variant = 10xxxxxx
 		b[8] = static_cast<uint8_t>((b[8] & 0x3F) | 0x80);
-
 		char buf[37];
 		std::snprintf(buf, sizeof(buf),
 			"%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
@@ -57,7 +69,6 @@ namespace StormByte {
 			b[8], b[9],
 			b[10], b[11], b[12], b[13], b[14], b[15]
 		);
-
 		return std::string(buf);
 	}
 }

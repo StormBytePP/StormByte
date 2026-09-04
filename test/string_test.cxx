@@ -1,9 +1,26 @@
+/*
+ * Copyright (C) 2024-2026 David C. Manuelda (StormBytePP)
+ *
+ * This file is part of StormByte.
+ *
+ * StormByte is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
+ * or later, as published by the Free Software Foundation.
+ *
+ * StormByte is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with StormByte. If not, see
+ * <https://www.gnu.org/licenses/lgpl-3.0.html>.
+ */
+
 #include <StormByte/string.hxx>
 #include <StormByte/system.hxx>
 #include <StormByte/test_handlers.h>
-
 using namespace StormByte::String;
-
 int test_simple_explode() {
 	int result = 0;
 	try {
@@ -21,7 +38,6 @@ int test_simple_explode() {
 	}
 	RETURN_TEST("test_simple_explode", result);
 }
-
 int test_path_explode() {
 	int result = 0;
 	try {
@@ -41,7 +57,6 @@ int test_path_explode() {
 	}
 	RETURN_TEST("test_path_explode", result);
 }
-
 int test_explode_one_item() {
 	int result = 0;
 	try {
@@ -57,7 +72,6 @@ int test_explode_one_item() {
 	}
 	RETURN_TEST("test_explode_one_item", result);
 }
-
 int test_temp_path() {
 	int result = 0;
 	try {
@@ -71,7 +85,6 @@ int test_temp_path() {
 	}
 	RETURN_TEST("test_temp_path", result);
 }
-
 int test_human_readable_byte_size() {
     int result = 0;
     const std::string locale = "en_US.UTF-8"; // Can't be a constexpr or gcc complains
@@ -79,22 +92,16 @@ int test_human_readable_byte_size() {
         // Explicitly specify the type of T
         std::string size = HumanReadable<uint64_t>(1024, Format::HumanReadableBytes, locale);
         ASSERT_EQUAL("test_human_readable_byte_size", "1 KiB", size);
-
         size = HumanReadable<uint64_t>(1024ULL * 1024, Format::HumanReadableBytes, locale);
         ASSERT_EQUAL("test_human_readable_byte_size", "1 MiB", size);
-
         size = HumanReadable<uint64_t>(1024ULL * 1024 * 1024, Format::HumanReadableBytes, locale);
         ASSERT_EQUAL("test_human_readable_byte_size", "1 GiB", size);
-
         size = HumanReadable<uint64_t>(1024ULL * 1024 * 1024 * 1024, Format::HumanReadableBytes, locale);
         ASSERT_EQUAL("test_human_readable_byte_size", "1 TiB", size);
-
         size = HumanReadable<uint64_t>(1024ULL * 1024 * 1024 * 1024 * 1024, Format::HumanReadableBytes, locale);
         ASSERT_EQUAL("test_human_readable_byte_size", "1 PiB", size);
-
 		size = HumanReadable<double>(1027.65, Format::HumanReadableBytes, locale);
 		ASSERT_EQUAL("test_human_readable_byte_size", "1 KiB", size);
-
 		size = HumanReadable<double>(1154.65, Format::HumanReadableBytes, locale);
 		ASSERT_EQUAL("test_human_readable_byte_size", "1.13 KiB", size);
     } catch (const StormByte::Exception& ex) {
@@ -103,13 +110,11 @@ int test_human_readable_byte_size() {
     }
     RETURN_TEST("test_human_readable_byte_size", result);
 }
-
 int test_human_readable_number() {
 	int result = 0;
 	try {
 		std::string number = HumanReadable<int>(1024, Format::HumanReadableNumber, "en_US.UTF-8");
 		ASSERT_EQUAL("test_human_readable_number", "1,024", number);
-
 		number = HumanReadable<int>(1024 * 1024, Format::HumanReadableNumber, "en_US.UTF-8");
 		ASSERT_EQUAL("test_human_readable_number", "1,048,576", number);
 	} catch (const StormByte::Exception& ex) {
@@ -118,7 +123,6 @@ int test_human_readable_number() {
 	}
 	RETURN_TEST("test_human_readable_number", result);
 }
-
 int test_buffer_to_string() {
 	const std::string test_string = "test_buffer_to_string";
 	std::vector<std::byte> buffer = StormByte::String::ToByteVector(test_string);
@@ -126,7 +130,6 @@ int test_buffer_to_string() {
 	ASSERT_EQUAL("test_buffer_to_string", test_string, str);
 	RETURN_TEST("test_buffer_to_string", 0);
 }
-
 int main() {
     int result = 0;
     try {
@@ -137,7 +140,6 @@ int main() {
 		result += test_human_readable_byte_size();
 		result += test_human_readable_number();
 		result += test_buffer_to_string();
-
     } catch (const StormByte::Exception& ex) {
         std::cerr << ex.what() << std::endl;
         result++;

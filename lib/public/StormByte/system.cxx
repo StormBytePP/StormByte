@@ -1,6 +1,24 @@
+/*
+ * Copyright (C) 2024-2026 David C. Manuelda (StormBytePP)
+ *
+ * This file is part of StormByte.
+ *
+ * StormByte is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
+ * or later, as published by the Free Software Foundation.
+ *
+ * StormByte is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with StormByte. If not, see
+ * <https://www.gnu.org/licenses/lgpl-3.0.html>.
+ */
+
 #include <StormByte/system.hxx>
 #include <StormByte/string.hxx>
-
 #ifdef WINDOWS
 #include <windows.h>
 #elifdef MACOS
@@ -15,23 +33,18 @@
 #include <unistd.h>
 #define MAX_PATH 256
 #endif
-
 #include <thread>
-
 namespace StormByte::System {
 	std::filesystem::path TempFileName(const std::string& prefix) {
 	#ifdef WINDOWS
 		wchar_t tempPath[MAX_PATH];
 		wchar_t tempFile[MAX_PATH];
-
 		if (GetTempPathW(MAX_PATH, tempPath) == 0) {
 			throw std::runtime_error("Error getting temp path");
 		}
-
 		if (GetTempFileNameW(tempPath, String::UTF8Decode(prefix).c_str(), 0, tempFile) == 0) {
 			throw std::runtime_error("Error getting temp file name");
 		}
-
 		return String::UTF8Encode(std::wstring(tempFile));
 	#else
 		// Linux + macOS (and other UNIX)
@@ -47,11 +60,9 @@ namespace StormByte::System {
 		return std::string(temp_filename);
 	#endif
 	}
-
 	std::filesystem::path CurrentPath() {
 		return std::filesystem::current_path();
 	}
-
 	std::filesystem::path ExecutablePath() {
 		// Directory that contains the running executable
 	#ifdef WINDOWS
@@ -82,12 +93,10 @@ namespace StormByte::System {
 	#endif
 		return "NOPATH";
 	}
-
 	template <typename Rep, typename Period>
 	void Sleep(const std::chrono::duration<Rep, Period>& duration) {
 		std::this_thread::sleep_for(duration);
 	}
-
 	template STORMBYTE_PUBLIC void Sleep(const std::chrono::milliseconds& duration);
 	template STORMBYTE_PUBLIC void Sleep(const std::chrono::seconds& duration);
 	template STORMBYTE_PUBLIC void Sleep(const std::chrono::minutes& duration);

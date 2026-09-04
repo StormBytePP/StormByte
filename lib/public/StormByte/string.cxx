@@ -1,5 +1,23 @@
-#include <StormByte/string.hxx>
+/*
+ * Copyright (C) 2024-2026 David C. Manuelda (StormBytePP)
+ *
+ * This file is part of StormByte.
+ *
+ * StormByte is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
+ * or later, as published by the Free Software Foundation.
+ *
+ * StormByte is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with StormByte. If not, see
+ * <https://www.gnu.org/licenses/lgpl-3.0.html>.
+ */
 
+#include <StormByte/string.hxx>
 #include <cstring>
 #include <cwchar>
 #include <cstdlib>
@@ -9,13 +27,11 @@
 #include <vector>
 #include <queue>
 #include <regex>
-
 #ifdef WINDOWS
 #include <cwchar>
 #include <direct.h> // For _getcwd
 #include <windows.h> // For MAX_PATH
 #endif
-
 namespace {
 	template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
 	std::string HumanReadableByteSize(const T& bytes, const std::string& locale) noexcept {
@@ -25,12 +41,9 @@ namespace {
 			constexpr uint64_t GB = MB * 1024;
 			constexpr uint64_t TB = GB * 1024;
 			constexpr uint64_t PB = TB * 1024;
-
 			uint64_t unsigned_bytes = static_cast<uint64_t>(bytes); // Cast to uint64_t
-
 			double value = static_cast<double>(bytes);
 			std::string suffix = "Bytes";
-
 			if (unsigned_bytes >= PB) {
 				value /= PB;
 				suffix = "PiB";
@@ -47,14 +60,12 @@ namespace {
 				value /= KB;
 				suffix = "KiB";
 			}
-
 			std::ostringstream oss;
 			try {
 				oss.imbue(std::locale(locale));
 			} catch (...) {
 				oss.imbue(std::locale("C"));
 			}
-
 			if (std::fabs(value - std::round(value)) < 0.01) {
 				oss << static_cast<int64_t>(std::round(value));
 			} else if (value < 0.01) {
@@ -62,25 +73,20 @@ namespace {
 			} else {
 				oss << std::fixed << std::setprecision(2) << value;
 			}
-
 			return oss.str() + " " + suffix;
-
 		} catch (...) {
 			return std::to_string(bytes) + " Bytes";
 		}
 	}
-
 	template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T> && !std::is_same_v<T, wchar_t>>>
 	std::string HumanReadableNumber(const T& number, const std::string& locale) noexcept {
 		try {
 			std::ostringstream oss;
-
 			try {
 				oss.imbue(std::locale(locale));
 			} catch (...) {
 				oss.imbue(std::locale("C"));
 			}
-
 			if constexpr (std::is_integral_v<T>) {
 				oss << number;
 			} else if constexpr (std::is_floating_point_v<T>) {
@@ -90,27 +96,22 @@ namespace {
 					oss << std::fixed << std::setprecision(2) << number;
 				}
 			}
-
 			return oss.str();
 		} catch (...) {
 			return std::to_string(number);
 		}
 	}
 }
-
 namespace StormByte::String {
 	std::queue<std::string> Explode(const std::string& str, const char delimiter) {
 		std::queue<std::string> result;
-
 		// Use ranges to split the string by the delimiter and iterate over parts
 		for (auto part : std::string_view(str) | std::views::split(delimiter)) {
 			// Convert each part into a std::string and push it to the queue
 			result.emplace(part.begin(), part.end());
 		}
-
 		return result;
 	}
-
 	std::vector<std::string> Split(const std::string& str) {
 		std::istringstream iss(str);
 		std::vector<std::string> result;
@@ -120,19 +121,16 @@ namespace StormByte::String {
 		}
 		return result;
 	}
-
 	std::string ToLower(const std::string& str) noexcept {
 		std::string result = str;
 		std::transform(result.begin(), result.end(), result.begin(), ::tolower);
 		return result;
 	}
-
 	std::string ToUpper(const std::string& str) noexcept {
 		std::string result = str;
 		std::transform(result.begin(), result.end(), result.begin(), ::toupper);
 		return result;
 	}
-
 	template <typename T, typename>
 	std::string HumanReadable(const T& number, const Format& format, const std::string& locale) noexcept {
 		switch (format) {
@@ -146,14 +144,11 @@ namespace StormByte::String {
 			return std::to_string(number);
 		}
 	}
-
 	std::string UTF8Encode(const std::wstring& wstr) {
 		if (wstr.empty()) return {};
-
 		std::mbstate_t state = std::mbstate_t();
 		const wchar_t* src = wstr.data();
 		std::size_t len = 0;
-
 	#ifdef WINDOWS
 		errno_t err = wcsrtombs_s(&len, nullptr, 0, &src, 0, &state);
 		if (err != 0)
@@ -167,11 +162,9 @@ namespace StormByte::String {
 		if (len == static_cast<std::size_t>(-1))
 			throw std::runtime_error("Wide to multibyte conversion failed");
 	#endif
-
 		std::string result(len, '\0');
 		src = wstr.data();
 		state = std::mbstate_t();
-
 	#ifdef WINDOWS
 		std::size_t written = 0;
 		err = wcsrtombs_s(&written, result.data(), result.size() + 1, &src, result.size(), &state);
@@ -181,17 +174,13 @@ namespace StormByte::String {
 		if (std::wcsrtombs(result.data(), &src, len, &state) == static_cast<std::size_t>(-1))
 			throw std::runtime_error("Wide to multibyte conversion failed");
 	#endif
-
 		return result;
 	}
-
 	std::wstring UTF8Decode(const std::string& str) {
 		if (str.empty()) return {};
-
 		std::mbstate_t state = std::mbstate_t();
 		const char* src = str.data();
 		std::size_t len = 0;
-
 	#ifdef WINDOWS
 		errno_t err = mbsrtowcs_s(&len, nullptr, 0, &src, 0, &state);
 		if (err != 0)
@@ -205,11 +194,9 @@ namespace StormByte::String {
 		if (len == static_cast<std::size_t>(-1))
 			throw std::runtime_error("Multibyte to wide conversion failed");
 	#endif
-
 		std::wstring result(len, L'\0');
 		src = str.data();
 		state = std::mbstate_t();
-
 	#ifdef WINDOWS
 		std::size_t written = 0;
 		err = mbsrtowcs_s(&written, result.data(), result.size() + 1, &src, result.size(), &state);
@@ -219,79 +206,62 @@ namespace StormByte::String {
 		if (std::mbsrtowcs(result.data(), &src, len, &state) == static_cast<std::size_t>(-1))
 			throw std::runtime_error("Multibyte to wide conversion failed");
 	#endif
-
 		return result;
 	}
-
 	std::string SanitizeNewlines(const std::string& str) noexcept {
 		std::string result = str;
 		return std::regex_replace(str, std::regex("\r\n"), "\n");
 	}
-
 	std::string FromByteVector(const std::vector<std::byte>& byte_vector) noexcept {
 		auto span = std::span<const std::byte>(byte_vector.data(), byte_vector.size());
 		return std::string(reinterpret_cast<const char*>(span.data()), span.size());
 	}
-
 	std::vector<std::byte> ToByteVector(const std::string& str) noexcept {
 		std::vector<std::byte> byte_vector(str.size());
 		std::memcpy(byte_vector.data(), str.data(), str.size());
 		return byte_vector;
 	}
-
 	std::string RemoveWhitespace(const std::string& str) noexcept {
 		std::string out;
 		out.reserve(str.size());
 		for (char c : str) if (!isspace(static_cast<unsigned char>(c))) out.push_back(c);
 		return out;
 	}
-
 	bool IsInteger(const std::string& str) noexcept {
 		if (str.empty()) return false;
-
 		size_t start = 0;
 		if (str[0] == '-' || str[0] == '+') {
 			if (str.size() == 1) return false; // Only sign, no digits
 			start = 1;
 		}
-
 		for (size_t i = start; i < str.size(); ++i) {
 			if (!std::isdigit(static_cast<unsigned char>(str[i]))) {
 				return false;
 			}
 		}
-
 		return true;
 	}
-
 	// Explicit instantiations for `HumanReadable` (ordered by category).
 	// Note: `wchar_t`, `char16_t`, and `char32_t` are excluded because they are not
 	// streamed to `std::ostringstream` on many standard library implementations.
-
 	// Boolean
 	template STORMBYTE_PUBLIC std::string HumanReadable<bool>(const bool&, const Format&, const std::string&) noexcept;
-
 	// Character types
 	template STORMBYTE_PUBLIC std::string HumanReadable<char>(const char&, const Format&, const std::string&) noexcept;
 	template STORMBYTE_PUBLIC std::string HumanReadable<signed char>(const signed char&, const Format&, const std::string&) noexcept;
 	template STORMBYTE_PUBLIC std::string HumanReadable<unsigned char>(const unsigned char&, const Format&, const std::string&) noexcept;
-
 	// Short
 	template STORMBYTE_PUBLIC std::string HumanReadable<short>(const short&, const Format&, const std::string&) noexcept;
 	template STORMBYTE_PUBLIC std::string HumanReadable<unsigned short>(const unsigned short&, const Format&, const std::string&) noexcept;
-
 	// Integer
 	template STORMBYTE_PUBLIC std::string HumanReadable<int>(const int&, const Format&, const std::string&) noexcept;
 	template STORMBYTE_PUBLIC std::string HumanReadable<unsigned int>(const unsigned int&, const Format&, const std::string&) noexcept;
-
 	// Long
 	template STORMBYTE_PUBLIC std::string HumanReadable<long>(const long&, const Format&, const std::string&) noexcept;
 	template STORMBYTE_PUBLIC std::string HumanReadable<unsigned long>(const unsigned long&, const Format&, const std::string&) noexcept;
-
 	// Long long
 	template STORMBYTE_PUBLIC std::string HumanReadable<long long>(const long long&, const Format&, const std::string&) noexcept;
 	template STORMBYTE_PUBLIC std::string HumanReadable<unsigned long long>(const unsigned long long&, const Format&, const std::string&) noexcept;
-
 	// Floating point
 	template STORMBYTE_PUBLIC std::string HumanReadable<float>(const float&, const Format&, const std::string&) noexcept;
 	template STORMBYTE_PUBLIC std::string HumanReadable<double>(const double&, const Format&, const std::string&) noexcept;

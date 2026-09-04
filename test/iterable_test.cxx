@@ -1,6 +1,24 @@
+/*
+ * Copyright (C) 2024-2026 David C. Manuelda (StormBytePP)
+ *
+ * This file is part of StormByte.
+ *
+ * StormByte is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
+ * or later, as published by the Free Software Foundation.
+ *
+ * StormByte is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with StormByte. If not, see
+ * <https://www.gnu.org/licenses/lgpl-3.0.html>.
+ */
+
 #include <StormByte/iterable.hxx>
 #include <StormByte/test_handlers.h>
-
 #include <deque>
 #include <iostream>
 #include <map>
@@ -8,9 +26,7 @@
 #include <string>
 #include <utility>
 #include <vector>
-
 using namespace StormByte;
-
 // ---------------------------------------------------------------------------
 // Test wrappers (expose protected m_data only for construction helpers)
 // ---------------------------------------------------------------------------
@@ -31,7 +47,6 @@ public:
 	using base::cend;
 	using base::has_item;
 };
-
 class MyQueue : public Iterable<std::deque<int>> {
 public:
 	using base = Iterable<std::deque<int>>;
@@ -49,7 +64,6 @@ public:
 	using base::cend;
 	using base::has_item;
 };
-
 class MyMap : public Iterable<std::map<std::string, int>> {
 public:
 	using base = Iterable<std::map<std::string, int>>;
@@ -70,7 +84,6 @@ public:
 	using base::has_item;
 	using base::has_key;
 };
-
 class MySet : public Iterable<std::set<int>> {
 public:
 	using base = Iterable<std::set<int>>;
@@ -83,7 +96,6 @@ public:
 	using base::end;
 	using base::has_item;
 };
-
 // ---------------------------------------------------------------------------
 // Compile-time guards: wrong add() overload must not be viable
 // (catches the clang-cl / MSVC STL regression without running code)
@@ -91,19 +103,15 @@ public:
 static_assert(Type::HasPushBack<std::vector<int>>);
 static_assert(!Type::HasPushFront<std::vector<int>>);
 static_assert(!Type::HasInsert<std::vector<int>>);
-
 static_assert(Type::HasPushBack<std::deque<int>>);
 static_assert(Type::HasPushFront<std::deque<int>>);
 static_assert(!Type::HasInsert<std::deque<int>>);
-
 static_assert(!Type::HasPushBack<std::map<std::string, int>>);
 static_assert(!Type::HasPushFront<std::map<std::string, int>>);
 static_assert(Type::HasInsert<std::map<std::string, int>>);
-
 static_assert(!Type::HasPushBack<std::set<int>>);
 static_assert(!Type::HasPushFront<std::set<int>>);
 static_assert(Type::HasInsert<std::set<int>>);
-
 // ---------------------------------------------------------------------------
 // Vector: add / index / empty
 // ---------------------------------------------------------------------------
@@ -126,7 +134,6 @@ int test_vector_add_and_index() {
 	}
 	RETURN_TEST("test_vector_add_and_index", result);
 }
-
 int test_vector_add_move() {
 	int result = 0;
 	try {
@@ -146,7 +153,6 @@ int test_vector_add_move() {
 	}
 	RETURN_TEST("test_vector_add_move", result);
 }
-
 int test_vector_add_preserves_order() {
 	int result = 0;
 	try {
@@ -163,7 +169,6 @@ int test_vector_add_preserves_order() {
 	}
 	RETURN_TEST("test_vector_add_preserves_order", result);
 }
-
 // ---------------------------------------------------------------------------
 // Iteration
 // ---------------------------------------------------------------------------
@@ -175,7 +180,6 @@ int test_forward_iteration() {
 		for (auto it = v.begin(); it != v.end(); ++it)
 			sum += *it;
 		ASSERT_EQUAL("test_forward_iteration", 15, sum);
-
 		sum = 0;
 		for (const auto& x : v)
 			sum += x;
@@ -186,7 +190,6 @@ int test_forward_iteration() {
 	}
 	RETURN_TEST("test_forward_iteration", result);
 }
-
 int test_reverse_iteration() {
 	int result = 0;
 	try {
@@ -204,7 +207,6 @@ int test_reverse_iteration() {
 	}
 	RETURN_TEST("test_reverse_iteration", result);
 }
-
 int test_const_iteration() {
 	int result = 0;
 	try {
@@ -214,7 +216,6 @@ int test_const_iteration() {
 		for (auto it = cv.begin(); it != cv.end(); ++it)
 			sum += *it;
 		ASSERT_EQUAL("test_const_iteration", 18, sum);
-
 		sum = 0;
 		for (auto it = cv.cbegin(); it != cv.cend(); ++it)
 			sum += *it;
@@ -225,7 +226,6 @@ int test_const_iteration() {
 	}
 	RETURN_TEST("test_const_iteration", result);
 }
-
 int test_iterator_arithmetic() {
 	int result = 0;
 	try {
@@ -247,7 +247,6 @@ int test_iterator_arithmetic() {
 	}
 	RETURN_TEST("test_iterator_arithmetic", result);
 }
-
 // ---------------------------------------------------------------------------
 // Bounds
 // ---------------------------------------------------------------------------
@@ -278,7 +277,6 @@ int test_vector_out_of_bounds() {
 	}
 	RETURN_TEST("test_vector_out_of_bounds", result);
 }
-
 int test_const_vector_out_of_bounds() {
 	int result = 0;
 	const MyVector v{1, 2};
@@ -291,7 +289,6 @@ int test_const_vector_out_of_bounds() {
 	}
 	RETURN_TEST("test_const_vector_out_of_bounds", result);
 }
-
 // ---------------------------------------------------------------------------
 // Deque (push_back preferred over push_front)
 // ---------------------------------------------------------------------------
@@ -313,7 +310,6 @@ int test_queue_add_and_index() {
 	}
 	RETURN_TEST("test_queue_add_and_index", result);
 }
-
 int test_queue_out_of_bounds() {
 	int result = 0;
 	MyQueue q;
@@ -326,7 +322,6 @@ int test_queue_out_of_bounds() {
 	}
 	RETURN_TEST("test_queue_out_of_bounds", result);
 }
-
 // ---------------------------------------------------------------------------
 // Map (associative insert)
 // ---------------------------------------------------------------------------
@@ -347,7 +342,6 @@ int test_map_add_and_key_access() {
 	}
 	RETURN_TEST("test_map_add_and_key_access", result);
 }
-
 int test_map_add_move_pair() {
 	int result = 0;
 	try {
@@ -362,7 +356,6 @@ int test_map_add_move_pair() {
 	}
 	RETURN_TEST("test_map_add_move_pair", result);
 }
-
 int test_map_subscript_inserts() {
 	int result = 0;
 	try {
@@ -377,7 +370,6 @@ int test_map_subscript_inserts() {
 	}
 	RETURN_TEST("test_map_subscript_inserts", result);
 }
-
 int test_map_const_missing_key_throws() {
 	int result = 0;
 	const MyMap m{{"a", 1}};
@@ -396,7 +388,6 @@ int test_map_const_missing_key_throws() {
 	}
 	RETURN_TEST("test_map_const_missing_key_throws", result);
 }
-
 // ---------------------------------------------------------------------------
 // Set (HasInsert via key_type, no mapped_type)
 // ---------------------------------------------------------------------------
@@ -419,7 +410,6 @@ int test_set_add() {
 	}
 	RETURN_TEST("test_set_add", result);
 }
-
 // ---------------------------------------------------------------------------
 // has_item / has_key
 // ---------------------------------------------------------------------------
@@ -431,7 +421,6 @@ int test_vector_has_item() {
 	ASSERT_FALSE("test_vector_has_item", MyVector{}.has_item(0));
 	RETURN_TEST("test_vector_has_item", result);
 }
-
 int test_queue_has_item() {
 	int result = 0;
 	MyQueue q{10, 20, 30, 40, 50};
@@ -439,7 +428,6 @@ int test_queue_has_item() {
 	ASSERT_FALSE("test_queue_has_item", q.has_item(99));
 	RETURN_TEST("test_queue_has_item", result);
 }
-
 int test_map_has_item_and_key() {
 	int result = 0;
 	MyMap m{{"a", 1}, {"b", 2}, {"c", 3}};
@@ -449,7 +437,6 @@ int test_map_has_item_and_key() {
 	ASSERT_FALSE("test_map_has_item_and_key", m.has_key("z"));
 	RETURN_TEST("test_map_has_item_and_key", result);
 }
-
 // ---------------------------------------------------------------------------
 // Equality
 // ---------------------------------------------------------------------------
@@ -464,7 +451,6 @@ int test_equality() {
 	ASSERT_FALSE("test_equality", a == c);
 	RETURN_TEST("test_equality", result);
 }
-
 // ---------------------------------------------------------------------------
 // Copy / move of wrapper
 // ---------------------------------------------------------------------------
@@ -475,7 +461,6 @@ int test_copy_and_move() {
 		MyVector b = a;
 		ASSERT_EQUAL("test_copy_and_move", 3, static_cast<int>(b.size()));
 		ASSERT_EQUAL("test_copy_and_move", 2, b[1]);
-
 		MyVector c = std::move(b);
 		ASSERT_EQUAL("test_copy_and_move", 3, static_cast<int>(c.size()));
 		ASSERT_EQUAL("test_copy_and_move", 1, c[0]);
@@ -485,10 +470,8 @@ int test_copy_and_move() {
 	}
 	RETURN_TEST("test_copy_and_move", result);
 }
-
 int main() {
 	int result = 0;
-
 	result += test_vector_add_and_index();
 	result += test_vector_add_move();
 	result += test_vector_add_preserves_order();
@@ -510,7 +493,6 @@ int main() {
 	result += test_map_has_item_and_key();
 	result += test_equality();
 	result += test_copy_and_move();
-
 	if (result == 0) {
 		std::cout << "All tests passed!" << std::endl;
 	} else {
