@@ -464,8 +464,13 @@ namespace StormByte {
 			/**
 			 * @brief Inserts a copy via `push_back`, else `push_front`, else associative `insert`.
 			 * @param value Element to add.
+			 *
+			 * Constrained with @ref Type::CopyConstructible so clang-cl / MSVC
+			 * do not instantiate `push_back(const unique_ptr&)` when the
+			 * container holds move-only values.
 			 */
-			void add(const value_type& value) {
+			void add(const value_type& value)
+			requires Type::CopyConstructible<value_type> {
 				if constexpr (Type::HasPushBack<Container>) {
 					m_data.push_back(value);
 				} else if constexpr (Type::HasPushFront<Container>) {
@@ -482,7 +487,8 @@ namespace StormByte {
 			 * @brief Inserts by move via `push_back`, else `push_front`, else associative `insert`.
 			 * @param value Element to add.
 			 */
-			void add(value_type&& value) {
+			void add(value_type&& value)
+			requires Type::MoveConstructible<value_type> {
 				if constexpr (Type::HasPushBack<Container>) {
 					m_data.push_back(std::move(value));
 				} else if constexpr (Type::HasPushFront<Container>) {

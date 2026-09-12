@@ -19,6 +19,14 @@ If you landed here from a release link and have not read the tree:
 - What this module is, how to build it, and short examples: [README.md](https://github.com/StormBytePP/StormByte/blob/master/README.md)
 - License: GNU Lesser General Public License version 3 or later, [LICENSE](https://github.com/StormBytePP/StormByte/blob/master/LICENSE)
 
+## [Unreleased]
+
+### Fixed
+
+- **Iterable::add** — `add(const value_type&)` is constrained with `Type::CopyConstructible`; `add(value_type&&)` with `Type::MoveConstructible`. clang-cl / MSVC no longer instantiate `push_back(const unique_ptr&)` when the container holds move-only values.
+
+[Unreleased]: https://github.com/StormBytePP/StormByte/compare/1.0.0...HEAD
+
 ## [1.0.0] - 2026-09-05
 
 Initial public release of StormByte Base.
