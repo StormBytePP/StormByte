@@ -19,7 +19,11 @@ If you landed here from a release link and have not read the tree:
 - What this module is, how to build it, and short examples: [README.md](https://github.com/StormBytePP/StormByte/blob/master/README.md)
 - License: GNU Lesser General Public License version 3 or later, [LICENSE](https://github.com/StormBytePP/StormByte/blob/master/LICENSE)
 
-## [Unreleased]
+[Unreleased]
+
+[Unreleased]: https://github.com/StormBytePP/StormByte/compare/1.1.0...HEAD
+
+## [1.1.0] - 2026-09-13
 
 ### Added
 
@@ -44,7 +48,7 @@ If you landed here from a release link and have not read the tree:
 - **String** — `ToLower` / `ToUpper` no longer pass negative signed values to the C character functions; negative byte sizes keep their sign instead of wrapping.
 - **String UTF-8 conversion** — wide-string conversion is now locale-independent and rejects malformed Unicode input with `UTF8Error`.
 
-[Unreleased]: https://github.com/StormBytePP/StormByte/compare/1.0.0...HEAD
+[1.1.0]: https://github.com/StormBytePP/StormByte/compare/1.1.0...1.0.0
 
 ## [1.0.0] - 2026-09-05
 
