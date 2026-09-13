@@ -57,6 +57,14 @@ int test_threadlock_reentrant() {
     }
     RETURN_TEST("test_threadlock_reentrant", result);
 }
+int test_threadlock_unlock_before_lock() {
+    int result = 0;
+    ThreadLock lock;
+    lock.Unlock();
+    lock.Lock();
+    lock.Unlock();
+    RETURN_TEST("test_threadlock_unlock_before_lock", result);
+}
 // Test that a thread attempting to Lock() will block until the owning thread Unlocks()
 int test_threadlock_blocking() {
     int result = 0;
@@ -129,6 +137,7 @@ int test_threadlock_many_writers() {
 int main() {
     int result = 0;
     result += test_threadlock_reentrant();
+	result += test_threadlock_unlock_before_lock();
     result += test_threadlock_blocking();
     result += test_threadlock_many_writers();
     if (result == 0) {

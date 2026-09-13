@@ -24,6 +24,7 @@
 #include <deque>
 #include <list>
 #include <map>
+#include <memory>
 #include <optional>
 #include <set>
 #include <string>
@@ -35,6 +36,9 @@
 #include <vector>
 #include <iostream>
 using namespace StormByte;
+struct TraitBase {};
+struct TraitDerived: TraitBase {};
+struct TraitUnrelated {};
 template<typename T>
 constexpr bool is_string_v = Type::String<T>;
 template<typename T>
@@ -265,6 +269,22 @@ int test_trivially_copyable() {
 	ASSERT_FALSE("test_trivially_copyable", Type::TriviallyCopyable<std::string>);
 	RETURN_TEST("test_trivially_copyable", result);
 }
+int test_extended_type_concepts() {
+	int result = 0;
+	ASSERT_TRUE("test_extended_type_concepts", Type::Sized<std::vector<int>>);
+	ASSERT_FALSE("test_extended_type_concepts", Type::Sized<int>);
+	ASSERT_TRUE("test_extended_type_concepts", Type::SmartPointer<std::unique_ptr<int>>);
+	ASSERT_TRUE("test_extended_type_concepts", Type::SmartPointer<std::shared_ptr<int>>);
+	ASSERT_FALSE("test_extended_type_concepts", Type::SmartPointer<int*>);
+	ASSERT_TRUE("test_extended_type_concepts", Type::Swappable<std::string>);
+	ASSERT_TRUE("test_extended_type_concepts", (Type::DerivedFrom<TraitDerived, TraitBase>));
+	ASSERT_FALSE("test_extended_type_concepts", (Type::DerivedFrom<TraitUnrelated, TraitBase>));
+	ASSERT_TRUE("test_extended_type_concepts", Type::EqualityComparable<int>);
+	ASSERT_TRUE("test_extended_type_concepts", Type::ThreeWayComparable<int>);
+	ASSERT_TRUE("test_extended_type_concepts", Type::Hashable<std::string>);
+	ASSERT_FALSE("test_extended_type_concepts", Type::Hashable<std::vector<int>>);
+	RETURN_TEST("test_extended_type_concepts", result);
+}
 int test_array_container_behaviour() {
 	int result = 0;
 	ASSERT_TRUE("test_array_container_behaviour", (is_container_v<std::array<int, 3>>));
@@ -295,6 +315,7 @@ int main() {
 	result += test_same_as_and_convertible();
 	result += test_constructible_and_callable();
 	result += test_trivially_copyable();
+	result += test_extended_type_concepts();
 	result += test_array_container_behaviour();
 	if (result == 0) {
 		std::cout << "All tests passed!" << std::endl;
