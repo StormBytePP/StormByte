@@ -19,7 +19,7 @@ If you landed here from a release link and have not read the tree:
 - What this module is, how to build it, and short examples: [README.md](https://github.com/StormBytePP/StormByte/blob/master/README.md)
 - License: GNU Lesser General Public License version 3 or later, [LICENSE](https://github.com/StormBytePP/StormByte/blob/master/LICENSE)
 
-[Unreleased]
+## [Unreleased]
 
 [Unreleased]: https://github.com/StormBytePP/StormByte/compare/1.1.0...HEAD
 
@@ -29,6 +29,7 @@ If you landed here from a release link and have not read the tree:
 
 - **Component** — wrapper for the module name on the component-prefixed `Exception` constructor. Call sites must now write `Exception(Component("Base64"), "…", args...)`.
 - **Type** concepts — `Sized`, `SmartPointer`, `Swappable`, `DerivedFrom`, `EqualityComparable`, `ThreeWayComparable`, `Hashable`.
+- **Type** range and pointer concepts — range/iterator category wrappers, range value/reference/difference aliases, `ExplicitlyConvertibleTo`, `NullablePointer`, `ByteInputRange`, and `ByteInputIterator` for public generic APIs.
 - **Test handlers** — assertions evaluate operands once and report non-streamable values safely. New macros: `ASSERT_THROWS`, `ASSERT_NO_THROW`, `ASSERT_NEAR`, `ASSERT_CONTAINS`, `ASSERT_NOT_NULL`, covered by `TestHandlersTests`.
 - **UTF8Error** — custom exception for invalid UTF-8 and wide-string Unicode input.
 

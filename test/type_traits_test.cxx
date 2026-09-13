@@ -20,6 +20,7 @@
 #include <StormByte/type_traits.hxx>
 #include <StormByte/test_handlers.h>
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <deque>
 #include <list>
@@ -39,6 +40,11 @@ using namespace StormByte;
 struct TraitBase {};
 struct TraitDerived: TraitBase {};
 struct TraitUnrelated {};
+struct MoveOnlyValue {
+	MoveOnlyValue() = default;
+	MoveOnlyValue(const MoveOnlyValue&) = delete;
+	MoveOnlyValue(MoveOnlyValue&&) = default;
+};
 template<typename T>
 constexpr bool is_string_v = Type::String<T>;
 template<typename T>
@@ -251,6 +257,49 @@ int test_same_as_and_convertible() {
 	ASSERT_FALSE("test_same_as_and_convertible", (Type::ConvertibleTo<std::string, int>));
 	RETURN_TEST("test_same_as_and_convertible", result);
 }
+int test_range_and_byte_concepts() {
+	int result = 0;
+	using Values = std::vector<int>;
+	using Iterator = Values::iterator;
+	using ListIterator = std::list<int>::iterator;
+	using Output = std::back_insert_iterator<Values>;
+	ASSERT_TRUE("test_range_and_byte_concepts", (Type::Range<Values>));
+	ASSERT_TRUE("test_range_and_byte_concepts", (Type::Range<Values&>));
+	ASSERT_FALSE("test_range_and_byte_concepts", (Type::Range<int>));
+	ASSERT_TRUE("test_range_and_byte_concepts", (Type::InputRange<Values>));
+	ASSERT_TRUE("test_range_and_byte_concepts", (Type::OutputRange<Values, int>));
+	ASSERT_TRUE("test_range_and_byte_concepts", (Type::ForwardRange<Values>));
+	ASSERT_TRUE("test_range_and_byte_concepts", (Type::BidirectionalRange<std::list<int>>));
+	ASSERT_TRUE("test_range_and_byte_concepts", (Type::RandomAccessRange<Values>));
+	ASSERT_TRUE("test_range_and_byte_concepts", (Type::ContiguousRange<Values>));
+	ASSERT_TRUE("test_range_and_byte_concepts", (Type::SizedRange<Values>));
+	ASSERT_TRUE("test_range_and_byte_concepts", (Type::CommonRange<Values>));
+	ASSERT_TRUE("test_range_and_byte_concepts", (Type::View<std::ranges::ref_view<Values>>));
+	ASSERT_FALSE("test_range_and_byte_concepts", (Type::View<Values>));
+	ASSERT_TRUE("test_range_and_byte_concepts", (Type::BorrowedRange<Values&>));
+	ASSERT_FALSE("test_range_and_byte_concepts", (Type::BorrowedRange<Values>));
+	ASSERT_TRUE("test_range_and_byte_concepts", (Type::InputIterator<Iterator>));
+	ASSERT_TRUE("test_range_and_byte_concepts", (Type::OutputIterator<Output, int>));
+	ASSERT_TRUE("test_range_and_byte_concepts", (Type::ForwardIterator<Iterator>));
+	ASSERT_TRUE("test_range_and_byte_concepts", (Type::BidirectionalIterator<ListIterator>));
+	ASSERT_TRUE("test_range_and_byte_concepts", (Type::RandomAccessIterator<Iterator>));
+	ASSERT_TRUE("test_range_and_byte_concepts", (Type::ContiguousIterator<Iterator>));
+	ASSERT_FALSE("test_range_and_byte_concepts", (Type::InputIterator<int>));
+	ASSERT_TRUE("test_range_and_byte_concepts", (Type::SentinelFor<Iterator, Iterator>));
+	ASSERT_TRUE("test_range_and_byte_concepts", (Type::SizedSentinelFor<Iterator, Iterator>));
+	ASSERT_TRUE("test_range_and_byte_concepts", (Type::SameAs<Type::RangeValue<Values>, int>));
+	ASSERT_TRUE("test_range_and_byte_concepts", (Type::SameAs<Type::RangeReference<Values>, int&>));
+	ASSERT_TRUE("test_range_and_byte_concepts", (Type::SameAs<Type::RangeDifference<Values>, std::ptrdiff_t>));
+	ASSERT_TRUE("test_range_and_byte_concepts", (Type::SameAs<Type::IteratorValue<Iterator>, int>));
+	ASSERT_TRUE("test_range_and_byte_concepts", (Type::ExplicitlyConvertibleTo<int, std::byte>));
+	ASSERT_FALSE("test_range_and_byte_concepts", (Type::ConvertibleTo<int, std::byte>));
+	ASSERT_TRUE("test_range_and_byte_concepts", (Type::ByteInputRange<std::vector<int>>));
+	ASSERT_TRUE("test_range_and_byte_concepts", (Type::ByteInputIterator<std::vector<int>::iterator>));
+	ASSERT_FALSE("test_range_and_byte_concepts", (Type::ByteInputRange<int>));
+	ASSERT_FALSE("test_range_and_byte_concepts", (Type::ByteInputRange<std::vector<std::string>>));
+	ASSERT_FALSE("test_range_and_byte_concepts", (Type::ByteInputIterator<std::vector<std::string>::iterator>));
+	RETURN_TEST("test_range_and_byte_concepts", result);
+}
 int test_constructible_and_callable() {
 	int result = 0;
 	ASSERT_TRUE("test_constructible_and_callable", Type::DefaultConstructible<int>);
@@ -276,8 +325,14 @@ int test_extended_type_concepts() {
 	ASSERT_TRUE("test_extended_type_concepts", Type::SmartPointer<std::unique_ptr<int>>);
 	ASSERT_TRUE("test_extended_type_concepts", Type::SmartPointer<std::shared_ptr<int>>);
 	ASSERT_FALSE("test_extended_type_concepts", Type::SmartPointer<int*>);
+	ASSERT_TRUE("test_extended_type_concepts", Type::NullablePointer<std::unique_ptr<int>>);
+	ASSERT_TRUE("test_extended_type_concepts", Type::NullablePointer<std::shared_ptr<int>>);
+	ASSERT_FALSE("test_extended_type_concepts", Type::NullablePointer<MoveOnlyValue>);
+	ASSERT_TRUE("test_extended_type_concepts", Type::MoveConstructible<MoveOnlyValue>);
 	ASSERT_TRUE("test_extended_type_concepts", Type::Swappable<std::string>);
 	ASSERT_TRUE("test_extended_type_concepts", (Type::DerivedFrom<TraitDerived, TraitBase>));
+	ASSERT_TRUE("test_extended_type_concepts", (Type::DerivedFrom<const TraitDerived, const TraitBase>));
+	ASSERT_TRUE("test_extended_type_concepts", (Type::DerivedFrom<TraitBase, TraitBase>));
 	ASSERT_FALSE("test_extended_type_concepts", (Type::DerivedFrom<TraitUnrelated, TraitBase>));
 	ASSERT_TRUE("test_extended_type_concepts", Type::EqualityComparable<int>);
 	ASSERT_TRUE("test_extended_type_concepts", Type::ThreeWayComparable<int>);
@@ -313,6 +368,7 @@ int main() {
 	result += test_enum_concepts();
 	result += test_arithmetic_and_cv_concepts();
 	result += test_same_as_and_convertible();
+	result += test_range_and_byte_concepts();
 	result += test_constructible_and_callable();
 	result += test_trivially_copyable();
 	result += test_extended_type_concepts();
