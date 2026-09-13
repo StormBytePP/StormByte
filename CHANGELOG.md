@@ -21,6 +21,10 @@ If you landed here from a release link and have not read the tree:
 
 ## [Unreleased]
 
+### Added
+
+- **Type** concepts — `Sized`, `SmartPointer`, `Swappable`, `DerivedFrom`, `EqualityComparable`, `ThreeWayComparable`, `Hashable`
+
 ### Fixed
 
 - **Iterable::add** — `add(const value_type&)` is constrained with `Type::CopyConstructible`; `add(value_type&&)` with `Type::MoveConstructible`. clang-cl / MSVC no longer instantiate `push_back(const unique_ptr&)` when the container holds move-only values.

@@ -24,6 +24,7 @@
 #include <bit>
 #include <concepts>
 #include <cstddef>
+#include <functional>
 #include <optional>
 #include <string>
 #include <type_traits>
@@ -129,6 +130,12 @@ namespace StormByte {
 				}
 			}
 		}
+
+		/**
+		 * @defgroup TypeContainers Container concepts
+		 * @brief Container-like and aggregate types: sequences, maps, sets, optionals, variants.
+		 * @{
+		 */
 
 		/**
 		 * @brief Text string types that are not generic containers.
@@ -283,6 +290,21 @@ namespace StormByte {
 		};
 
 		/**
+		 * @brief @ref Container that publishes `size()` convertible to `std::size_t`.
+		 * @tparam C Container type (cv/ref ignored).
+		 *
+		 * @code
+		 * static_assert(Type::Sized<std::vector<int>>);
+		 * @endcode
+		 */
+		template<typename C>
+		concept Sized =
+			Container<std::remove_cvref_t<C>> &&
+			requires(std::remove_cvref_t<C> const& c) {
+				{ c.size() } -> std::convertible_to<std::size_t>;
+			};
+
+		/**
 		 * @brief Exactly `std::optional<U>` for some `U`.
 		 * @tparam T Type to test (no decay).
 		 *
@@ -317,16 +339,39 @@ namespace StormByte {
 		};
 
 		/**
-		 * @brief Lvalue or rvalue reference type.
+		 * @brief Instantiation of `std::variant`, after stripping cv/ref.
 		 * @tparam T Type to test.
 		 *
 		 * @code
-		 * template<Type::Reference T>
-		 * void process(T&& ref);
+		 * template<Type::Variant T>
+		 * void process(T var);
 		 * @endcode
 		 */
 		template<typename T>
-		concept Reference = std::is_reference_v<T>;
+		concept Variant = Detail::is_variant_v<std::remove_cvref_t<T>>;
+
+		/**
+		 * @brief @ref Variant @p T that lists @p U among its alternatives.
+		 * @tparam T Variant type (cv/ref stripped before the lookup).
+		 * @tparam U Alternative to look for (cv/ref stripped).
+		 *
+		 * @code
+		 * template<typename T, typename U>
+		 * requires Type::VariantHasType<T, U>
+		 * void handle_variant(T var);
+		 * @endcode
+		 */
+		template<typename T, typename U>
+		concept VariantHasType =
+			Variant<T> &&
+			Detail::variant_has_type_v<std::remove_cvref_t<T>, U>;
+		/** @} */
+
+		/**
+		 * @defgroup TypeEnums Enumeration concepts
+		 * @brief Concepts and helpers for `enum` / `enum class` types.
+		 * @{
+		 */
 
 		/**
 		 * @brief Unscoped or scoped enumeration (`enum` / `enum class`).
@@ -395,6 +440,25 @@ namespace StormByte {
 		constexpr UnderlyingType<E> ToUnderlying(E e) noexcept {
 			return static_cast<UnderlyingType<E>>(e);
 		}
+		/** @} */
+
+		/**
+		 * @defgroup TypeCategories Fundamental type category concepts
+		 * @brief Thin wrappers around the basic `std::is_*` type category predicates.
+		 * @{
+		 */
+
+		/**
+		 * @brief Lvalue or rvalue reference type.
+		 * @tparam T Type to test.
+		 *
+		 * @code
+		 * template<Type::Reference T>
+		 * void process(T&& ref);
+		 * @endcode
+		 */
+		template<typename T>
+		concept Reference = std::is_reference_v<T>;
 
 		/**
 		 * @brief Raw (possibly cv-qualified) pointer type. Not a smart pointer.
@@ -407,6 +471,28 @@ namespace StormByte {
 		 */
 		template<typename T>
 		concept Pointer = std::is_pointer_v<T>;
+
+		/**
+		 * @brief Smart pointer-like type: dereferenceable and exposes `get()`.
+		 * @tparam T Type to test (cv/ref ignored).
+		 *
+		 * Matches `std::unique_ptr`, `std::shared_ptr` and similar RAII
+		 * wrappers without naming them directly. A raw @ref Pointer does
+		 * not match: it has no `get()`.
+		 *
+		 * @code
+		 * static_assert(Type::SmartPointer<std::shared_ptr<int>>);
+		 * static_assert(!Type::SmartPointer<int*>);
+		 * @endcode
+		 */
+		template<typename T>
+		concept SmartPointer =
+			!Pointer<std::remove_cvref_t<T>> &&
+			requires(std::remove_cvref_t<T> const& p) {
+				{ *p };
+				{ p.operator->() };
+				{ p.get() };
+			};
 
 		/**
 		 * @brief Integral type (`bool`, `char`, `int`, `long`, …), including cv.
@@ -496,34 +582,13 @@ namespace StormByte {
 		 */
 		template<typename T>
 		concept Class = std::is_class_v<T>;
+		/** @} */
 
 		/**
-		 * @brief Instantiation of `std::variant`, after stripping cv/ref.
-		 * @tparam T Type to test.
-		 *
-		 * @code
-		 * template<Type::Variant T>
-		 * void process(T var);
-		 * @endcode
+		 * @defgroup TypeObjectSemantics Object semantics concepts
+		 * @brief Construction, destruction and copy/move semantics predicates.
+		 * @{
 		 */
-		template<typename T>
-		concept Variant = Detail::is_variant_v<std::remove_cvref_t<T>>;
-
-		/**
-		 * @brief @ref Variant @p T that lists @p U among its alternatives.
-		 * @tparam T Variant type (cv/ref stripped before the lookup).
-		 * @tparam U Alternative to look for (cv/ref stripped).
-		 *
-		 * @code
-		 * template<typename T, typename U>
-		 * requires Type::VariantHasType<T, U>
-		 * void handle_variant(T var);
-		 * @endcode
-		 */
-		template<typename T, typename U>
-		concept VariantHasType =
-			Variant<T> &&
-			Detail::variant_has_type_v<std::remove_cvref_t<T>, U>;
 
 		/**
 		 * @brief Type that may be copied with `memcpy` / as-if `memcpy`.
@@ -586,6 +651,25 @@ namespace StormByte {
 		concept MoveConstructible = std::is_move_constructible_v<T>;
 
 		/**
+		 * @brief Type that can be swapped with `std::swap` (`std::is_swappable`).
+		 * @tparam T Type to test.
+		 *
+		 * @code
+		 * template<Type::Swappable T>
+		 * void exchange(T& a, T& b) { std::swap(a, b); }
+		 * @endcode
+		 */
+		template<typename T>
+		concept Swappable = std::is_swappable_v<T>;
+		/** @} */
+
+		/**
+		 * @defgroup TypeRelations Type relation concepts
+		 * @brief Relationships between two (or more) types: invocability, equivalence, convertibility.
+		 * @{
+		 */
+
+		/**
 		 * @brief Invocable with argument types @p Args (`std::is_invocable`).
 		 * @tparam F Callable type.
 		 * @tparam Args Argument types passed to `F`.
@@ -633,6 +717,81 @@ namespace StormByte {
 		 */
 		template<typename From, typename To>
 		concept ConvertibleTo = std::is_convertible_v<From, To>;
+
+		/**
+		 * @brief @p Derived derives from @p Base (`std::is_base_of`).
+		 * @tparam Derived Candidate derived type.
+		 * @tparam Base Candidate base type.
+		 *
+		 * @note Not `std::derived_from`: that also requires an unambiguous,
+		 *       public base-to-derived conversion. This only checks the
+		 *       inheritance relationship itself.
+		 *
+		 * @code
+		 * struct Base {};
+		 * struct Derived : Base {};
+		 * static_assert(Type::DerivedFrom<Derived, Base>);
+		 * @endcode
+		 */
+		template<typename Derived, typename Base>
+		concept DerivedFrom = std::is_base_of_v<Base, Derived>;
+		/** @} */
+
+		/**
+		 * @defgroup TypeComparison Comparison and hashing concepts
+		 * @brief Equality, ordering and `std::hash` support for a type.
+		 * @{
+		 */
+
+		/**
+		 * @brief Type whose `==` and `!=` both yield something convertible to `bool`.
+		 * @tparam T Type to test.
+		 *
+		 * @note Not `std::equality_comparable`: this only checks same-type
+		 *       comparison, not the mixed-type / common-reference machinery.
+		 *
+		 * @code
+		 * template<Type::EqualityComparable T>
+		 * bool same(T const& a, T const& b) { return a == b; }
+		 * @endcode
+		 */
+		template<typename T>
+		concept EqualityComparable =
+			requires(std::remove_cvref_t<T> const& a, std::remove_cvref_t<T> const& b) {
+				{ a == b } -> std::convertible_to<bool>;
+				{ a != b } -> std::convertible_to<bool>;
+			};
+
+		/**
+		 * @brief Type whose `<=>` operator is well-formed.
+		 * @tparam T Type to test.
+		 *
+		 * @code
+		 * template<Type::ThreeWayComparable T>
+		 * auto order(T const& a, T const& b) { return a <=> b; }
+		 * @endcode
+		 */
+		template<typename T>
+		concept ThreeWayComparable =
+			requires(std::remove_cvref_t<T> const& a, std::remove_cvref_t<T> const& b) {
+				{ a <=> b };
+			};
+
+		/**
+		 * @brief Type with a valid `std::hash` specialization.
+		 * @tparam T Type to test.
+		 *
+		 * @code
+		 * template<Type::Hashable T>
+		 * std::size_t hash_of(T const& value) { return std::hash<std::remove_cvref_t<T>>{}(value); }
+		 * @endcode
+		 */
+		template<typename T>
+		concept Hashable =
+			requires(std::remove_cvref_t<T> const& t) {
+				{ std::hash<std::remove_cvref_t<T>>{}(t) } -> std::convertible_to<std::size_t>;
+			};
+		/** @} */
 	}
 
 	/**
