@@ -173,9 +173,17 @@ int test_utf8_conversion_is_locale_independent() {
 	std::setlocale(LC_ALL, saved_locale.c_str());
 	RETURN_TEST("test_utf8_conversion_is_locale_independent", result);
 }
+int test_utf8_conversion_preserves_embedded_nul() {
+	int result = 0;
+	const std::wstring wide = {L'A', L'\0', L'\u00E9', L'\0', L'B'};
+	const std::string utf8 = {'A', '\0', static_cast<char>(0xC3), static_cast<char>(0xA9), '\0', 'B'};
+	ASSERT_EQUAL("test_utf8_conversion_preserves_embedded_nul", utf8, UTF8Encode(wide));
+	ASSERT_EQUAL("test_utf8_conversion_preserves_embedded_nul", wide, UTF8Decode(utf8));
+	RETURN_TEST("test_utf8_conversion_preserves_embedded_nul", result);
+}
 int test_utf8_conversion_rejects_invalid_input() {
 	int result = 0;
-	const std::vector<std::string> invalid_utf8 = {
+	std::vector<std::string> invalid_utf8 = {
 		std::string("\x80", 1),
 		std::string("\xC0\x80", 2),
 		std::string("\xE0\x80\x80", 3),
@@ -183,10 +191,20 @@ int test_utf8_conversion_rejects_invalid_input() {
 		std::string("\xED\xA0\x80", 3),
 		std::string("\xF4\x90\x80\x80", 4),
 		std::string("\xF0\x28\x8C\x28", 4),
+		std::string("\xF5\x80\x80\x80", 4),
+		std::string("\xFF", 1),
+		std::string("\x80\x80", 2),
+		std::string("A\x80", 2),
+		std::string({static_cast<char>(0xC2), 'A'}),
+		std::string({static_cast<char>(0xE2), 'A', static_cast<char>(0x80)}),
+		std::string({static_cast<char>(0xF0), 'A', static_cast<char>(0x80), static_cast<char>(0x80)}),
 		std::string("\xC2", 1),
 		std::string("\xE2\x82", 2),
 		std::string("\xF0\x9F\x98", 3)
 	};
+	for (int lead = 0xF5; lead <= 0xFF; ++lead) {
+		invalid_utf8.push_back(std::string(1, static_cast<char>(lead)));
+	}
 	for (const std::string& input : invalid_utf8) {
 		bool threw = false;
 		try {
@@ -203,11 +221,53 @@ int test_utf8_conversion_rejects_invalid_input() {
 		threw = true;
 	}
 	ASSERT_TRUE("test_utf8_conversion_rejects_invalid_input", threw);
+	const std::vector<std::string> invalid_surrogates = {
+		std::string("\xED\xA0\x80", 3),
+		std::string("\xED\xBF\xBF", 3)
+	};
+	for (const std::string& input : invalid_surrogates) {
+		threw = false;
+		try {
+			UTF8Decode(input);
+		} catch (const StormByte::UTF8Error&) {
+			threw = true;
+		}
+		ASSERT_TRUE("test_utf8_conversion_rejects_invalid_input", threw);
+	}
+	if constexpr (sizeof(wchar_t) == 2) {
+		const std::vector<std::wstring> invalid_wide = {
+			{static_cast<wchar_t>(0xD800)},
+			{static_cast<wchar_t>(0xDC00)},
+			{static_cast<wchar_t>(0xD800), static_cast<wchar_t>(0xD800)},
+			{static_cast<wchar_t>(0xDC00), static_cast<wchar_t>(0xDC00)},
+			{static_cast<wchar_t>(0xD800), static_cast<wchar_t>(0xDFFF)}
+		};
+		for (const std::wstring& input : invalid_wide) {
+			threw = false;
+			try {
+				UTF8Encode(input);
+			} catch (const StormByte::UTF8Error&) {
+				threw = true;
+			}
+			ASSERT_TRUE("test_utf8_conversion_rejects_invalid_input", threw);
+		}
+	} else {
+		for (const wchar_t codepoint : {static_cast<wchar_t>(0xD800), static_cast<wchar_t>(0xDFFF), static_cast<wchar_t>(0x110000)}) {
+			threw = false;
+			try {
+				UTF8Encode(std::wstring(1, codepoint));
+			} catch (const StormByte::UTF8Error&) {
+				threw = true;
+			}
+			ASSERT_TRUE("test_utf8_conversion_rejects_invalid_input", threw);
+		}
+	}
 	RETURN_TEST("test_utf8_conversion_rejects_invalid_input", result);
 }
 int test_utf8_conversion_boundaries() {
 	int result = 0;
 	const std::vector<std::pair<std::wstring, std::string>> cases = {
+		{std::wstring(), std::string()},
 		{std::wstring(1, static_cast<wchar_t>(0x7F)), std::string("\x7F", 1)},
 		{std::wstring(1, static_cast<wchar_t>(0x80)), std::string("\xC2\x80", 2)},
 		{std::wstring(1, static_cast<wchar_t>(0x7FF)), std::string("\xDF\xBF", 2)},
@@ -222,6 +282,9 @@ int test_utf8_conversion_boundaries() {
 		const std::wstring pair = {static_cast<wchar_t>(0xD800), static_cast<wchar_t>(0xDC00)};
 		ASSERT_EQUAL("test_utf8_conversion_boundaries", std::string("\xF0\x90\x80\x80", 4), UTF8Encode(pair));
 		ASSERT_EQUAL("test_utf8_conversion_boundaries", pair, UTF8Decode("\xF0\x90\x80\x80"));
+		const std::wstring maximum = {static_cast<wchar_t>(0xDBFF), static_cast<wchar_t>(0xDFFF)};
+		ASSERT_EQUAL("test_utf8_conversion_boundaries", std::string("\xF4\x8F\xBF\xBF", 4), UTF8Encode(maximum));
+		ASSERT_EQUAL("test_utf8_conversion_boundaries", maximum, UTF8Decode("\xF4\x8F\xBF\xBF"));
 	} else {
 		const std::vector<std::pair<std::wstring, std::string>> supplementary = {
 			{std::wstring(1, static_cast<wchar_t>(0x10000)), std::string("\xF0\x90\x80\x80", 4)},
@@ -248,6 +311,7 @@ int main() {
 		result += test_buffer_to_string();
 		result += test_case_conversion_high_bytes();
 		result += test_utf8_conversion_is_locale_independent();
+		result += test_utf8_conversion_preserves_embedded_nul();
 		result += test_utf8_conversion_rejects_invalid_input();
 		result += test_utf8_conversion_boundaries();
     } catch (const StormByte::Exception& ex) {
