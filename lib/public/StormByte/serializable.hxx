@@ -26,6 +26,7 @@
 #include <StormByte/type_traits.hxx>
 #include <StormByte/visibility.h>
 
+#include <array>
 #include <bit>
 #include <cstdint>
 #include <cstring>
@@ -33,6 +34,7 @@
 #include <span>
 #include <string>
 #include <type_traits>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -51,6 +53,16 @@ namespace StormByte {
 	 * for their own types. Do not specialize @ref Serializable itself.
 	 */
 	namespace Detail {
+		/**
+		 * @brief Identifies `std::array` so fixed-size containers can be decoded by index.
+		 * @tparam T Candidate type.
+		 */
+		template<typename T>
+		constexpr bool is_std_array_v = false;
+
+		template<typename U, std::size_t N>
+		constexpr bool is_std_array_v<std::array<U, N>> = true;
+
 		/**
 		 * @brief Compile-time false dependent on @p T.
 		 * @tparam T Ignored; exists so `static_assert` is delayed to instantiation.
@@ -452,6 +464,10 @@ namespace StormByte {
 
 				if (size > static_cast<std::uint64_t>(data.size() - offset))
 					return Unexpected<DeserializeError>("Claimed container size exceeds remaining buffer");
+				if constexpr (Detail::is_std_array_v<T>) {
+					if (size != static_cast<std::uint64_t>(std::tuple_size_v<T>))
+						return Unexpected<DeserializeError>("Array size does not match serialized element count");
+				}
 
 				T container;
 				for (std::uint64_t i = 0; i < size; ++i) {
@@ -465,7 +481,11 @@ namespace StormByte {
 						return Unexpected(expected_element.error());
 
 					const std::size_t element_size = Serializable<ElementT>::Size(expected_element.value());
-					container.insert(container.end(), std::move(expected_element.value()));
+					if constexpr (Detail::is_std_array_v<T>) {
+						container[static_cast<std::size_t>(i)] = std::move(expected_element.value());
+					} else {
+						container.insert(container.end(), std::move(expected_element.value()));
+					}
 					offset += element_size;
 				}
 				return container;

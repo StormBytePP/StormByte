@@ -23,12 +23,14 @@
 #include <StormByte/helpers.hxx>
 #include <StormByte/serializable.hxx>
 #include <StormByte/test_handlers.h>
+#include <array>
 #include <cstring>
 #include <map>
 #include <optional>
 #include <random>
 #include <span>
 #include <string>
+#include <tuple>
 #include <vector>
 using namespace StormByte;
 // =============================================================================
@@ -186,6 +188,26 @@ int test_serialize_map() {
 	ASSERT_TRUE("test_serialize_map", data == expected_data.value());
 	RETURN_TEST("test_serialize_map", 0);
 }
+int test_serialize_array() {
+	const std::array<int, 3> data = { 10, 20, 30 };
+	auto buffer = Serializable<std::array<int, 3>>(data).Serialize();
+	auto expected = Serializable<std::array<int, 3>>::Deserialize(buffer);
+	if (!expected) {
+		std::cerr << expected.error()->what() << std::endl;
+		RETURN_TEST("test_serialize_array", 1);
+	}
+	ASSERT_TRUE("test_serialize_array", data == expected.value());
+	const auto expected_size = Serializable<std::array<int, 3>>::Size(data);
+	ASSERT_EQUAL("test_serialize_array", expected_size, buffer.size());
+	RETURN_TEST("test_serialize_array", 0);
+}
+int test_serialize_array_rejects_wrong_element_count() {
+	const std::vector<int> data = { 10, 20 };
+	auto buffer = Serializable<std::vector<int>>(data).Serialize();
+	auto expected = Serializable<std::array<int, 3>>::Deserialize(buffer);
+	ASSERT_FALSE("test_serialize_array_rejects_wrong_element_count", expected.has_value());
+	RETURN_TEST("test_serialize_array_rejects_wrong_element_count", 0);
+}
 int test_serialize_int_truncated() {
 	int data = 42;
 	Serializable<int> serialization(data);
@@ -271,6 +293,34 @@ int test_serialize_optional_string() {
 	}
 	ASSERT_EQUAL("test_serialize_optional_string", data.value(), expected_data.value().value());
 	RETURN_TEST("test_serialize_optional_string", 0);
+}
+int test_serialize_nested_optional() {
+	using Value = std::optional<std::optional<int>>;
+	const std::vector<Value> values = { std::nullopt, std::optional<int>{std::nullopt}, std::optional<int>{42} };
+	for (const auto& data : values) {
+		auto buffer = Serializable<Value>(data).Serialize();
+		auto expected = Serializable<Value>::Deserialize(buffer);
+		if (!expected || expected.value() != data) {
+			std::cerr << "test_serialize_nested_optional: nested optional mismatch\n";
+			RETURN_TEST("test_serialize_nested_optional", 1);
+		}
+	}
+	RETURN_TEST("test_serialize_nested_optional", 0);
+}
+int test_serialize_deep_nested_vector() {
+	using Value = std::vector<std::vector<std::vector<int>>>;
+	const Value data = {
+		{{1, 2}, {3}},
+		{{4, 5, 6}}
+	};
+	auto buffer = Serializable<Value>(data).Serialize();
+	auto expected = Serializable<Value>::Deserialize(buffer);
+	if (!expected) {
+		std::cerr << expected.error()->what() << std::endl;
+		RETURN_TEST("test_serialize_deep_nested_vector", 1);
+	}
+	ASSERT_TRUE("test_serialize_deep_nested_vector", data == expected.value());
+	RETURN_TEST("test_serialize_deep_nested_vector", 0);
 }
 int test_serialize_deserialize_big_string() {
 	const std::string fn_name = "test_serialize_deserialize_big_string";
@@ -539,6 +589,17 @@ int test_serialize_u16string_non_bmp() {
 	ASSERT_TRUE("test_serialize_u16string_non_bmp", data == expected.value());
 	RETURN_TEST("test_serialize_u16string_non_bmp", 0);
 }
+int test_serialize_unicode_boundary_codepoints() {
+	const std::u32string data = { U'\0', U'\x7F', U'\x80', U'\x7FF', U'\x800', U'\xFFFF', U'\U00010000', U'\U0010FFFF' };
+	auto buffer = Serializable<std::u32string>(data).Serialize();
+	auto expected = Serializable<std::u32string>::Deserialize(buffer);
+	if (!expected) {
+		std::cerr << expected.error()->what() << std::endl;
+		RETURN_TEST("test_serialize_unicode_boundary_codepoints", 1);
+	}
+	ASSERT_TRUE("test_serialize_unicode_boundary_codepoints", data == expected.value());
+	RETURN_TEST("test_serialize_unicode_boundary_codepoints", 0);
+}
 int test_serialize_wstring() {
 	std::wstring data = L"Hello, StormByte!";
 	auto buffer = Serializable<std::wstring>(data).Serialize();
@@ -735,12 +796,16 @@ int main() {
 	result += test_serialize_string_vector();
 	result += test_serialize_pair();
 	result += test_serialize_map();
+	result += test_serialize_array();
+	result += test_serialize_array_rejects_wrong_element_count();
 	result += test_serialize_int_truncated();
 	result += test_serialize_string_vector_truncated();
 	result += test_serialize_pair_truncated();
 	result += test_serialize_optional_notempty();
 	result += test_serialize_optional_empty();
 	result += test_serialize_optional_string();
+	result += test_serialize_nested_optional();
+	result += test_serialize_deep_nested_vector();
 	result += test_serialize_deserialize_big_string();
 	result += test_serialize_deserialize_with_span();
 	result += test_serialize_deserialize_with_span_truncated();
@@ -759,6 +824,7 @@ int main() {
 	result += test_serialize_u16string_truncated();
 	result += test_serialize_u16string_huge_size();
 	result += test_serialize_u16string_non_bmp();
+	result += test_serialize_unicode_boundary_codepoints();
 	result += test_serialize_wstring();
 	result += test_serialize_wstring_non_bmp();
 	result += test_wide_and_u16_share_utf8_wire();
