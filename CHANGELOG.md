@@ -24,6 +24,7 @@ If you landed here from a release link and have not read the tree:
 ### Changed
 
 - **Template implementation split** — `Bitmask`, `Clonable`, `Iterable` (including its nested `Iterator`/`ConstIterator`), and `Serializable` now declare their members in the `.hxx` header and define them in a matching `.txx` file included at the bottom of the header. Public API and behavior are unchanged; `.txx` files are installed alongside the headers.
+- **Serializable<T> explicit instantiation** — `bool`, all standard character/integer/floating-point types, and the four Codec-backed string types (`std::string`, `std::wstring`, `std::u16string`, `std::u32string`) are now explicitly instantiated inside the shared/dynamic library and declared `extern template` in the header, so consumers link against the library's code instead of re-instantiating it locally. `Serializable`'s container/pair/optional/trivial private helpers gained matching `requires` clauses so the explicit instantiation only compiles the members that apply to each concrete `T`.
 
 [Unreleased]: https://github.com/StormBytePP/StormByte/compare/1.1.0...HEAD
 

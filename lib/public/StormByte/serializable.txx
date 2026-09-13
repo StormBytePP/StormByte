@@ -74,7 +74,8 @@ namespace StormByte {
 	}
 
 	template<typename T>
-	std::vector<std::byte> Serializable<T>::SerializeTrivial() const noexcept {
+	std::vector<std::byte> Serializable<T>::SerializeTrivial() const noexcept
+	requires std::is_trivially_copyable_v<T> {
 		DecayedT value = m_data;
 
 		if constexpr (!std::is_same_v<DecayedT, bool> &&
@@ -89,7 +90,8 @@ namespace StormByte {
 	}
 
 	template<typename T>
-	std::vector<std::byte> Serializable<T>::SerializeContainer() const noexcept {
+	std::vector<std::byte> Serializable<T>::SerializeContainer() const noexcept
+	requires Type::Container<T> {
 		const std::uint64_t size = static_cast<std::uint64_t>(m_data.size());
 		std::vector<std::byte> buffer = Serializable<std::uint64_t>(size).Serialize();
 		buffer.reserve(buffer.size() + SizeContainer(m_data));
@@ -101,7 +103,8 @@ namespace StormByte {
 	}
 
 	template<typename T>
-	std::vector<std::byte> Serializable<T>::SerializePair() const noexcept {
+	std::vector<std::byte> Serializable<T>::SerializePair() const noexcept
+	requires Type::Pair<T> {
 		Serializable<std::decay_t<typename T::first_type>> first_serial(m_data.first);
 		Serializable<std::decay_t<typename T::second_type>> second_serial(m_data.second);
 		std::vector<std::byte> buffer;
@@ -112,7 +115,8 @@ namespace StormByte {
 	}
 
 	template<typename T>
-	std::vector<std::byte> Serializable<T>::SerializeOptional() const noexcept {
+	std::vector<std::byte> Serializable<T>::SerializeOptional() const noexcept
+	requires Type::Optional<T> {
 		const bool has_value = m_data.has_value();
 		std::vector<std::byte> buffer;
 		buffer.reserve(SizeOptional(m_data));
@@ -125,7 +129,8 @@ namespace StormByte {
 	}
 
 	template<typename T>
-	std::size_t Serializable<T>::SizeContainer(const DecayedT& data) noexcept {
+	std::size_t Serializable<T>::SizeContainer(const DecayedT& data) noexcept
+	requires Type::Container<T> {
 		std::size_t size = sizeof(std::uint64_t);
 		for (const auto& element : data) {
 			size += Serializable<std::decay_t<decltype(element)>>::Size(element);
@@ -134,14 +139,16 @@ namespace StormByte {
 	}
 
 	template<typename T>
-	std::size_t Serializable<T>::SizePair(const DecayedT& data) noexcept {
+	std::size_t Serializable<T>::SizePair(const DecayedT& data) noexcept
+	requires Type::Pair<T> {
 		return
 			Serializable<std::decay_t<typename T::first_type>>::Size(data.first) +
 			Serializable<std::decay_t<typename T::second_type>>::Size(data.second);
 	}
 
 	template<typename T>
-	std::size_t Serializable<T>::SizeOptional(const DecayedT& data) noexcept {
+	std::size_t Serializable<T>::SizeOptional(const DecayedT& data) noexcept
+	requires Type::Optional<T> {
 		std::size_t size = sizeof(bool);
 		if (data.has_value()) {
 			size += Serializable<std::decay_t<decltype(data.value())>>::Size(data.value());
@@ -150,7 +157,8 @@ namespace StormByte {
 	}
 
 	template<typename T>
-	Expected<T, DeserializeError> Serializable<T>::DeserializeTrivial(std::span<const std::byte> data) noexcept {
+	Expected<T, DeserializeError> Serializable<T>::DeserializeTrivial(std::span<const std::byte> data) noexcept
+	requires std::is_trivially_copyable_v<T> {
 		if constexpr (std::is_same_v<T, bool>) {
 			if (data.empty())
 				return Unexpected<DeserializeError>("Insufficient data for bool");
@@ -176,7 +184,8 @@ namespace StormByte {
 	}
 
 	template<typename T>
-	Expected<T, DeserializeError> Serializable<T>::DeserializeContainer(std::span<const std::byte> data) noexcept {
+	Expected<T, DeserializeError> Serializable<T>::DeserializeContainer(std::span<const std::byte> data) noexcept
+	requires Type::Container<T> {
 		std::size_t offset = 0;
 
 		if (offset + sizeof(std::uint64_t) > data.size())
@@ -220,7 +229,8 @@ namespace StormByte {
 	}
 
 	template<typename T>
-	Expected<T, DeserializeError> Serializable<T>::DeserializePair(std::span<const std::byte> data) noexcept {
+	Expected<T, DeserializeError> Serializable<T>::DeserializePair(std::span<const std::byte> data) noexcept
+	requires Type::Pair<T> {
 		using FirstT = std::decay_t<typename T::first_type>;
 		using SecondT = std::decay_t<typename T::second_type>;
 
@@ -240,7 +250,8 @@ namespace StormByte {
 	}
 
 	template<typename T>
-	Expected<T, DeserializeError> Serializable<T>::DeserializeOptional(std::span<const std::byte> data) noexcept {
+	Expected<T, DeserializeError> Serializable<T>::DeserializeOptional(std::span<const std::byte> data) noexcept
+	requires Type::Optional<T> {
 		auto expected_has = Serializable<bool>::Deserialize(data);
 		if (!expected_has)
 			return Unexpected(expected_has.error());

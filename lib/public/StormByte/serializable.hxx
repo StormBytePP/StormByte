@@ -272,19 +272,22 @@ namespace StormByte {
 			 *
 			 * @return Blob of `sizeof(T)` bytes.
 			 */
-			std::vector<std::byte> SerializeTrivial() const noexcept;
+			std::vector<std::byte> SerializeTrivial() const noexcept
+			requires std::is_trivially_copyable_v<T>;
 
 			/**
 			 * @brief Encodes a container: `uint64` count (LE) then each element.
 			 * @return Blob.
 			 */
-			std::vector<std::byte> SerializeContainer() const noexcept;
+			std::vector<std::byte> SerializeContainer() const noexcept
+			requires Type::Container<T>;
 
 			/**
 			 * @brief Encodes a pair: first, then second. No separator.
 			 * @return Blob.
 			 */
-			std::vector<std::byte> SerializePair() const noexcept;
+			std::vector<std::byte> SerializePair() const noexcept
+			requires Type::Pair<T>;
 
 			/**
 			 * @brief Encodes an optional: `bool has_value`, then the value if set.
@@ -293,28 +296,32 @@ namespace StormByte {
 			 *
 			 * @return Blob.
 			 */
-			std::vector<std::byte> SerializeOptional() const noexcept;
+			std::vector<std::byte> SerializeOptional() const noexcept
+			requires Type::Optional<T>;
 
 			/**
 			 * @brief Serialized size of a container.
 			 * @param[in] data Container to measure.
 			 * @return `8` plus the sum of element sizes.
 			 */
-			static std::size_t SizeContainer(const DecayedT& data) noexcept;
+			static std::size_t SizeContainer(const DecayedT& data) noexcept
+			requires Type::Container<T>;
 
 			/**
 			 * @brief Serialized size of a pair.
 			 * @param[in] data Pair to measure.
 			 * @return Sum of member sizes.
 			 */
-			static std::size_t SizePair(const DecayedT& data) noexcept;
+			static std::size_t SizePair(const DecayedT& data) noexcept
+			requires Type::Pair<T>;
 
 			/**
 			 * @brief Serialized size of an optional.
 			 * @param[in] data Optional to measure.
 			 * @return `sizeof(bool)` plus the value size when engaged.
 			 */
-			static std::size_t SizeOptional(const DecayedT& data) noexcept;
+			static std::size_t SizeOptional(const DecayedT& data) noexcept
+			requires Type::Optional<T>;
 
 			/**
 			 * @brief Decodes a trivially copyable value.
@@ -325,29 +332,70 @@ namespace StormByte {
 			 * @param[in] data Input span.
 			 * @return Value, or @ref DeserializeError.
 			 */
-			static Expected<T, DeserializeError> DeserializeTrivial(std::span<const std::byte> data) noexcept;
+			static Expected<T, DeserializeError> DeserializeTrivial(std::span<const std::byte> data) noexcept
+			requires std::is_trivially_copyable_v<T>;
 
 			/**
 			 * @brief Decodes a container: count, then that many elements.
 			 * @param[in] data Input span.
 			 * @return Container, or @ref DeserializeError.
 			 */
-			static Expected<T, DeserializeError> DeserializeContainer(std::span<const std::byte> data) noexcept;
+			static Expected<T, DeserializeError> DeserializeContainer(std::span<const std::byte> data) noexcept
+			requires Type::Container<T>;
 
 			/**
 			 * @brief Decodes a pair: first, then second.
 			 * @param[in] data Input span.
 			 * @return Pair, or @ref DeserializeError.
 			 */
-			static Expected<T, DeserializeError> DeserializePair(std::span<const std::byte> data) noexcept;
+			static Expected<T, DeserializeError> DeserializePair(std::span<const std::byte> data) noexcept
+			requires Type::Pair<T>;
 
 			/**
 			 * @brief Decodes an optional: `bool`, then the value if set.
 			 * @param[in] data Input span.
 			 * @return Optional, or @ref DeserializeError.
 			 */
-			static Expected<T, DeserializeError> DeserializeOptional(std::span<const std::byte> data) noexcept;
+			static Expected<T, DeserializeError> DeserializeOptional(std::span<const std::byte> data) noexcept
+			requires Type::Optional<T>;
 	};
+
+	// Explicit-instantiation declarations: suppress implicit instantiation of
+	// Serializable<T> for these T in every consumer TU. The matching
+	// `template class` definitions live in serializable.cxx, so the generated
+	// code ships once inside the shared library instead of being duplicated
+	// (and re-emitted as weak symbols) by each consumer.
+	//
+	// This block MUST come before `#include <StormByte/serializable.txx>`:
+	// `SerializeContainer`/`SerializeOptional`/etc. name `Serializable<bool>`
+	// and `Serializable<std::uint64_t>` as non-dependent types, so GCC
+	// implicitly instantiates those two specializations the moment the
+	// member bodies are parsed. If that happens before these `extern
+	// template` declarations, the visibility attribute below is silently
+	// discarded (see `-Wattributes`) and those two symbols stay hidden.
+	extern template class STORMBYTE_PUBLIC Serializable<bool>;
+	extern template class STORMBYTE_PUBLIC Serializable<char>;
+	extern template class STORMBYTE_PUBLIC Serializable<signed char>;
+	extern template class STORMBYTE_PUBLIC Serializable<unsigned char>;
+	extern template class STORMBYTE_PUBLIC Serializable<wchar_t>;
+	extern template class STORMBYTE_PUBLIC Serializable<char8_t>;
+	extern template class STORMBYTE_PUBLIC Serializable<char16_t>;
+	extern template class STORMBYTE_PUBLIC Serializable<char32_t>;
+	extern template class STORMBYTE_PUBLIC Serializable<short>;
+	extern template class STORMBYTE_PUBLIC Serializable<unsigned short>;
+	extern template class STORMBYTE_PUBLIC Serializable<int>;
+	extern template class STORMBYTE_PUBLIC Serializable<unsigned int>;
+	extern template class STORMBYTE_PUBLIC Serializable<long>;
+	extern template class STORMBYTE_PUBLIC Serializable<unsigned long>;
+	extern template class STORMBYTE_PUBLIC Serializable<long long>;
+	extern template class STORMBYTE_PUBLIC Serializable<unsigned long long>;
+	extern template class STORMBYTE_PUBLIC Serializable<float>;
+	extern template class STORMBYTE_PUBLIC Serializable<double>;
+	extern template class STORMBYTE_PUBLIC Serializable<long double>;
+	extern template class STORMBYTE_PUBLIC Serializable<std::string>;
+	extern template class STORMBYTE_PUBLIC Serializable<std::wstring>;
+	extern template class STORMBYTE_PUBLIC Serializable<std::u16string>;
+	extern template class STORMBYTE_PUBLIC Serializable<std::u32string>;
 }
 
 #include <StormByte/serializable.txx>

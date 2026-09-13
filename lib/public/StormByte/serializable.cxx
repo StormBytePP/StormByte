@@ -22,6 +22,45 @@
 #include <string>
 
 namespace StormByte {
+	// Explicit instantiations of Serializable<T>: the generated code lives
+	// once in this shared/dynamic library instead of being re-instantiated
+	// (as weak/COMDAT symbols) by every consumer translation unit. Matches
+	// the `extern template class` declarations in serializable.hxx. This
+	// block must be the first point of instantiation for these T in this
+	// TU so the STORMBYTE_PUBLIC visibility is not shadowed by an earlier
+	// implicit (hidden-visibility) instantiation from the helpers below.
+	// Boolean
+	template class STORMBYTE_PUBLIC Serializable<bool>;
+	// Character types
+	template class STORMBYTE_PUBLIC Serializable<char>;
+	template class STORMBYTE_PUBLIC Serializable<signed char>;
+	template class STORMBYTE_PUBLIC Serializable<unsigned char>;
+	template class STORMBYTE_PUBLIC Serializable<wchar_t>;
+	template class STORMBYTE_PUBLIC Serializable<char8_t>;
+	template class STORMBYTE_PUBLIC Serializable<char16_t>;
+	template class STORMBYTE_PUBLIC Serializable<char32_t>;
+	// Short
+	template class STORMBYTE_PUBLIC Serializable<short>;
+	template class STORMBYTE_PUBLIC Serializable<unsigned short>;
+	// Integer
+	template class STORMBYTE_PUBLIC Serializable<int>;
+	template class STORMBYTE_PUBLIC Serializable<unsigned int>;
+	// Long
+	template class STORMBYTE_PUBLIC Serializable<long>;
+	template class STORMBYTE_PUBLIC Serializable<unsigned long>;
+	// Long long
+	template class STORMBYTE_PUBLIC Serializable<long long>;
+	template class STORMBYTE_PUBLIC Serializable<unsigned long long>;
+	// Floating point
+	template class STORMBYTE_PUBLIC Serializable<float>;
+	template class STORMBYTE_PUBLIC Serializable<double>;
+	template class STORMBYTE_PUBLIC Serializable<long double>;
+	// Strings (Codec-backed)
+	template class STORMBYTE_PUBLIC Serializable<std::string>;
+	template class STORMBYTE_PUBLIC Serializable<std::wstring>;
+	template class STORMBYTE_PUBLIC Serializable<std::u16string>;
+	template class STORMBYTE_PUBLIC Serializable<std::u32string>;
+
 	namespace {
 		void append_utf8(std::string& out, char32_t cp) {
 			if (cp > 0x10FFFFu || (cp >= 0xD800u && cp <= 0xDFFFu))
