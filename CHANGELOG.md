@@ -36,6 +36,7 @@ If you landed here from a release link and have not read the tree:
 ### Changed
 
 - **Exception(component, fmt, args...)** — first argument is `Component`, not `std::string`. Source-breaking for every call that used the old two-string form.
+- **Type** concepts — reorganized `type_traits.hxx` into focused container, wrapper, conversion, category, range, relation, and comparison groups without changing public contracts.
 
 ### Fixed
 

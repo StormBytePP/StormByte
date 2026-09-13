@@ -135,7 +135,7 @@ namespace StormByte {
 
 		/**
 		 * @defgroup TypeContainers Container concepts
-		 * @brief Container-like and aggregate types: sequences, maps, sets, optionals, variants.
+		 * @brief Container shape and mutation capability predicates.
 		 * @{
 		 */
 
@@ -305,6 +305,13 @@ namespace StormByte {
 			requires(std::remove_cvref_t<C> const& c) {
 				{ c.size() } -> std::convertible_to<std::size_t>;
 			};
+		/** @} */
+
+		/**
+		 * @defgroup TypeWrappers Standard wrapper and aggregate concepts
+		 * @brief Predicates for standard wrappers and pair-like aggregate values.
+		 * @{
+		 */
 
 		/**
 		 * @brief Exactly `std::optional<U>` for some `U`.
@@ -445,6 +452,38 @@ namespace StormByte {
 		/** @} */
 
 		/**
+		 * @defgroup TypeConversions Type conversion concepts
+		 * @brief Implicit and explicit convertibility predicates.
+		 * @{
+		 */
+
+		/**
+		 * @brief @p From is implicitly convertible to @p To (`std::is_convertible`).
+		 * @tparam From Source type.
+		 * @tparam To Destination type.
+		 *
+		 * @note Not `std::convertible_to`: that also requires an explicit
+		 *       `To` construct from `From` and would tighten the contract.
+		 */
+		template<typename From, typename To>
+		concept ConvertibleTo = std::is_convertible_v<From, To>;
+
+		/**
+		 * @brief @p From may be explicitly converted to @p To with `static_cast`.
+		 * @tparam From Source type.
+		 * @tparam To Destination type.
+		 *
+		 * @note Accepts both implicit and explicit conversions. Unlike
+		 *       @ref ConvertibleTo, this matches types with an explicit conversion
+		 *       operator or constructor.
+		 */
+		template<typename From, typename To>
+		concept ExplicitlyConvertibleTo = requires(From value) {
+			static_cast<To>(value);
+		};
+		/** @} */
+
+		/**
 		 * @defgroup TypeCategories Fundamental type category concepts
 		 * @brief Thin wrappers around the basic `std::is_*` type category predicates.
 		 * @{
@@ -495,6 +534,19 @@ namespace StormByte {
 				{ p.operator->() };
 				{ p.get() };
 			};
+
+		/**
+		 * @brief Smart pointer-like type that can test whether it contains an object.
+		 * @tparam T Type to test (cv/ref ignored).
+		 *
+		 * Requires dereference, member access, `get()`, and an implicit or explicit
+		 * conversion to `bool`. Unlike @ref SmartPointer, this is suitable for APIs
+		 * that evaluate `!pointer` before dereferencing it.
+		 */
+		template<typename T>
+		concept NullablePointer =
+			SmartPointer<T> &&
+			ExplicitlyConvertibleTo<std::remove_cvref_t<T>, bool>;
 
 		/**
 		 * @brief Integral type (`bool`, `char`, `int`, `long`, …), including cv.
@@ -686,6 +738,30 @@ namespace StormByte {
 		/** @brief Value type associated with an iterator. @tparam I Iterator type. */
 		template<typename I>
 		using IteratorValue = std::iter_value_t<I>;
+
+		/**
+		 * @brief Input range whose scalar values can be explicitly converted to `std::byte`.
+		 * @tparam R Range type.
+		 *
+		 * Class-valued ranges are rejected. Conversion may be implicit or explicit.
+		 */
+		template<typename R>
+		concept ByteInputRange =
+			InputRange<R> &&
+			!Class<RangeValue<R>> &&
+			ExplicitlyConvertibleTo<RangeValue<R>, std::byte>;
+
+		/**
+		 * @brief Input iterator whose scalar values can be explicitly converted to `std::byte`.
+		 * @tparam I Iterator type.
+		 *
+		 * Class-valued iterator values are rejected. Conversion may be implicit or explicit.
+		 */
+		template<typename I>
+		concept ByteInputIterator =
+			InputIterator<I> &&
+			!Class<IteratorValue<I>> &&
+			ExplicitlyConvertibleTo<IteratorValue<I>, std::byte>;
 		/** @} */
 
 		/**
@@ -804,74 +880,6 @@ namespace StormByte {
 		template<typename T, typename U>
 		concept SameAs =
 			std::is_same_v<std::remove_cvref_t<T>, std::remove_cvref_t<U>>;
-
-		/**
-		 * @brief @p From is implicitly convertible to @p To (`std::is_convertible`).
-		 * @tparam From Source type.
-		 * @tparam To Destination type.
-		 *
-		 * @note Not `std::convertible_to`: that also requires an explicit
-		 *       `To` construct from `From` and would tighten the contract.
-		 *
-		 * @code
-		 * template<typename From, typename To>
-		 * requires Type::ConvertibleTo<From, To>
-		 * To convert(From value);
-		 * @endcode
-		 */
-		template<typename From, typename To>
-		concept ConvertibleTo = std::is_convertible_v<From, To>;
-
-		/**
-		 * @brief @p From may be explicitly converted to @p To with `static_cast`.
-		 * @tparam From Source type.
-		 * @tparam To Destination type.
-		 *
-		 * @note Accepts both implicit and explicit conversions. Unlike
-		 *       @ref ConvertibleTo, this matches types with an explicit conversion
-		 *       operator or constructor.
-		 */
-		template<typename From, typename To>
-		concept ExplicitlyConvertibleTo = requires(From value) {
-			static_cast<To>(value);
-		};
-
-		/**
-		 * @brief Smart pointer-like type that can test whether it contains an object.
-		 * @tparam T Type to test (cv/ref ignored).
-		 *
-		 * Requires dereference, member access, `get()`, and an implicit or explicit
-		 * conversion to `bool`. Unlike @ref SmartPointer, this is suitable for APIs
-		 * that evaluate `!pointer` before dereferencing it.
-		 */
-		template<typename T>
-		concept NullablePointer =
-			SmartPointer<T> &&
-			ExplicitlyConvertibleTo<std::remove_cvref_t<T>, bool>;
-
-		/**
-		 * @brief Input range whose scalar values can be explicitly converted to `std::byte`.
-		 * @tparam R Range type.
-		 *
-		 * Class-valued ranges are rejected. Conversion may be implicit or explicit.
-		 */
-		template<typename R>
-		concept ByteInputRange =
-			InputRange<R> &&
-			!Class<RangeValue<R>> &&
-			ExplicitlyConvertibleTo<RangeValue<R>, std::byte>;
-
-		/**
-		 * @brief Input iterator whose scalar values can be explicitly converted to `std::byte`.
-		 * @tparam I Iterator type.
-		 *
-		 * Class-valued iterator values are rejected. Conversion may be implicit or explicit.
-		 */
-		template<typename I>
-		concept ByteInputIterator =
-			InputIterator<I> &&
-			!Class<IteratorValue<I>> &&
-			ExplicitlyConvertibleTo<IteratorValue<I>, std::byte>;
 
 		/**
 		 * @brief @p Derived derives from @p Base (`std::is_base_of`).
