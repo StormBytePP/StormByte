@@ -42,6 +42,10 @@ if(ENABLE_TEST)
 	target_link_libraries(ThreadLockTests StormByte)
 	add_test(NAME ThreadLockTests COMMAND ThreadLockTests)
 
+	add_executable(TestHandlersTests test_handlers_test.cxx)
+	target_link_libraries(TestHandlersTests StormByte)
+	add_test(NAME TestHandlersTests COMMAND TestHandlersTests)
+
 	add_executable(TypeTraitsTests type_traits_test.cxx)
 	target_link_libraries(TypeTraitsTests StormByte)
 	add_test(NAME TypeTraitsTests COMMAND TypeTraitsTests)

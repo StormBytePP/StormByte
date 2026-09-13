@@ -25,6 +25,7 @@ If you landed here from a release link and have not read the tree:
 
 - **Type** concepts — `Sized`, `SmartPointer`, `Swappable`, `DerivedFrom`, `EqualityComparable`, `ThreeWayComparable`, `Hashable`
 - **Component** — wraps a module name for the component-prefixed `Exception` constructor; see Changed.
+- **Test handlers** — existing assertions now evaluate operands once and safely report non-streamable values; added `ASSERT_THROWS`, `ASSERT_NO_THROW`, `ASSERT_NEAR`, `ASSERT_CONTAINS` and `ASSERT_NOT_NULL`, with dedicated `TestHandlersTests` coverage.
 
 ### Changed
 
