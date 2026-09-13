@@ -24,10 +24,19 @@ If you landed here from a release link and have not read the tree:
 ### Added
 
 - **Type** concepts — `Sized`, `SmartPointer`, `Swappable`, `DerivedFrom`, `EqualityComparable`, `ThreeWayComparable`, `Hashable`
+- **Component** — wraps a module name for the component-prefixed `Exception` constructor; see Changed.
+
+### Changed
+
+- **Exception(component, fmt, args...)** — `component` is now a `Component` wrapper instead of a plain `std::string`: `Exception(Component("Base64"), "...", args...)`. Source-breaking for every call site using the old two-string form.
 
 ### Fixed
 
 - **Iterable::add** — `add(const value_type&)` is constrained with `Type::CopyConstructible`; `add(value_type&&)` with `Type::MoveConstructible`. clang-cl / MSVC no longer instantiate `push_back(const unique_ptr&)` when the container holds move-only values.
+- **Iterable::Iterator / ConstIterator** — `iterator_category` is now derived from the underlying container iterator instead of being hardcoded to `random_access_iterator_tag`. Fixes a compile error in `std::distance` / `std::advance` and similar algorithms on `Iterable<std::list<...>>`, `Iterable<std::map<...>>`, `Iterable<std::set<...>>`, etc.
+- **Exception(component, fmt, args...)** — this overload was silently hijacked by `Exception(fmt, args...)` for every call with 2+ arguments: the component string was used as the whole message and the real format string/args were discarded (e.g. `Base64Error("Base64", "Invalid character '{}' in input", c)` produced just `"Base64"`). Wrapping `component` in `Component` makes the component overload the only viable candidate.
+- **Exception(format_string, Args...)** zero-argument path — fixed `copy_str(fmt)` not compiling whenever that branch was actually selected by overload resolution (e.g. constructing from a `std::string_view`); it now copies `fmt.get()` as-is, per the documented "message as-is" behavior.
+- **System::TempFileName** — builds the `mkstemp` template in a `std::string` sized to the prefix instead of a fixed 256-byte buffer, so a long `prefix` no longer truncates the required trailing `XXXXXX` and silently fails.
 
 [Unreleased]: https://github.com/StormBytePP/StormByte/compare/1.0.0...HEAD
 
