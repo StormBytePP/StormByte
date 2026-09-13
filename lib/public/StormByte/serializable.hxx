@@ -273,7 +273,7 @@ namespace StormByte {
 			 * @return Blob of `sizeof(T)` bytes.
 			 */
 			std::vector<std::byte> SerializeTrivial() const noexcept
-			requires std::is_trivially_copyable_v<T>;
+			requires Type::TriviallyCopyable<T>;
 
 			/**
 			 * @brief Encodes a container: `uint64` count (LE) then each element.
@@ -333,7 +333,7 @@ namespace StormByte {
 			 * @return Value, or @ref DeserializeError.
 			 */
 			static Expected<T, DeserializeError> DeserializeTrivial(std::span<const std::byte> data) noexcept
-			requires std::is_trivially_copyable_v<T>;
+			requires Type::TriviallyCopyable<T>;
 
 			/**
 			 * @brief Decodes a container: count, then that many elements.

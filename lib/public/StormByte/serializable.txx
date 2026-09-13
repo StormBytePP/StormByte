@@ -31,7 +31,7 @@ namespace StormByte {
 			return SerializePair();
 		} else if constexpr (Type::Container<T>) {
 			return SerializeContainer();
-		} else if constexpr (std::is_trivially_copyable_v<T>) {
+		} else if constexpr (Type::TriviallyCopyable<T>) {
 			return SerializeTrivial();
 		} else {
 			return Detail::Codec<DecayedT>::Write(m_data);
@@ -46,7 +46,7 @@ namespace StormByte {
 			return DeserializePair(data);
 		} else if constexpr (Type::Container<T>) {
 			return DeserializeContainer(data);
-		} else if constexpr (std::is_trivially_copyable_v<T>) {
+		} else if constexpr (Type::TriviallyCopyable<T>) {
 			return DeserializeTrivial(data);
 		} else {
 			return Detail::Codec<DecayedT>::Read(data);
@@ -66,7 +66,7 @@ namespace StormByte {
 			return SizePair(data);
 		} else if constexpr (Type::Container<T>) {
 			return SizeContainer(data);
-		} else if constexpr (std::is_trivially_copyable_v<T>) {
+		} else if constexpr (Type::TriviallyCopyable<T>) {
 			return sizeof(data);
 		} else {
 			return Detail::Codec<DecayedT>::Size(data);
@@ -75,7 +75,7 @@ namespace StormByte {
 
 	template<typename T>
 	std::vector<std::byte> Serializable<T>::SerializeTrivial() const noexcept
-	requires std::is_trivially_copyable_v<T> {
+	requires Type::TriviallyCopyable<T> {
 		DecayedT value = m_data;
 
 		if constexpr (!std::is_same_v<DecayedT, bool> &&
@@ -158,7 +158,7 @@ namespace StormByte {
 
 	template<typename T>
 	Expected<T, DeserializeError> Serializable<T>::DeserializeTrivial(std::span<const std::byte> data) noexcept
-	requires std::is_trivially_copyable_v<T> {
+	requires Type::TriviallyCopyable<T> {
 		if constexpr (std::is_same_v<T, bool>) {
 			if (data.empty())
 				return Unexpected<DeserializeError>("Insufficient data for bool");

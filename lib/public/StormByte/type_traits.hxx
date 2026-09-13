@@ -807,6 +807,18 @@ namespace StormByte {
 		concept DefaultConstructible = std::is_default_constructible_v<T>;
 
 		/**
+		 * @brief @ref DefaultConstructible with a trivial default constructor.
+		 * @tparam T Type to test.
+		 *
+		 * @code
+		 * template<Type::TriviallyDefaultConstructible T>
+		 * T* pool_new();
+		 * @endcode
+		 */
+		template<typename T>
+		concept TriviallyDefaultConstructible = std::is_trivially_default_constructible_v<T>;
+
+		/**
 		 * @brief Type that can be copy-constructed.
 		 * @tparam T Type to test.
 		 *
@@ -817,6 +829,42 @@ namespace StormByte {
 		 */
 		template<typename T>
 		concept CopyConstructible = std::is_copy_constructible_v<T>;
+
+		/**
+		 * @brief @ref CopyConstructible with a trivial copy constructor.
+		 * @tparam T Type to test.
+		 *
+		 * @code
+		 * template<Type::TriviallyCopyConstructible T>
+		 * void fast_construct(T* dest, const T& src);
+		 * @endcode
+		 */
+		template<typename T>
+		concept TriviallyCopyConstructible = std::is_trivially_copy_constructible_v<T>;
+
+		/**
+		 * @brief Type that can be copy-assigned (`operator=(const T&)`).
+		 * @tparam T Type to test.
+		 *
+		 * @code
+		 * template<Type::CopyAssignable T>
+		 * void overwrite(T& dest, const T& src) { dest = src; }
+		 * @endcode
+		 */
+		template<typename T>
+		concept CopyAssignable = std::is_copy_assignable_v<T>;
+
+		/**
+		 * @brief @ref CopyAssignable with a trivial copy-assignment operator.
+		 * @tparam T Type to test.
+		 *
+		 * @code
+		 * template<Type::TriviallyCopyAssignable T>
+		 * void fast_assign(T& dest, const T& src) { dest = src; }
+		 * @endcode
+		 */
+		template<typename T>
+		concept TriviallyCopyAssignable = std::is_trivially_copy_assignable_v<T>;
 
 		/**
 		 * @brief Type that can be move-constructed.
@@ -831,6 +879,66 @@ namespace StormByte {
 		concept MoveConstructible = std::is_move_constructible_v<T>;
 
 		/**
+		 * @brief @ref MoveConstructible with a trivial move constructor.
+		 * @tparam T Type to test.
+		 *
+		 * @code
+		 * template<Type::TriviallyMoveConstructible T>
+		 * void fast_construct(T* dest, T&& src);
+		 * @endcode
+		 */
+		template<typename T>
+		concept TriviallyMoveConstructible = std::is_trivially_move_constructible_v<T>;
+
+		/**
+		 * @brief Type that can be move-assigned (`operator=(T&&)`).
+		 * @tparam T Type to test.
+		 *
+		 * @code
+		 * template<Type::MoveAssignable T>
+		 * void take_over(T& dest, T&& src) { dest = std::move(src); }
+		 * @endcode
+		 */
+		template<typename T>
+		concept MoveAssignable = std::is_move_assignable_v<T>;
+
+		/**
+		 * @brief @ref MoveAssignable with a trivial move-assignment operator.
+		 * @tparam T Type to test.
+		 *
+		 * @code
+		 * template<Type::TriviallyMoveAssignable T>
+		 * void fast_take_over(T& dest, T&& src) { dest = std::move(src); }
+		 * @endcode
+		 */
+		template<typename T>
+		concept TriviallyMoveAssignable = std::is_trivially_move_assignable_v<T>;
+
+		/**
+		 * @brief Both @ref CopyConstructible and @ref CopyAssignable.
+		 * @tparam T Type to test.
+		 *
+		 * @code
+		 * template<Type::Copyable T>
+		 * T duplicate(const T& original);
+		 * @endcode
+		 */
+		template<typename T>
+		concept Copyable = CopyConstructible<T> && CopyAssignable<T>;
+
+		/**
+		 * @brief Both @ref MoveConstructible and @ref MoveAssignable.
+		 * @tparam T Type to test.
+		 *
+		 * @code
+		 * template<Type::Movable T>
+		 * T transfer(T&& source);
+		 * @endcode
+		 */
+		template<typename T>
+		concept Movable = MoveConstructible<T> && MoveAssignable<T>;
+
+		/**
 		 * @brief Type that can be swapped with `std::swap` (`std::is_swappable`).
 		 * @tparam T Type to test.
 		 *
@@ -842,6 +950,7 @@ namespace StormByte {
 		template<typename T>
 		concept Swappable = std::is_swappable_v<T>;
 		/** @} */
+
 
 		/**
 		 * @defgroup TypeRelations Type relation concepts
