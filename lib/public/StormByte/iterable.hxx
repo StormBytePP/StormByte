@@ -64,7 +64,7 @@ namespace StormByte {
 			class Iterator {
 				friend class Iterable;
 				public:
-					using iterator_category = std::random_access_iterator_tag;	///< Category advertised to algorithms.
+					using iterator_category = typename std::iterator_traits<typename Container::iterator>::iterator_category;	///< Matches the underlying container iterator; not assumed random-access.
 					using value_type = typename Container::value_type;			///< Element type.
 					using difference_type = typename Container::difference_type;	///< Distance type.
 					using pointer = typename Container::pointer;				///< Mutable pointer.
@@ -167,7 +167,7 @@ namespace StormByte {
 			class ConstIterator {
 				friend class Iterable;
 				public:
-					using iterator_category = std::random_access_iterator_tag;	///< Category advertised to algorithms.
+					using iterator_category = typename std::iterator_traits<typename Container::const_iterator>::iterator_category;	///< Matches the underlying container iterator; not assumed random-access.
 					using value_type = typename Container::value_type;			///< Element type.
 					using difference_type = typename Container::difference_type;	///< Distance type.
 					using pointer = typename Container::const_pointer;			///< Const pointer.

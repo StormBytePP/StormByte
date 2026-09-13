@@ -21,9 +21,11 @@
 #include <StormByte/test_handlers.h>
 #include <deque>
 #include <iostream>
+#include <iterator>
 #include <map>
 #include <set>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 using namespace StormByte;
@@ -112,6 +114,16 @@ static_assert(Type::HasInsert<std::map<std::string, int>>);
 static_assert(!Type::HasPushBack<std::set<int>>);
 static_assert(!Type::HasPushFront<std::set<int>>);
 static_assert(Type::HasInsert<std::set<int>>);
+// ---------------------------------------------------------------------------
+// iterator_category must match the underlying container iterator, not be
+// hardcoded to random_access_iterator_tag (regression: std::distance /
+// std::advance used to fail to compile for map/set-backed Iterable).
+// ---------------------------------------------------------------------------
+static_assert(std::is_same_v<MyVector::iterator::iterator_category, std::random_access_iterator_tag>);
+static_assert(std::is_same_v<MyQueue::iterator::iterator_category, std::random_access_iterator_tag>);
+static_assert(std::is_same_v<MyMap::iterator::iterator_category, std::bidirectional_iterator_tag>);
+static_assert(std::is_same_v<MyMap::const_iterator::iterator_category, std::bidirectional_iterator_tag>);
+static_assert(std::is_same_v<MySet::iterator::iterator_category, std::bidirectional_iterator_tag>);
 // ---------------------------------------------------------------------------
 // Vector: add / index / empty
 // ---------------------------------------------------------------------------
@@ -470,6 +482,29 @@ int test_copy_and_move() {
 	}
 	RETURN_TEST("test_copy_and_move", result);
 }
+// ---------------------------------------------------------------------------
+// std::distance / std::advance on bidirectional-only containers
+// ---------------------------------------------------------------------------
+int test_map_distance_and_advance() {
+	int result = 0;
+	MyMap m{{"a", 1}, {"b", 2}, {"c", 3}};
+	ASSERT_EQUAL("test_map_distance_and_advance", 3, static_cast<int>(std::distance(m.begin(), m.end())));
+	auto it = m.begin();
+	std::advance(it, 2);
+	ASSERT_TRUE("test_map_distance_and_advance", it != m.end());
+	std::advance(it, 1);
+	ASSERT_TRUE("test_map_distance_and_advance", it == m.end());
+	RETURN_TEST("test_map_distance_and_advance", result);
+}
+int test_set_distance_and_advance() {
+	int result = 0;
+	MySet s{5, 3, 1, 4};
+	ASSERT_EQUAL("test_set_distance_and_advance", 4, static_cast<int>(std::distance(s.begin(), s.end())));
+	auto it = s.begin();
+	std::advance(it, 4);
+	ASSERT_TRUE("test_set_distance_and_advance", it == s.end());
+	RETURN_TEST("test_set_distance_and_advance", result);
+}
 int main() {
 	int result = 0;
 	result += test_vector_add_and_index();
@@ -493,6 +528,8 @@ int main() {
 	result += test_map_has_item_and_key();
 	result += test_equality();
 	result += test_copy_and_move();
+	result += test_map_distance_and_advance();
+	result += test_set_distance_and_advance();
 	if (result == 0) {
 		std::cout << "All tests passed!" << std::endl;
 	} else {
