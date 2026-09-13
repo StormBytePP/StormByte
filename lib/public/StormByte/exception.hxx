@@ -179,4 +179,13 @@ namespace StormByte {
 		public:
 			using Exception::Exception;
 	};
+
+	/**
+	 * @class UTF8Error
+	 * @brief Thrown when UTF-8 or wide-string input contains invalid Unicode.
+	 */
+	class STORMBYTE_PUBLIC UTF8Error: public Exception {
+		public:
+			using Exception::Exception;
+	};
 }

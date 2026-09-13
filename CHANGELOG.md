@@ -26,6 +26,7 @@ If you landed here from a release link and have not read the tree:
 - **Component** — wrapper for the module name on the component-prefixed `Exception` constructor. Call sites must now write `Exception(Component("Base64"), "…", args...)`.
 - **Type** concepts — `Sized`, `SmartPointer`, `Swappable`, `DerivedFrom`, `EqualityComparable`, `ThreeWayComparable`, `Hashable`.
 - **Test handlers** — assertions evaluate operands once and report non-streamable values safely. New macros: `ASSERT_THROWS`, `ASSERT_NO_THROW`, `ASSERT_NEAR`, `ASSERT_CONTAINS`, `ASSERT_NOT_NULL`, covered by `TestHandlersTests`.
+- **UTF8Error** — custom exception for invalid UTF-8 and wide-string Unicode input.
 
 ### Changed
 
@@ -41,7 +42,7 @@ If you landed here from a release link and have not read the tree:
 - **Serializable<std::array>** — deserializes elements by index and rejects a serialized count that does not match the array extent.
 - **Unexpected<Base>(Derived)** — no longer conflicts with `Unexpected<E>(error)` when `Base` and `Derived` are the same type.
 - **String** — `ToLower` / `ToUpper` no longer pass negative signed values to the C character functions; negative byte sizes keep their sign instead of wrapping.
-- **String UTF-8 conversion** — wide-string conversion is now locale-independent and rejects malformed Unicode input with `std::runtime_error`.
+- **String UTF-8 conversion** — wide-string conversion is now locale-independent and rejects malformed Unicode input with `StormByte::Exception`.
 
 [Unreleased]: https://github.com/StormBytePP/StormByte/compare/1.0.0...HEAD
 
