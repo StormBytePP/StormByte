@@ -21,6 +21,10 @@ If you landed here from a release link and have not read the tree:
 
 ## [Unreleased]
 
+### Changed
+
+- **Template implementation split** — `Bitmask`, `Clonable`, `Iterable` (including its nested `Iterator`/`ConstIterator`), and `Serializable` now declare their members in the `.hxx` header and define them in a matching `.txx` file included at the bottom of the header. Public API and behavior are unchanged; `.txx` files are installed alongside the headers.
+
 [Unreleased]: https://github.com/StormBytePP/StormByte/compare/1.1.0...HEAD
 
 ## [1.1.0] - 2026-09-13

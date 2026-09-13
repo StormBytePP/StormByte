@@ -56,15 +56,7 @@ namespace StormByte {
 			 * @return `shared_ptr` or `unique_ptr` according to `PointerType`.
 			 */
 			template<class Target, typename... Args>
-			static PointerType MakePointer(Args&&... args) {
-				if constexpr (std::is_same_v<PointerType, std::shared_ptr<T>>) {
-					return std::make_shared<Target>(std::forward<Args>(args)...);
-				} else if constexpr (std::is_same_v<PointerType, std::unique_ptr<T>>) {
-					return std::make_unique<Target>(std::forward<Args>(args)...);
-				} else {
-					static_assert(false, "Unsupported smart pointer type");
-				}
-			}
+			static PointerType MakePointer(Args&&... args);
 
 			/**
 			 * @brief Default constructor.
@@ -109,3 +101,5 @@ namespace StormByte {
 			virtual PointerType Move() 										= 0;
 	};
 }
+
+#include <StormByte/clonable.txx>

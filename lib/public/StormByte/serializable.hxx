@@ -238,66 +238,28 @@ namespace StormByte {
 			 * @brief Encodes @ref m_data to a little-endian blob.
 			 * @return Blob for this one value. No outer framing.
 			 */
-			std::vector<std::byte> Serialize() const noexcept {
-				if constexpr (Type::Optional<T>) {
-					return SerializeOptional();
-				} else if constexpr (Type::Pair<T>) {
-					return SerializePair();
-				} else if constexpr (Type::Container<T>) {
-					return SerializeContainer();
-				} else if constexpr (std::is_trivially_copyable_v<T>) {
-					return SerializeTrivial();
-				} else {
-					return Detail::Codec<DecayedT>::Write(m_data);
-				}
-			}
+			std::vector<std::byte> Serialize() const noexcept;
 
 			/**
 			 * @brief Decodes one @p T from the start of @p data.
 			 * @param[in] data Input span; may be longer than one value.
 			 * @return Value, or @ref DeserializeError.
 			 */
-			static Expected<T, DeserializeError> Deserialize(std::span<const std::byte> data) noexcept {
-				if constexpr (Type::Optional<T>) {
-					return DeserializeOptional(data);
-				} else if constexpr (Type::Pair<T>) {
-					return DeserializePair(data);
-				} else if constexpr (Type::Container<T>) {
-					return DeserializeContainer(data);
-				} else if constexpr (std::is_trivially_copyable_v<T>) {
-					return DeserializeTrivial(data);
-				} else {
-					return Detail::Codec<DecayedT>::Read(data);
-				}
-			}
+			static Expected<T, DeserializeError> Deserialize(std::span<const std::byte> data) noexcept;
 
 			/**
 			 * @brief Decodes one @p T from a vector.
 			 * @param[in] data Input blob.
 			 * @return Value, or @ref DeserializeError.
 			 */
-			static Expected<T, DeserializeError> Deserialize(const std::vector<std::byte>& data) noexcept {
-				return Deserialize(std::span<const std::byte>(data.data(), data.size()));
-			}
+			static Expected<T, DeserializeError> Deserialize(const std::vector<std::byte>& data) noexcept;
 
 			/**
 			 * @brief Serialized size of @p data.
 			 * @param[in] data Value to measure.
 			 * @return Size in bytes of @ref Serialize for the same value.
 			 */
-			static std::size_t Size(const DecayedT& data) noexcept {
-				if constexpr (Type::Optional<T>) {
-					return SizeOptional(data);
-				} else if constexpr (Type::Pair<T>) {
-					return SizePair(data);
-				} else if constexpr (Type::Container<T>) {
-					return SizeContainer(data);
-				} else if constexpr (std::is_trivially_copyable_v<T>) {
-					return sizeof(data);
-				} else {
-					return Detail::Codec<DecayedT>::Size(data);
-				}
-			}
+			static std::size_t Size(const DecayedT& data) noexcept;
 
 		private:
 			const DecayedT& m_data;	///< Referenced value. Not owned.
@@ -310,48 +272,19 @@ namespace StormByte {
 			 *
 			 * @return Blob of `sizeof(T)` bytes.
 			 */
-			std::vector<std::byte> SerializeTrivial() const noexcept {
-				DecayedT value = m_data;
-
-				if constexpr (!std::is_same_v<DecayedT, bool> &&
-						std::endian::native != std::endian::little) {
-					value = Type::Detail::swap_endian(value);
-				}
-
-				return {
-					reinterpret_cast<const std::byte*>(&value),
-					reinterpret_cast<const std::byte*>(&value) + sizeof(value)
-				};
-			}
+			std::vector<std::byte> SerializeTrivial() const noexcept;
 
 			/**
 			 * @brief Encodes a container: `uint64` count (LE) then each element.
 			 * @return Blob.
 			 */
-			std::vector<std::byte> SerializeContainer() const noexcept {
-				const std::uint64_t size = static_cast<std::uint64_t>(m_data.size());
-				std::vector<std::byte> buffer = Serializable<std::uint64_t>(size).Serialize();
-				buffer.reserve(buffer.size() + SizeContainer(m_data));
-				for (const auto& element : m_data) {
-					Serializable<std::decay_t<decltype(element)>> element_serial(element);
-					append_vector(buffer, element_serial.Serialize());
-				}
-				return buffer;
-			}
+			std::vector<std::byte> SerializeContainer() const noexcept;
 
 			/**
 			 * @brief Encodes a pair: first, then second. No separator.
 			 * @return Blob.
 			 */
-			std::vector<std::byte> SerializePair() const noexcept {
-				Serializable<std::decay_t<typename T::first_type>> first_serial(m_data.first);
-				Serializable<std::decay_t<typename T::second_type>> second_serial(m_data.second);
-				std::vector<std::byte> buffer;
-				buffer.reserve(SizePair(m_data));
-				append_vector(buffer, first_serial.Serialize());
-				append_vector(buffer, second_serial.Serialize());
-				return buffer;
-			}
+			std::vector<std::byte> SerializePair() const noexcept;
 
 			/**
 			 * @brief Encodes an optional: `bool has_value`, then the value if set.
@@ -360,54 +293,28 @@ namespace StormByte {
 			 *
 			 * @return Blob.
 			 */
-			std::vector<std::byte> SerializeOptional() const noexcept {
-				const bool has_value = m_data.has_value();
-				std::vector<std::byte> buffer;
-				buffer.reserve(SizeOptional(m_data));
-				append_vector(buffer, Serializable<bool>(has_value).Serialize());
-				if (m_data.has_value()) {
-					Serializable<std::decay_t<decltype(m_data.value())>> value_serial(m_data.value());
-					append_vector(buffer, value_serial.Serialize());
-				}
-				return buffer;
-			}
+			std::vector<std::byte> SerializeOptional() const noexcept;
 
 			/**
 			 * @brief Serialized size of a container.
 			 * @param[in] data Container to measure.
 			 * @return `8` plus the sum of element sizes.
 			 */
-			static std::size_t SizeContainer(const DecayedT& data) noexcept {
-				std::size_t size = sizeof(std::uint64_t);
-				for (const auto& element : data) {
-					size += Serializable<std::decay_t<decltype(element)>>::Size(element);
-				}
-				return size;
-			}
+			static std::size_t SizeContainer(const DecayedT& data) noexcept;
 
 			/**
 			 * @brief Serialized size of a pair.
 			 * @param[in] data Pair to measure.
 			 * @return Sum of member sizes.
 			 */
-			static std::size_t SizePair(const DecayedT& data) noexcept {
-				return
-					Serializable<std::decay_t<typename T::first_type>>::Size(data.first) +
-					Serializable<std::decay_t<typename T::second_type>>::Size(data.second);
-			}
+			static std::size_t SizePair(const DecayedT& data) noexcept;
 
 			/**
 			 * @brief Serialized size of an optional.
 			 * @param[in] data Optional to measure.
 			 * @return `sizeof(bool)` plus the value size when engaged.
 			 */
-			static std::size_t SizeOptional(const DecayedT& data) noexcept {
-				std::size_t size = sizeof(bool);
-				if (data.has_value()) {
-					size += Serializable<std::decay_t<decltype(data.value())>>::Size(data.value());
-				}
-				return size;
-			}
+			static std::size_t SizeOptional(const DecayedT& data) noexcept;
 
 			/**
 			 * @brief Decodes a trivially copyable value.
@@ -418,126 +325,30 @@ namespace StormByte {
 			 * @param[in] data Input span.
 			 * @return Value, or @ref DeserializeError.
 			 */
-			static Expected<T, DeserializeError> DeserializeTrivial(std::span<const std::byte> data) noexcept {
-				if constexpr (std::is_same_v<T, bool>) {
-					if (data.empty())
-						return Unexpected<DeserializeError>("Insufficient data for bool");
-
-					const auto raw = static_cast<unsigned char>(data[0]);
-					if (raw != 0 && raw != 1)
-						return Unexpected<DeserializeError>("Invalid bool value in stream");
-
-					return raw != 0;
-				} else {
-					if (data.size() < sizeof(T))
-						return Unexpected<DeserializeError>("Insufficient data for deserialization");
-
-					T result;
-					std::memcpy(&result, data.data(), sizeof(T));
-
-					if constexpr (std::endian::native != std::endian::little) {
-						result = Type::Detail::swap_endian(result);
-					}
-
-					return result;
-				}
-			}
+			static Expected<T, DeserializeError> DeserializeTrivial(std::span<const std::byte> data) noexcept;
 
 			/**
 			 * @brief Decodes a container: count, then that many elements.
 			 * @param[in] data Input span.
 			 * @return Container, or @ref DeserializeError.
 			 */
-			static Expected<T, DeserializeError> DeserializeContainer(std::span<const std::byte> data) noexcept {
-				std::size_t offset = 0;
-
-				if (offset + sizeof(std::uint64_t) > data.size())
-					return Unexpected<DeserializeError>("Insufficient data for container size");
-
-				auto expected_container_size = Serializable<std::uint64_t>::Deserialize(
-					data.subspan(offset, sizeof(std::uint64_t)));
-				if (!expected_container_size)
-					return Unexpected(expected_container_size.error());
-
-				const std::uint64_t size = expected_container_size.value();
-				offset += sizeof(std::uint64_t);
-
-				if (size > static_cast<std::uint64_t>(data.size() - offset))
-					return Unexpected<DeserializeError>("Claimed container size exceeds remaining buffer");
-				if constexpr (Detail::is_std_array_v<T>) {
-					if (size != static_cast<std::uint64_t>(std::tuple_size_v<T>))
-						return Unexpected<DeserializeError>("Array size does not match serialized element count");
-				}
-
-				T container;
-				for (std::uint64_t i = 0; i < size; ++i) {
-					using ElementT = std::decay_t<typename T::value_type>;
-
-					if (offset >= data.size())
-						return Unexpected<DeserializeError>("Insufficient data for container element");
-
-					auto expected_element = Serializable<ElementT>::Deserialize(data.subspan(offset));
-					if (!expected_element)
-						return Unexpected(expected_element.error());
-
-					const std::size_t element_size = Serializable<ElementT>::Size(expected_element.value());
-					if constexpr (Detail::is_std_array_v<T>) {
-						container[static_cast<std::size_t>(i)] = std::move(expected_element.value());
-					} else {
-						container.insert(container.end(), std::move(expected_element.value()));
-					}
-					offset += element_size;
-				}
-				return container;
-			}
+			static Expected<T, DeserializeError> DeserializeContainer(std::span<const std::byte> data) noexcept;
 
 			/**
 			 * @brief Decodes a pair: first, then second.
 			 * @param[in] data Input span.
 			 * @return Pair, or @ref DeserializeError.
 			 */
-			static Expected<T, DeserializeError> DeserializePair(std::span<const std::byte> data) noexcept {
-				using FirstT = std::decay_t<typename T::first_type>;
-				using SecondT = std::decay_t<typename T::second_type>;
-
-				auto expected_first = Serializable<FirstT>::Deserialize(data);
-				if (!expected_first)
-					return Unexpected(expected_first.error());
-
-				const std::size_t first_size = Serializable<FirstT>::Size(expected_first.value());
-				if (first_size > data.size())
-					return Unexpected<DeserializeError>("Insufficient data for pair second");
-
-				auto expected_second = Serializable<SecondT>::Deserialize(data.subspan(first_size));
-				if (!expected_second)
-					return Unexpected(expected_second.error());
-
-				return T{ std::move(expected_first.value()), std::move(expected_second.value()) };
-			}
+			static Expected<T, DeserializeError> DeserializePair(std::span<const std::byte> data) noexcept;
 
 			/**
 			 * @brief Decodes an optional: `bool`, then the value if set.
 			 * @param[in] data Input span.
 			 * @return Optional, or @ref DeserializeError.
 			 */
-			static Expected<T, DeserializeError> DeserializeOptional(std::span<const std::byte> data) noexcept {
-				auto expected_has = Serializable<bool>::Deserialize(data);
-				if (!expected_has)
-					return Unexpected(expected_has.error());
-
-				if (!expected_has.value())
-					return T{};
-
-				const std::size_t flag_size = Serializable<bool>::Size(true);
-				if (flag_size > data.size())
-					return Unexpected<DeserializeError>("Insufficient data for optional value");
-
-				using ValueT = std::decay_t<typename T::value_type>;
-				auto expected_value = Serializable<ValueT>::Deserialize(data.subspan(flag_size));
-				if (!expected_value)
-					return Unexpected(expected_value.error());
-
-				return T{ std::move(expected_value.value()) };
-			}
+			static Expected<T, DeserializeError> DeserializeOptional(std::span<const std::byte> data) noexcept;
 	};
 }
+
+#include <StormByte/serializable.txx>
+

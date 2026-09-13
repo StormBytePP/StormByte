@@ -141,157 +141,120 @@ namespace StormByte {
 			 * @param other Other mask.
 			 * @return `true` when both store the same `E`.
 			 */
-			constexpr bool operator==(const Bitmask& other) const noexcept {
-				return m_value == other.m_value;
-			}
+			constexpr bool operator==(const Bitmask& other) const noexcept;
 
 			/**
 			 * @brief Inequality.
 			 * @param other Other mask.
 			 * @return `true` when the stored `E` differs.
 			 */
-			constexpr bool operator!=(const Bitmask& other) const noexcept {
-				return m_value != other.m_value;
-			}
+			constexpr bool operator!=(const Bitmask& other) const noexcept;
 
 			/**
 			 * @brief Bitwise OR; returns `Derived`.
 			 * @param other Other mask.
 			 * @return New `Derived` with union of flags.
 			 */
-			constexpr Derived operator|(const Bitmask& other) const noexcept {
-				return Derived(m_value | other.m_value);
-			}
+			constexpr Derived operator|(const Bitmask& other) const noexcept;
 
 			/**
 			 * @brief Bitwise AND; returns `Derived`.
 			 * @param other Other mask.
 			 * @return New `Derived` with intersection of flags.
 			 */
-			constexpr Derived operator&(const Bitmask& other) const noexcept {
-				return Derived(m_value & other.m_value);
-			}
+			constexpr Derived operator&(const Bitmask& other) const noexcept;
 
 			/**
 			 * @brief Bitwise XOR; returns `Derived`.
 			 * @param other Other mask.
 			 * @return New `Derived` with toggled flags.
 			 */
-			constexpr Derived operator^(const Bitmask& other) const noexcept {
-				return Derived(m_value ^ other.m_value);
-			}
+			constexpr Derived operator^(const Bitmask& other) const noexcept;
 
 			/**
 			 * @brief Bitwise NOT; returns `Derived`.
 			 * @return New `Derived` with inverted flags.
 			 */
-			constexpr Derived operator~() const noexcept {
-				return Derived(~m_value);
-			}
+			constexpr Derived operator~() const noexcept;
 
 			/**
 			 * @brief OR-assign.
 			 * @param other Other mask.
 			 * @return `*this`.
 			 */
-			constexpr Bitmask& operator|=(const Bitmask& other) noexcept {
-				m_value = m_value | other.m_value;
-				return *this;
-			}
+			constexpr Bitmask& operator|=(const Bitmask& other) noexcept;
 
 			/**
 			 * @brief AND-assign.
 			 * @param other Other mask.
 			 * @return `*this`.
 			 */
-			constexpr Bitmask& operator&=(const Bitmask& other) noexcept {
-				m_value = m_value & other.m_value;
-				return *this;
-			}
+			constexpr Bitmask& operator&=(const Bitmask& other) noexcept;
 
 			/**
 			 * @brief XOR-assign.
 			 * @param other Other mask.
 			 * @return `*this`.
 			 */
-			constexpr Bitmask& operator^=(const Bitmask& other) noexcept {
-				m_value = m_value ^ other.m_value;
-				return *this;
-			}
+			constexpr Bitmask& operator^=(const Bitmask& other) noexcept;
 
 			/**
 			 * @brief Sets every bit in @p value.
 			 * @param value Flags to add.
 			 */
-			constexpr void Add(E value) noexcept {
-				m_value = m_value | value;
-			}
+			constexpr void Add(E value) noexcept;
 
 			/**
 			 * @brief Clears every bit in @p value.
 			 * @param value Flags to remove.
 			 */
-			constexpr void Remove(E value) noexcept {
-				m_value = m_value & ~value;
-			}
+			constexpr void Remove(E value) noexcept;
 
 			/**
 			 * @brief Stored enumerators.
 			 * @return Current `E`.
 			 */
-			constexpr E Value() const noexcept {
-				return m_value;
-			}
+			constexpr E Value() const noexcept;
 
 			/**
 			 * @brief `true` when every bit in @p value is set.
 			 * @param value Flags to test.
 			 */
-			constexpr bool Has(E value) const noexcept {
-				return (m_value & value) == value;
-			}
+			constexpr bool Has(E value) const noexcept;
 
 			/**
 			 * @brief `true` when every bit in @p other is set.
 			 * @param other Other mask.
 			 */
-			constexpr bool Has(const Bitmask& other) const noexcept {
-				return Has(other.m_value);
-			}
+			constexpr bool Has(const Bitmask& other) const noexcept;
 
 			/**
 			 * @brief `true` when any bit in @p value is set.
 			 * @param value Flags to test.
 			 */
-			constexpr bool HasAny(E value) const noexcept {
-				return (m_value & value) != static_cast<E>(0);
-			}
+			constexpr bool HasAny(E value) const noexcept;
 
 			/**
 			 * @brief `true` when any bit in @p other is set.
 			 * @param other Other mask.
 			 */
-			constexpr bool HasAny(const Bitmask& other) const noexcept {
-				return HasAny(other.m_value);
-			}
+			constexpr bool HasAny(const Bitmask& other) const noexcept;
 
 			/**
 			 * @brief `true` when no bit in @p value is set.
 			 * @param value Flags to test.
 			 */
-			constexpr bool HasNone(E value) const noexcept {
-				return (m_value & value) == static_cast<E>(0);
-			}
+			constexpr bool HasNone(E value) const noexcept;
 
 			/**
 			 * @brief `true` when no bit in @p other is set.
 			 * @param other Other mask.
 			 */
-			constexpr bool HasNone(const Bitmask& other) const noexcept {
-				return HasNone(other.m_value);
-			}
+			constexpr bool HasNone(const Bitmask& other) const noexcept;
 
 		protected:
 			E m_value;	///< Packed flags.
 	};
 }
+
+#include <StormByte/bitmask.txx>
