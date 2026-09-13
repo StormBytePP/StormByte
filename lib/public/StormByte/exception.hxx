@@ -21,6 +21,7 @@
 
 #include <StormByte/visibility.h>
 #include <string>
+#include <string_view>
 #include <format>
 
 /**
@@ -58,7 +59,7 @@ namespace StormByte {
 		template <typename... Args>
 		Exception(std::format_string<Args...> fmt, Args&&... args) {
 			if constexpr (sizeof...(Args) == 0) {
-				m_what = copy_str(fmt);
+				m_what = copy_str(std::string(fmt.get()).c_str());
 			} else {
 				std::string formatted_message = std::format(fmt, std::forward<Args>(args)...);
 				m_what = copy_str(formatted_message.c_str());

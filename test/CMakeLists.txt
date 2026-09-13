@@ -10,6 +10,10 @@ if(ENABLE_TEST)
 	target_link_libraries(BitmaskTests StormByte)
 	add_test(NAME BitmaskTests COMMAND BitmaskTests)
 
+	add_executable(ExceptionTests exception_test.cxx)
+	target_link_libraries(ExceptionTests StormByte)
+	add_test(NAME ExceptionTests COMMAND ExceptionTests)
+
 	add_executable(IterableTests iterable_test.cxx)
 	target_link_libraries(IterableTests StormByte)
 	add_test(NAME IterableTests COMMAND IterableTests)
