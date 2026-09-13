@@ -21,19 +21,6 @@ If you landed here from a release link and have not read the tree:
 
 ## [Unreleased]
 
-### Added
-
-- **Type** object-semantics concepts — `TriviallyDefaultConstructible`, `TriviallyCopyConstructible`, `CopyAssignable`, `TriviallyCopyAssignable`, `TriviallyMoveConstructible`, `MoveAssignable`, `TriviallyMoveAssignable`, `Copyable`, `Movable`, rounding out the existing `CopyConstructible`/`MoveConstructible`/`TriviallyCopyable`/`TriviallyDestructible`/`Swappable` group.
-
-### Changed
-
-- **Template implementation split** — `Bitmask`, `Clonable`, `Iterable` (including its nested `Iterator`/`ConstIterator`), and `Serializable` now declare their members in the `.hxx` header and define them in a matching `.txx` file included at the bottom of the header. Public API and behavior are unchanged; `.txx` files are installed alongside the headers.
-- **Serializable<T> explicit instantiation** — `bool`, all standard character/integer/floating-point types, and the four Codec-backed string types (`std::string`, `std::wstring`, `std::u16string`, `std::u32string`) are now explicitly instantiated inside the shared/dynamic library and declared `extern template` in the header, so consumers link against the library's code instead of re-instantiating it locally. `Serializable`'s container/pair/optional/trivial private helpers gained matching `requires` clauses (using the new `Type::TriviallyCopyable` concept) so the explicit instantiation only compiles the members that apply to each concrete `T`.
-
-### Removed
-
-- **`StormByte::swap_endian`** — the transitional alias of `Type::Detail::swap_endian` in the root `StormByte` namespace. It was only ever meant to keep old call sites compiling until `Serializable` moved to the fully-qualified name, which it now does; call `StormByte::Type::Detail::swap_endian` directly instead.
-
 [Unreleased]: https://github.com/StormBytePP/StormByte/compare/1.1.0...HEAD
 
 ## [1.1.0] - 2026-09-13
@@ -43,6 +30,7 @@ If you landed here from a release link and have not read the tree:
 - **Component** — wrapper for the module name on the component-prefixed `Exception` constructor. Call sites must now write `Exception(Component("Base64"), "…", args...)`.
 - **Type** concepts — `Sized`, `SmartPointer`, `Swappable`, `DerivedFrom`, `EqualityComparable`, `ThreeWayComparable`, `Hashable`.
 - **Type** range and pointer concepts — range/iterator category wrappers, range value/reference/difference aliases, `ExplicitlyConvertibleTo`, `NullablePointer`, `ByteInputRange`, and `ByteInputIterator` for public generic APIs.
+- **Type** object-semantics concepts — `TriviallyDefaultConstructible`, `TriviallyCopyConstructible`, `CopyAssignable`, `TriviallyCopyAssignable`, `TriviallyMoveConstructible`, `MoveAssignable`, `TriviallyMoveAssignable`, `Copyable`, `Movable`, rounding out the existing `CopyConstructible`/`MoveConstructible`/`TriviallyCopyable`/`TriviallyDestructible`/`Swappable` group.
 - **Test handlers** — assertions evaluate operands once and report non-streamable values safely. New macros: `ASSERT_THROWS`, `ASSERT_NO_THROW`, `ASSERT_NEAR`, `ASSERT_CONTAINS`, `ASSERT_NOT_NULL`, covered by `TestHandlersTests`.
 - **UTF8Error** — custom exception for invalid UTF-8 and wide-string Unicode input.
 
@@ -50,6 +38,12 @@ If you landed here from a release link and have not read the tree:
 
 - **Exception(component, fmt, args...)** — first argument is `Component`, not `std::string`. Source-breaking for every call that used the old two-string form.
 - **Type** concepts — reorganized `type_traits.hxx` into focused container, wrapper, conversion, category, range, relation, and comparison groups without changing public contracts.
+- **Template implementation split** — `Bitmask`, `Clonable`, `Iterable` (including its nested `Iterator`/`ConstIterator`), and `Serializable` now declare their members in the `.hxx` header and define them in a matching `.txx` file included at the bottom of the header. Public API and behavior are unchanged; `.txx` files are installed alongside the headers.
+- **Serializable<T> explicit instantiation** — `bool`, all standard character/integer/floating-point types, and the four Codec-backed string types (`std::string`, `std::wstring`, `std::u16string`, `std::u32string`) are now explicitly instantiated inside the shared/dynamic library and declared `extern template` in the header, so consumers link against the library's code instead of re-instantiating it locally.
+
+### Removed
+
+- **`StormByte::swap_endian`** — the transitional alias of `Type::Detail::swap_endian` in the root `StormByte` namespace. Call `StormByte::Type::Detail::swap_endian` directly instead.
 
 ### Fixed
 
@@ -59,11 +53,12 @@ If you landed here from a release link and have not read the tree:
 - **Iterable::Iterator / ConstIterator** — `iterator_category` is taken from the underlying container iterator instead of being hardcoded as `random_access_iterator_tag`. `std::distance` / `std::advance` compile on `Iterable<std::list<…>>`, `map`, `set`, etc.
 - **System::TempFileName** — builds the `mkstemp` template in a `std::string` sized to the prefix instead of a 256-byte buffer, so a long prefix no longer truncates the trailing `XXXXXX`.
 - **Serializable<std::array>** — deserializes elements by index and rejects a serialized count that does not match the array extent.
+- **Serializable constrained helpers** — container/pair/optional/trivial private helpers are member templates (`template<typename U = T> requires Type::* <U>`) so `template class Serializable<bool>` / `char` no longer instantiate bodies that call `.size()` on a scalar (clang-cl / clang++).
 - **Unexpected<Base>(Derived)** — no longer conflicts with `Unexpected<E>(error)` when `Base` and `Derived` are the same type.
 - **String** — `ToLower` / `ToUpper` no longer pass negative signed values to the C character functions; negative byte sizes keep their sign instead of wrapping.
 - **String UTF-8 conversion** — wide-string conversion is now locale-independent and rejects malformed Unicode input with `UTF8Error`.
 
-[1.1.0]: https://github.com/StormBytePP/StormByte/compare/1.1.0...1.0.0
+[1.1.0]: https://github.com/StormBytePP/StormByte/compare/1.0.0...1.1.0
 
 ## [1.0.0] - 2026-09-05
 
