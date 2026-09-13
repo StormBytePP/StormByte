@@ -240,7 +240,7 @@ int test_utf8_conversion_rejects_invalid_input() {
 			{static_cast<wchar_t>(0xDC00)},
 			{static_cast<wchar_t>(0xD800), static_cast<wchar_t>(0xD800)},
 			{static_cast<wchar_t>(0xDC00), static_cast<wchar_t>(0xDC00)},
-			{static_cast<wchar_t>(0xD800), static_cast<wchar_t>(0xDFFF)}
+			{static_cast<wchar_t>(0xD800), L'A'}
 		};
 		for (const std::wstring& input : invalid_wide) {
 			threw = false;
@@ -282,6 +282,9 @@ int test_utf8_conversion_boundaries() {
 		const std::wstring pair = {static_cast<wchar_t>(0xD800), static_cast<wchar_t>(0xDC00)};
 		ASSERT_EQUAL("test_utf8_conversion_boundaries", std::string("\xF0\x90\x80\x80", 4), UTF8Encode(pair));
 		ASSERT_EQUAL("test_utf8_conversion_boundaries", pair, UTF8Decode("\xF0\x90\x80\x80"));
+		const std::wstring pair_at_low_boundary = {static_cast<wchar_t>(0xD800), static_cast<wchar_t>(0xDFFF)};
+		ASSERT_EQUAL("test_utf8_conversion_boundaries", std::string("\xF0\x90\x8F\xBF", 4), UTF8Encode(pair_at_low_boundary));
+		ASSERT_EQUAL("test_utf8_conversion_boundaries", pair_at_low_boundary, UTF8Decode("\xF0\x90\x8F\xBF"));
 		const std::wstring maximum = {static_cast<wchar_t>(0xDBFF), static_cast<wchar_t>(0xDFFF)};
 		ASSERT_EQUAL("test_utf8_conversion_boundaries", std::string("\xF4\x8F\xBF\xBF", 4), UTF8Encode(maximum));
 		ASSERT_EQUAL("test_utf8_conversion_boundaries", maximum, UTF8Decode("\xF4\x8F\xBF\xBF"));
