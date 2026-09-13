@@ -20,6 +20,7 @@
 #include <StormByte/string.hxx>
 #include <StormByte/system.hxx>
 #include <StormByte/test_handlers.h>
+#include <string>
 using namespace StormByte::String;
 int test_simple_explode() {
 	int result = 0;
@@ -37,6 +38,17 @@ int test_simple_explode() {
 		result++;
 	}
 	RETURN_TEST("test_simple_explode", result);
+}
+int test_explode_consecutive_delimiters() {
+	int result = 0;
+	std::queue<std::string> parts = Explode("a,,c", ',');
+	ASSERT_EQUAL("test_explode_consecutive_delimiters", 3u, parts.size());
+	ASSERT_EQUAL("test_explode_consecutive_delimiters", "a", parts.front());
+	parts.pop();
+	ASSERT_EQUAL("test_explode_consecutive_delimiters", "", parts.front());
+	parts.pop();
+	ASSERT_EQUAL("test_explode_consecutive_delimiters", "c", parts.front());
+	RETURN_TEST("test_explode_consecutive_delimiters", result);
 }
 int test_path_explode() {
 	int result = 0;
@@ -110,6 +122,12 @@ int test_human_readable_byte_size() {
     }
     RETURN_TEST("test_human_readable_byte_size", result);
 }
+int test_human_readable_negative_bytes() {
+	int result = 0;
+	const std::string size = HumanReadable<int>(-1024, Format::HumanReadableBytes, "C");
+	ASSERT_EQUAL("test_human_readable_negative_bytes", "-1 KiB", size);
+	RETURN_TEST("test_human_readable_negative_bytes", result);
+}
 int test_human_readable_number() {
 	int result = 0;
 	try {
@@ -130,16 +148,26 @@ int test_buffer_to_string() {
 	ASSERT_EQUAL("test_buffer_to_string", test_string, str);
 	RETURN_TEST("test_buffer_to_string", 0);
 }
+int test_case_conversion_high_bytes() {
+	int result = 0;
+	const std::string input = "A\xC0\xFFz";
+	ASSERT_EQUAL("test_case_conversion_high_bytes", std::string("a\xC0\xFFz"), ToLower(input));
+	ASSERT_EQUAL("test_case_conversion_high_bytes", std::string("A\xC0\xFFZ"), ToUpper(input));
+	RETURN_TEST("test_case_conversion_high_bytes", result);
+}
 int main() {
     int result = 0;
     try {
 		result += test_simple_explode();
+		result += test_explode_consecutive_delimiters();
 		result += test_path_explode();
 		result += test_explode_one_item();
 		result += test_temp_path();
 		result += test_human_readable_byte_size();
+		result += test_human_readable_negative_bytes();
 		result += test_human_readable_number();
 		result += test_buffer_to_string();
+		result += test_case_conversion_high_bytes();
     } catch (const StormByte::Exception& ex) {
         std::cerr << ex.what() << std::endl;
         result++;

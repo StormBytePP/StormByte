@@ -41,22 +41,24 @@ namespace {
 			constexpr uint64_t GB = MB * 1024;
 			constexpr uint64_t TB = GB * 1024;
 			constexpr uint64_t PB = TB * 1024;
-			uint64_t unsigned_bytes = static_cast<uint64_t>(bytes); // Cast to uint64_t
-			double value = static_cast<double>(bytes);
+			const long double signed_bytes = static_cast<long double>(bytes);
+			const bool negative = signed_bytes < 0;
+			const long double magnitude = negative ? -signed_bytes : signed_bytes;
+			double value = static_cast<double>(magnitude);
 			std::string suffix = "Bytes";
-			if (unsigned_bytes >= PB) {
+			if (magnitude >= PB) {
 				value /= PB;
 				suffix = "PiB";
-			} else if (unsigned_bytes >= TB) {
+			} else if (magnitude >= TB) {
 				value /= TB;
 				suffix = "TiB";
-			} else if (unsigned_bytes >= GB) {
+			} else if (magnitude >= GB) {
 				value /= GB;
 				suffix = "GiB";
-			} else if (unsigned_bytes >= MB) {
+			} else if (magnitude >= MB) {
 				value /= MB;
 				suffix = "MiB";
-			} else if (unsigned_bytes >= KB) {
+			} else if (magnitude >= KB) {
 				value /= KB;
 				suffix = "KiB";
 			}
@@ -73,7 +75,7 @@ namespace {
 			} else {
 				oss << std::fixed << std::setprecision(2) << value;
 			}
-			return oss.str() + " " + suffix;
+			return (negative ? "-" : "") + oss.str() + " " + suffix;
 		} catch (...) {
 			return std::to_string(bytes) + " Bytes";
 		}
@@ -123,12 +125,16 @@ namespace StormByte::String {
 	}
 	std::string ToLower(const std::string& str) noexcept {
 		std::string result = str;
-		std::transform(result.begin(), result.end(), result.begin(), ::tolower);
+		std::transform(result.begin(), result.end(), result.begin(), [](unsigned char c) {
+			return static_cast<char>(std::tolower(c));
+		});
 		return result;
 	}
 	std::string ToUpper(const std::string& str) noexcept {
 		std::string result = str;
-		std::transform(result.begin(), result.end(), result.begin(), ::toupper);
+		std::transform(result.begin(), result.end(), result.begin(), [](unsigned char c) {
+			return static_cast<char>(std::toupper(c));
+		});
 		return result;
 	}
 	template <typename T, typename>
