@@ -87,7 +87,7 @@ namespace StormByte {
 				break;
 			std::uint8_t value = DecodeTable[static_cast<unsigned char>(c)];
 			if (value == 255) {
-				throw Base64Error("Base64", "Invalid character '{}' in input", c);
+				throw Base64Error(Component("Base64"), "Invalid character '{}' in input", c);
 			}
 			buffer = (buffer << 6) | value;
 			bits_collected += 6;

@@ -30,6 +30,25 @@
  */
 namespace StormByte {
 	/**
+	 * @struct Component
+	 * @brief Wraps a module name for the component-prefixed `Exception` constructor.
+	 *
+	 * Exists only to disambiguate `Exception(component, fmt, args...)` from
+	 * `Exception(fmt, args...)`: with both taking a leading string-like
+	 * parameter, overload resolution would otherwise silently prefer the
+	 * fmt-only constructor and discard the component and message.
+	 */
+	struct Component {
+		std::string_view name;	///< Module name inserted after `StormByte::`.
+
+		/**
+		 * @brief Wraps @p name.
+		 * @param name Module name.
+		 */
+		constexpr explicit Component(std::string_view name) noexcept: name(name) {}
+	};
+
+	/**
 	 * @class Exception
 	 * @brief Base exception type for the suite.
 	 *
@@ -69,15 +88,15 @@ namespace StormByte {
 		/**
 		 * @brief Constructs with a component prefix and `std::format`.
 		 * @tparam Args Format argument types.
-		 * @param component Module name inserted after `StormByte::`.
+		 * @param component Module name, wrapped so it cannot be mistaken for `fmt`.
 		 * @param fmt Format string.
 		 * @param args Format arguments.
 		 * @note Final text is `StormByte::<component>: <formatted>`.
 		 */
 		template <typename... Args>
-		Exception(const std::string& component, std::format_string<Args...> fmt, Args&&... args) {
+		Exception(Component component, std::format_string<Args...> fmt, Args&&... args) {
 			std::string formatted_message = std::format(fmt, std::forward<Args>(args)...);
-			std::string full_message = "StormByte::" + component + ": " + formatted_message;
+			std::string full_message = "StormByte::" + std::string(component.name) + ": " + formatted_message;
 			m_what = copy_str(full_message.c_str());
 		}
 

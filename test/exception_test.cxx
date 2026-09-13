@@ -51,11 +51,31 @@ int test_zero_args_format_string_ctor_is_as_is() {
 	ASSERT_EQUAL("test_zero_args_format_string_ctor_is_as_is", std::string("literal {{brace}} as-is"), std::string(e.what()));
 	RETURN_TEST("test_zero_args_format_string_ctor_is_as_is", result);
 }
+// ---------------------------------------------------------------------------
+// Regression: Exception(component, fmt, args...) used to be silently hijacked
+// by the fmt-only constructor (the component string was treated as the whole
+// message and the real format string/args were discarded). The Component
+// wrapper makes it the only viable overload for a component-prefixed call.
+// ---------------------------------------------------------------------------
+int test_component_prefixed_message() {
+	int result = 0;
+	Exception e(Component("MyComponent"), "failed with code {}", 7);
+	ASSERT_EQUAL("test_component_prefixed_message", std::string("StormByte::MyComponent: failed with code 7"), std::string(e.what()));
+	RETURN_TEST("test_component_prefixed_message", result);
+}
+int test_component_prefixed_message_no_args() {
+	int result = 0;
+	Exception e(Component("MyComponent"), "plain text");
+	ASSERT_EQUAL("test_component_prefixed_message_no_args", std::string("StormByte::MyComponent: plain text"), std::string(e.what()));
+	RETURN_TEST("test_component_prefixed_message_no_args", result);
+}
 int main() {
 	int result = 0;
 	result += test_plain_message_no_args();
 	result += test_formatted_message_with_args();
 	result += test_zero_args_format_string_ctor_is_as_is();
+	result += test_component_prefixed_message();
+	result += test_component_prefixed_message_no_args();
 	if (result == 0) {
 		std::cout << "All tests passed!" << std::endl;
 	} else {
