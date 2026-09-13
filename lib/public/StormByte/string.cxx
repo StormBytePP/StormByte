@@ -36,7 +36,7 @@
 #endif
 namespace {
 	[[noreturn]] void ThrowInvalidUnicode() {
-		throw std::runtime_error("Invalid Unicode input");
+		throw StormByte::UTF8Error("Invalid Unicode input");
 	}
 	void AppendUTF8(std::string& result, const uint32_t codepoint) {
 		if (codepoint <= 0x7F) {

@@ -108,14 +108,14 @@ namespace StormByte::String {
 	/**
 	 * @brief Wide string to UTF-8.
 	 * @param ws Wide input.
-	 * @throws std::runtime_error On conversion failure.
+	 * @throws StormByte::UTF8Error On invalid Unicode input.
 	 */
 	STORMBYTE_PUBLIC std::string UTF8Encode(const std::wstring& ws);
 
 	/**
 	 * @brief UTF-8 to wide string.
 	 * @param s UTF-8 input.
-	 * @throws std::runtime_error On conversion failure.
+	 * @throws StormByte::UTF8Error On invalid Unicode input.
 	 */
 	STORMBYTE_PUBLIC std::wstring UTF8Decode(const std::string& s);
 

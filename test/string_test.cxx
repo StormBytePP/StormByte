@@ -21,7 +21,6 @@
 #include <StormByte/system.hxx>
 #include <StormByte/test_handlers.h>
 #include <clocale>
-#include <stdexcept>
 #include <string>
 using namespace StormByte::String;
 int test_simple_explode() {
@@ -192,7 +191,7 @@ int test_utf8_conversion_rejects_invalid_input() {
 		bool threw = false;
 		try {
 			UTF8Decode(input);
-		} catch (const std::runtime_error&) {
+		} catch (const StormByte::UTF8Error&) {
 			threw = true;
 		}
 		ASSERT_TRUE("test_utf8_conversion_rejects_invalid_input", threw);
@@ -200,7 +199,7 @@ int test_utf8_conversion_rejects_invalid_input() {
 	bool threw = false;
 	try {
 		UTF8Encode(std::wstring(1, static_cast<wchar_t>(0xD800)));
-	} catch (const std::runtime_error&) {
+	} catch (const StormByte::UTF8Error&) {
 		threw = true;
 	}
 	ASSERT_TRUE("test_utf8_conversion_rejects_invalid_input", threw);
