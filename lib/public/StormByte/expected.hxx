@@ -77,7 +77,8 @@ namespace StormByte {
 	 */
 	template <typename Base, typename Derived>
 	auto Unexpected(Derived&& error) -> std::unexpected<std::shared_ptr<Base>>
-	requires std::is_base_of_v<Base, std::decay_t<Derived>>
+	requires std::is_base_of_v<Base, std::decay_t<Derived>> &&
+		(!std::same_as<Base, std::decay_t<Derived>>)
 	{
 		using DerivedT = std::decay_t<Derived>;
 		return std::unexpected<std::shared_ptr<Base>>(std::static_pointer_cast<Base>(std::make_shared<DerivedT>(std::forward<Derived>(error))));

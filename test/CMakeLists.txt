@@ -14,6 +14,14 @@ if(ENABLE_TEST)
 	target_link_libraries(ExceptionTests StormByte)
 	add_test(NAME ExceptionTests COMMAND ExceptionTests)
 
+	add_executable(CoreApiTests core_api_test.cxx)
+	target_link_libraries(CoreApiTests StormByte)
+	add_test(NAME CoreApiTests COMMAND CoreApiTests)
+
+	add_executable(ExpectedTests expected_test.cxx)
+	target_link_libraries(ExpectedTests StormByte)
+	add_test(NAME ExpectedTests COMMAND ExpectedTests)
+
 	add_executable(IterableTests iterable_test.cxx)
 	target_link_libraries(IterableTests StormByte)
 	add_test(NAME IterableTests COMMAND IterableTests)
