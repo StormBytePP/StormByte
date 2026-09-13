@@ -270,58 +270,75 @@ namespace StormByte {
 			 * On a big-endian host the object representation is byte-swapped
 			 * before the copy. `bool` is one byte and is not swapped.
 			 *
+			 * @tparam U Defaulted to @p T; keeps this a member *template* so
+			 *           explicit instantiation of `Serializable<T>` does not
+			 *           try to instantiate it for a `T` that fails the
+			 *           `requires` clause (observed with clang-cl/MSVC ABI).
 			 * @return Blob of `sizeof(T)` bytes.
 			 */
+			template<typename U = T>
 			std::vector<std::byte> SerializeTrivial() const noexcept
-			requires Type::TriviallyCopyable<T>;
+			requires Type::TriviallyCopyable<U>;
 
 			/**
 			 * @brief Encodes a container: `uint64` count (LE) then each element.
+			 * @tparam U Defaulted to @p T; see @ref SerializeTrivial.
 			 * @return Blob.
 			 */
+			template<typename U = T>
 			std::vector<std::byte> SerializeContainer() const noexcept
-			requires Type::Container<T>;
+			requires Type::Container<U>;
 
 			/**
 			 * @brief Encodes a pair: first, then second. No separator.
+			 * @tparam U Defaulted to @p T; see @ref SerializeTrivial.
 			 * @return Blob.
 			 */
+			template<typename U = T>
 			std::vector<std::byte> SerializePair() const noexcept
-			requires Type::Pair<T>;
+			requires Type::Pair<U>;
 
 			/**
 			 * @brief Encodes an optional: `bool has_value`, then the value if set.
 			 *
 			 * Never copies the `optional` object representation (padding).
 			 *
+			 * @tparam U Defaulted to @p T; see @ref SerializeTrivial.
 			 * @return Blob.
 			 */
+			template<typename U = T>
 			std::vector<std::byte> SerializeOptional() const noexcept
-			requires Type::Optional<T>;
+			requires Type::Optional<U>;
 
 			/**
 			 * @brief Serialized size of a container.
+			 * @tparam U Defaulted to @p T; see @ref SerializeTrivial.
 			 * @param[in] data Container to measure.
 			 * @return `8` plus the sum of element sizes.
 			 */
+			template<typename U = T>
 			static std::size_t SizeContainer(const DecayedT& data) noexcept
-			requires Type::Container<T>;
+			requires Type::Container<U>;
 
 			/**
 			 * @brief Serialized size of a pair.
+			 * @tparam U Defaulted to @p T; see @ref SerializeTrivial.
 			 * @param[in] data Pair to measure.
 			 * @return Sum of member sizes.
 			 */
+			template<typename U = T>
 			static std::size_t SizePair(const DecayedT& data) noexcept
-			requires Type::Pair<T>;
+			requires Type::Pair<U>;
 
 			/**
 			 * @brief Serialized size of an optional.
+			 * @tparam U Defaulted to @p T; see @ref SerializeTrivial.
 			 * @param[in] data Optional to measure.
 			 * @return `sizeof(bool)` plus the value size when engaged.
 			 */
+			template<typename U = T>
 			static std::size_t SizeOptional(const DecayedT& data) noexcept
-			requires Type::Optional<T>;
+			requires Type::Optional<U>;
 
 			/**
 			 * @brief Decodes a trivially copyable value.
@@ -329,36 +346,45 @@ namespace StormByte {
 			 * `bool` only accepts the bytes `0` and `1`. Any other value is
 			 * rejected (loading it into a `bool` is undefined).
 			 *
+			 * @tparam U Defaulted to @p T; see @ref SerializeTrivial.
 			 * @param[in] data Input span.
 			 * @return Value, or @ref DeserializeError.
 			 */
+			template<typename U = T>
 			static Expected<T, DeserializeError> DeserializeTrivial(std::span<const std::byte> data) noexcept
-			requires Type::TriviallyCopyable<T>;
+			requires Type::TriviallyCopyable<U>;
 
 			/**
 			 * @brief Decodes a container: count, then that many elements.
+			 * @tparam U Defaulted to @p T; see @ref SerializeTrivial.
 			 * @param[in] data Input span.
 			 * @return Container, or @ref DeserializeError.
 			 */
+			template<typename U = T>
 			static Expected<T, DeserializeError> DeserializeContainer(std::span<const std::byte> data) noexcept
-			requires Type::Container<T>;
+			requires Type::Container<U>;
 
 			/**
 			 * @brief Decodes a pair: first, then second.
+			 * @tparam U Defaulted to @p T; see @ref SerializeTrivial.
 			 * @param[in] data Input span.
 			 * @return Pair, or @ref DeserializeError.
 			 */
+			template<typename U = T>
 			static Expected<T, DeserializeError> DeserializePair(std::span<const std::byte> data) noexcept
-			requires Type::Pair<T>;
+			requires Type::Pair<U>;
 
 			/**
 			 * @brief Decodes an optional: `bool`, then the value if set.
+			 * @tparam U Defaulted to @p T; see @ref SerializeTrivial.
 			 * @param[in] data Input span.
 			 * @return Optional, or @ref DeserializeError.
 			 */
+			template<typename U = T>
 			static Expected<T, DeserializeError> DeserializeOptional(std::span<const std::byte> data) noexcept
-			requires Type::Optional<T>;
+			requires Type::Optional<U>;
 	};
+
 
 	// Explicit-instantiation declarations: suppress implicit instantiation of
 	// Serializable<T> for these T in every consumer TU. The matching
