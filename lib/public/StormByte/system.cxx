@@ -48,16 +48,13 @@ namespace StormByte::System {
 		return String::UTF8Encode(std::wstring(tempFile));
 	#else
 		// Linux + macOS (and other UNIX)
-		const std::string temp_filename_with_prefix = "/tmp/" + prefix + "XXXXXX";
-		char temp_filename[256];
-		std::strncpy(temp_filename, temp_filename_with_prefix.c_str(), sizeof(temp_filename));
-		temp_filename[sizeof(temp_filename) - 1] = '\0';
-		int fd = mkstemp(temp_filename);
+		std::string temp_filename = "/tmp/" + prefix + "XXXXXX";
+		int fd = mkstemp(temp_filename.data());
 		if (fd == -1) {
 			throw std::runtime_error("Failed to create temporary file");
 		}
 		close(fd);
-		return std::string(temp_filename);
+		return temp_filename;
 	#endif
 	}
 	std::filesystem::path CurrentPath() {

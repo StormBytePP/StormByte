@@ -21,7 +21,9 @@
 #include <StormByte/system.hxx>
 #include <StormByte/test_handlers.h>
 #include <chrono>
+#include <filesystem>
 #include <iostream>
+#include <string>
 using namespace StormByte::System;
 int test_several_sleeps() {
 	// CI + ASAN can stretch sleeps a lot; allow a wide but still meaningful window.
@@ -46,9 +48,28 @@ int test_several_sleeps() {
 	}
 	RETURN_TEST("test_several_sleeps", result);
 }
+int test_temp_file_name_long_prefix_does_not_throw() {
+	// Regression: the old fixed 256-byte buffer for "/tmp/" + prefix + "XXXXXX"
+	// truncated away the required trailing "XXXXXX" once the prefix pushed the
+	// whole path past 256 bytes, making mkstemp fail. 247 chars is long enough
+	// to have hit that bug while staying under the 255-byte NAME_MAX filesystem
+	// limit for the resulting file name.
+	int result = 0;
+	try {
+		const std::string long_prefix(247, 'a');
+		auto path = TempFileName(long_prefix);
+		ASSERT_TRUE("test_temp_file_name_long_prefix_does_not_throw", std::filesystem::exists(path));
+		std::filesystem::remove(path);
+	} catch (const std::exception& ex) {
+		std::cerr << ex.what() << std::endl;
+		result++;
+	}
+	RETURN_TEST("test_temp_file_name_long_prefix_does_not_throw", result);
+}
 int main() {
 	int result = 0;
 	result += test_several_sleeps();
+	result += test_temp_file_name_long_prefix_does_not_throw();
 	if (result == 0) {
 		std::cout << "All tests passed!" << std::endl;
 	} else {
