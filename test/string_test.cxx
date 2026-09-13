@@ -20,6 +20,8 @@
 #include <StormByte/string.hxx>
 #include <StormByte/system.hxx>
 #include <StormByte/test_handlers.h>
+#include <clocale>
+#include <stdexcept>
 #include <string>
 using namespace StormByte::String;
 int test_simple_explode() {
@@ -155,6 +157,41 @@ int test_case_conversion_high_bytes() {
 	ASSERT_EQUAL("test_case_conversion_high_bytes", std::string("A\xC0\xFFZ"), ToUpper(input));
 	RETURN_TEST("test_case_conversion_high_bytes", result);
 }
+int test_utf8_conversion_is_locale_independent() {
+	int result = 0;
+	const char* current_locale = std::setlocale(LC_ALL, nullptr);
+	const std::string saved_locale = current_locale == nullptr ? "C" : current_locale;
+	std::setlocale(LC_ALL, "C");
+	try {
+		const std::wstring input = L"caf\u00e9 \U0001F600";
+		const std::string encoded = UTF8Encode(input);
+		ASSERT_EQUAL("test_utf8_conversion_is_locale_independent", "caf\xC3\xA9 \xF0\x9F\x98\x80", encoded);
+		ASSERT_EQUAL("test_utf8_conversion_is_locale_independent", input, UTF8Decode(encoded));
+	} catch (const std::exception& ex) {
+		std::cerr << ex.what() << std::endl;
+		result++;
+	}
+	std::setlocale(LC_ALL, saved_locale.c_str());
+	RETURN_TEST("test_utf8_conversion_is_locale_independent", result);
+}
+int test_utf8_conversion_rejects_invalid_input() {
+	int result = 0;
+	bool threw = false;
+	try {
+		UTF8Decode(std::string("\xF0\x28\x8C\x28", 4));
+	} catch (const std::runtime_error&) {
+		threw = true;
+	}
+	ASSERT_TRUE("test_utf8_conversion_rejects_invalid_input", threw);
+	threw = false;
+	try {
+		UTF8Encode(std::wstring(1, static_cast<wchar_t>(0xD800)));
+	} catch (const std::runtime_error&) {
+		threw = true;
+	}
+	ASSERT_TRUE("test_utf8_conversion_rejects_invalid_input", threw);
+	RETURN_TEST("test_utf8_conversion_rejects_invalid_input", result);
+}
 int main() {
     int result = 0;
     try {
@@ -168,6 +205,8 @@ int main() {
 		result += test_human_readable_number();
 		result += test_buffer_to_string();
 		result += test_case_conversion_high_bytes();
+		result += test_utf8_conversion_is_locale_independent();
+		result += test_utf8_conversion_rejects_invalid_input();
     } catch (const StormByte::Exception& ex) {
         std::cerr << ex.what() << std::endl;
         result++;

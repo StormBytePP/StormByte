@@ -41,6 +41,7 @@ If you landed here from a release link and have not read the tree:
 - **Serializable<std::array>** — deserializes elements by index and rejects a serialized count that does not match the array extent.
 - **Unexpected<Base>(Derived)** — no longer conflicts with `Unexpected<E>(error)` when `Base` and `Derived` are the same type.
 - **String** — `ToLower` / `ToUpper` no longer pass negative signed values to the C character functions; negative byte sizes keep their sign instead of wrapping.
+- **String UTF-8 conversion** — wide-string conversion is now locale-independent and rejects malformed Unicode input with `std::runtime_error`.
 
 [Unreleased]: https://github.com/StormBytePP/StormByte/compare/1.0.0...HEAD
 

@@ -27,12 +27,71 @@
 #include <vector>
 #include <queue>
 #include <regex>
+#include <stdexcept>
+#include <cstdint>
 #ifdef WINDOWS
 #include <cwchar>
 #include <direct.h> // For _getcwd
 #include <windows.h> // For MAX_PATH
 #endif
 namespace {
+	[[noreturn]] void ThrowInvalidUnicode() {
+		throw std::runtime_error("Invalid Unicode input");
+	}
+	void AppendUTF8(std::string& result, const uint32_t codepoint) {
+		if (codepoint <= 0x7F) {
+			result.push_back(static_cast<char>(codepoint));
+		} else if (codepoint <= 0x7FF) {
+			result.push_back(static_cast<char>(0xC0 | (codepoint >> 6)));
+			result.push_back(static_cast<char>(0x80 | (codepoint & 0x3F)));
+		} else if (codepoint <= 0xFFFF) {
+			result.push_back(static_cast<char>(0xE0 | (codepoint >> 12)));
+			result.push_back(static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F)));
+			result.push_back(static_cast<char>(0x80 | (codepoint & 0x3F)));
+		} else if (codepoint <= 0x10FFFF) {
+			result.push_back(static_cast<char>(0xF0 | (codepoint >> 18)));
+			result.push_back(static_cast<char>(0x80 | ((codepoint >> 12) & 0x3F)));
+			result.push_back(static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F)));
+			result.push_back(static_cast<char>(0x80 | (codepoint & 0x3F)));
+		} else {
+			ThrowInvalidUnicode();
+		}
+	}
+	uint32_t DecodeUTF8Codepoint(const std::string& input, std::size_t& index) {
+		const auto first = static_cast<unsigned char>(input[index]);
+		std::size_t length = 0;
+		uint32_t codepoint = 0;
+		uint32_t minimum = 0;
+		if (first <= 0x7F) {
+			++index;
+			return first;
+		} else if (first >= 0xC2 && first <= 0xDF) {
+			length = 2;
+			codepoint = first & 0x1F;
+			minimum = 0x80;
+		} else if (first >= 0xE0 && first <= 0xEF) {
+			length = 3;
+			codepoint = first & 0x0F;
+			minimum = 0x800;
+		} else if (first >= 0xF0 && first <= 0xF4) {
+			length = 4;
+			codepoint = first & 0x07;
+			minimum = 0x10000;
+		} else {
+			ThrowInvalidUnicode();
+		}
+		if (index + length > input.size()) ThrowInvalidUnicode();
+		for (std::size_t offset = 1; offset < length; ++offset) {
+			const auto continuation = static_cast<unsigned char>(input[index + offset]);
+			if ((continuation & 0xC0) != 0x80) ThrowInvalidUnicode();
+			codepoint = (codepoint << 6) | (continuation & 0x3F);
+		}
+		if (codepoint < minimum || codepoint > 0x10FFFF || (codepoint >= 0xD800 && codepoint <= 0xDFFF)) {
+			ThrowInvalidUnicode();
+		}
+		index += length;
+		return codepoint;
+	}
 	template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
 	std::string HumanReadableByteSize(const T& bytes, const std::string& locale) noexcept {
 		try {
@@ -151,67 +210,46 @@ namespace StormByte::String {
 		}
 	}
 	std::string UTF8Encode(const std::wstring& wstr) {
-		if (wstr.empty()) return {};
-		std::mbstate_t state = std::mbstate_t();
-		const wchar_t* src = wstr.data();
-		std::size_t len = 0;
-	#ifdef WINDOWS
-		errno_t err = wcsrtombs_s(&len, nullptr, 0, &src, 0, &state);
-		if (err != 0)
-			throw std::runtime_error("Wide to multibyte conversion failed");
-		// wcsrtombs_s includes the terminating null in the count
-		if (len == 0)
-			return {};
-		--len;
-	#else
-		len = std::wcsrtombs(nullptr, &src, 0, &state);
-		if (len == static_cast<std::size_t>(-1))
-			throw std::runtime_error("Wide to multibyte conversion failed");
-	#endif
-		std::string result(len, '\0');
-		src = wstr.data();
-		state = std::mbstate_t();
-	#ifdef WINDOWS
-		std::size_t written = 0;
-		err = wcsrtombs_s(&written, result.data(), result.size() + 1, &src, result.size(), &state);
-		if (err != 0)
-			throw std::runtime_error("Wide to multibyte conversion failed");
-	#else
-		if (std::wcsrtombs(result.data(), &src, len, &state) == static_cast<std::size_t>(-1))
-			throw std::runtime_error("Wide to multibyte conversion failed");
-	#endif
+		std::string result;
+		result.reserve(wstr.size());
+		for (std::size_t index = 0; index < wstr.size(); ++index) {
+			uint32_t codepoint = static_cast<uint32_t>(wstr[index]);
+			if constexpr (sizeof(wchar_t) == 2) {
+				if (codepoint >= 0xD800 && codepoint <= 0xDBFF) {
+					if (index + 1 >= wstr.size()) ThrowInvalidUnicode();
+					const uint32_t low = static_cast<uint32_t>(wstr[++index]);
+					if (low < 0xDC00 || low > 0xDFFF) ThrowInvalidUnicode();
+					codepoint = 0x10000 + ((codepoint - 0xD800) << 10) + (low - 0xDC00);
+				} else if (codepoint >= 0xDC00 && codepoint <= 0xDFFF) {
+					ThrowInvalidUnicode();
+				}
+			} else if constexpr (sizeof(wchar_t) == 4) {
+				if (codepoint > 0x10FFFF || (codepoint >= 0xD800 && codepoint <= 0xDFFF)) ThrowInvalidUnicode();
+			} else {
+				static_assert(sizeof(wchar_t) == 2 || sizeof(wchar_t) == 4, "Unsupported wchar_t size");
+			}
+			AppendUTF8(result, codepoint);
+		}
 		return result;
 	}
 	std::wstring UTF8Decode(const std::string& str) {
-		if (str.empty()) return {};
-		std::mbstate_t state = std::mbstate_t();
-		const char* src = str.data();
-		std::size_t len = 0;
-	#ifdef WINDOWS
-		errno_t err = mbsrtowcs_s(&len, nullptr, 0, &src, 0, &state);
-		if (err != 0)
-			throw std::runtime_error("Multibyte to wide conversion failed");
-		// mbsrtowcs_s includes the terminating null in the count
-		if (len == 0)
-			return {};
-		--len;
-	#else
-		len = std::mbsrtowcs(nullptr, &src, 0, &state);
-		if (len == static_cast<std::size_t>(-1))
-			throw std::runtime_error("Multibyte to wide conversion failed");
-	#endif
-		std::wstring result(len, L'\0');
-		src = str.data();
-		state = std::mbstate_t();
-	#ifdef WINDOWS
-		std::size_t written = 0;
-		err = mbsrtowcs_s(&written, result.data(), result.size() + 1, &src, result.size(), &state);
-		if (err != 0)
-			throw std::runtime_error("Multibyte to wide conversion failed");
-	#else
-		if (std::mbsrtowcs(result.data(), &src, len, &state) == static_cast<std::size_t>(-1))
-			throw std::runtime_error("Multibyte to wide conversion failed");
-	#endif
+		std::wstring result;
+		result.reserve(str.size());
+		for (std::size_t index = 0; index < str.size();) {
+			const uint32_t codepoint = DecodeUTF8Codepoint(str, index);
+			if constexpr (sizeof(wchar_t) == 2) {
+				if (codepoint <= 0xFFFF) {
+					result.push_back(static_cast<wchar_t>(codepoint));
+				} else {
+					result.push_back(static_cast<wchar_t>(0xD800 + ((codepoint - 0x10000) >> 10)));
+					result.push_back(static_cast<wchar_t>(0xDC00 + ((codepoint - 0x10000) & 0x3FF)));
+				}
+			} else if constexpr (sizeof(wchar_t) == 4) {
+				result.push_back(static_cast<wchar_t>(codepoint));
+			} else {
+				static_assert(sizeof(wchar_t) == 2 || sizeof(wchar_t) == 4, "Unsupported wchar_t size");
+			}
+		}
 		return result;
 	}
 	std::string SanitizeNewlines(const std::string& str) noexcept {
