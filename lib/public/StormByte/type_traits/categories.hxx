@@ -129,7 +129,7 @@ namespace StormByte {
 		 * @endcode
 		 */
 		template<typename T>
-		concept Arithmetic = std::is_arithmetic_v<T>;
+		concept Arithmetic = Integral<T> || FloatingPoint<T>;
 
 		/**
 		 * @brief Signed arithmetic type (`std::is_signed`).

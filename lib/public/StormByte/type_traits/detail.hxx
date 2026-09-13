@@ -19,11 +19,13 @@
 
 #pragma once
 
+// TriviallyCopyable / Integral: swap_endian's requires-clause and dispatch.
+#include <StormByte/type_traits/categories.hxx>
+#include <StormByte/type_traits/object_semantics.hxx>
+
 #include <array>
 #include <bit>
-#include <concepts>
 #include <cstddef>
-#include <type_traits>
 
 /**
  * @namespace StormByte
@@ -54,11 +56,11 @@ namespace StormByte {
 			 * @warning Not a format detector. No BOM, no `std::endian` test.
 			 */
 			template<typename U>
-			requires std::is_trivially_copyable_v<U> && (sizeof(U) > 0)
+			requires TriviallyCopyable<U> && (sizeof(U) > 0)
 			constexpr U swap_endian(U val) noexcept {
 				if constexpr (sizeof(U) == 1) {
 					return val;
-				} else if constexpr (std::integral<U>) {
+				} else if constexpr (Integral<U>) {
 					return std::byteswap(val);
 				} else {
 					auto bytes = std::bit_cast<std::array<std::byte, sizeof(U)>>(val);

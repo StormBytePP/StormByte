@@ -19,6 +19,9 @@
 
 #pragma once
 
+// UnsignedEnum reuses Unsigned on the enum's underlying type.
+#include <StormByte/type_traits/categories.hxx>
+
 #include <type_traits>
 
 /**
@@ -57,7 +60,7 @@ namespace StormByte {
 		template<typename E>
 		concept UnsignedEnum =
 			Enum<E> &&
-			std::is_unsigned_v<std::underlying_type_t<std::remove_cv_t<E>>>;
+			Unsigned<std::underlying_type_t<std::remove_cv_t<E>>>;
 
 		/**
 		 * @brief Scoped enumeration (`enum class` / `enum struct`).
