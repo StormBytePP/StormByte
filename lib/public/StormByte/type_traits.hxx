@@ -45,17 +45,3 @@
 #include <StormByte/type_traits/object_semantics.hxx>
 #include <StormByte/type_traits/relations.hxx>
 #include <StormByte/type_traits/comparison.hxx>
-
-/**
- * @namespace StormByte
- * @brief Root namespace of the StormByte suite.
- */
-namespace StormByte {
-	/**
-	 * @brief Endian swap used by @ref Serializable on big-endian hosts.
-	 *
-	 * Alias of @ref Type::Detail::swap_endian so existing call sites that
-	 * include only this header keep compiling until Serializable is updated.
-	 */
-	using Type::Detail::swap_endian;
-}

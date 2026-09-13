@@ -30,6 +30,10 @@ If you landed here from a release link and have not read the tree:
 - **Template implementation split** — `Bitmask`, `Clonable`, `Iterable` (including its nested `Iterator`/`ConstIterator`), and `Serializable` now declare their members in the `.hxx` header and define them in a matching `.txx` file included at the bottom of the header. Public API and behavior are unchanged; `.txx` files are installed alongside the headers.
 - **Serializable<T> explicit instantiation** — `bool`, all standard character/integer/floating-point types, and the four Codec-backed string types (`std::string`, `std::wstring`, `std::u16string`, `std::u32string`) are now explicitly instantiated inside the shared/dynamic library and declared `extern template` in the header, so consumers link against the library's code instead of re-instantiating it locally. `Serializable`'s container/pair/optional/trivial private helpers gained matching `requires` clauses (using the new `Type::TriviallyCopyable` concept) so the explicit instantiation only compiles the members that apply to each concrete `T`.
 
+### Removed
+
+- **`StormByte::swap_endian`** — the transitional alias of `Type::Detail::swap_endian` in the root `StormByte` namespace. It was only ever meant to keep old call sites compiling until `Serializable` moved to the fully-qualified name, which it now does; call `StormByte::Type::Detail::swap_endian` directly instead.
+
 [Unreleased]: https://github.com/StormBytePP/StormByte/compare/1.1.0...HEAD
 
 ## [1.1.0] - 2026-09-13
