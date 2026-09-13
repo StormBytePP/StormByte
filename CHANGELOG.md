@@ -23,24 +23,24 @@ If you landed here from a release link and have not read the tree:
 
 ### Added
 
-- **Type** concepts — `Sized`, `SmartPointer`, `Swappable`, `DerivedFrom`, `EqualityComparable`, `ThreeWayComparable`, `Hashable`
-- **Component** — wraps a module name for the component-prefixed `Exception` constructor; see Changed.
-- **Test handlers** — existing assertions now evaluate operands once and safely report non-streamable values; added `ASSERT_THROWS`, `ASSERT_NO_THROW`, `ASSERT_NEAR`, `ASSERT_CONTAINS` and `ASSERT_NOT_NULL`, with dedicated `TestHandlersTests` coverage.
+- **Component** — wrapper for the module name on the component-prefixed `Exception` constructor. Call sites must now write `Exception(Component("Base64"), "…", args...)`.
+- **Type** concepts — `Sized`, `SmartPointer`, `Swappable`, `DerivedFrom`, `EqualityComparable`, `ThreeWayComparable`, `Hashable`.
+- **Test handlers** — assertions evaluate operands once and report non-streamable values safely. New macros: `ASSERT_THROWS`, `ASSERT_NO_THROW`, `ASSERT_NEAR`, `ASSERT_CONTAINS`, `ASSERT_NOT_NULL`, covered by `TestHandlersTests`.
 
 ### Changed
 
-- **Exception(component, fmt, args...)** — `component` is now a `Component` wrapper instead of a plain `std::string`: `Exception(Component("Base64"), "...", args...)`. Source-breaking for every call site using the old two-string form.
+- **Exception(component, fmt, args...)** — first argument is `Component`, not `std::string`. Source-breaking for every call that used the old two-string form.
 
 ### Fixed
 
-- **Iterable::add** — `add(const value_type&)` is constrained with `Type::CopyConstructible`; `add(value_type&&)` with `Type::MoveConstructible`. clang-cl / MSVC no longer instantiate `push_back(const unique_ptr&)` when the container holds move-only values.
-- **Iterable::Iterator / ConstIterator** — `iterator_category` is now derived from the underlying container iterator instead of being hardcoded to `random_access_iterator_tag`. Fixes a compile error in `std::distance` / `std::advance` and similar algorithms on `Iterable<std::list<...>>`, `Iterable<std::map<...>>`, `Iterable<std::set<...>>`, etc.
-- **Exception(component, fmt, args...)** — this overload was silently hijacked by `Exception(fmt, args...)` for every call with 2+ arguments: the component string was used as the whole message and the real format string/args were discarded (e.g. `Base64Error("Base64", "Invalid character '{}' in input", c)` produced just `"Base64"`). Wrapping `component` in `Component` makes the component overload the only viable candidate.
-- **Exception(format_string, Args...)** zero-argument path — fixed `copy_str(fmt)` not compiling whenever that branch was actually selected by overload resolution (e.g. constructing from a `std::string_view`); it now copies `fmt.get()` as-is, per the documented "message as-is" behavior.
-- **System::TempFileName** — builds the `mkstemp` template in a `std::string` sized to the prefix instead of a fixed 256-byte buffer, so a long `prefix` no longer truncates the required trailing `XXXXXX` and silently fails.
-- **Serializable<std::array>** — deserialization now assigns fixed-size array elements by index and rejects serialized element counts that do not exactly match the array extent.
-- **Unexpected<Base>(Derived)** — no longer conflicts with the ordinary `Unexpected<E>(error)` overload when `Base` and `Derived` are the same type.
-- **String case conversion and byte sizes** — `ToLower`/`ToUpper` no longer invoke the C character functions with signed negative values, and negative byte sizes retain their sign instead of wrapping to a huge unsigned value.
+- **Exception(component, fmt, args...)** — `Exception(fmt, args...)` was chosen for every call with 2+ arguments, so the component string became the whole message and the format/args were discarded. `Component` makes the prefixed overload the only viable candidate.
+- **Exception(format_string, Args...)** — the zero-argument path called `copy_str(fmt)`, which did not compile when that branch was selected (e.g. construction from `std::string_view`). It now copies `fmt.get()`, matching the documented “message as-is” behaviour.
+- **Iterable::add** — `add(const value_type&)` requires `Type::CopyConstructible`; `add(value_type&&)` requires `Type::MoveConstructible`. clang-cl / MSVC no longer instantiate `push_back(const unique_ptr&)`.
+- **Iterable::Iterator / ConstIterator** — `iterator_category` is taken from the underlying container iterator instead of being hardcoded as `random_access_iterator_tag`. `std::distance` / `std::advance` compile on `Iterable<std::list<…>>`, `map`, `set`, etc.
+- **System::TempFileName** — builds the `mkstemp` template in a `std::string` sized to the prefix instead of a 256-byte buffer, so a long prefix no longer truncates the trailing `XXXXXX`.
+- **Serializable<std::array>** — deserializes elements by index and rejects a serialized count that does not match the array extent.
+- **Unexpected<Base>(Derived)** — no longer conflicts with `Unexpected<E>(error)` when `Base` and `Derived` are the same type.
+- **String** — `ToLower` / `ToUpper` no longer pass negative signed values to the C character functions; negative byte sizes keep their sign instead of wrapping.
 
 [Unreleased]: https://github.com/StormBytePP/StormByte/compare/1.0.0...HEAD
 
