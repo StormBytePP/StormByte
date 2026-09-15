@@ -567,6 +567,24 @@ int test_set_distance_and_advance() {
 	RETURN_TEST("test_set_distance_and_advance", result);
 }
 
+int test_copy_assign() {
+	int result = 0;
+	try {
+		MyVector a{1, 2, 3};
+		MyVector b{9};
+		b = a;
+		ASSERT_EQUAL("test_copy_assign", 3, static_cast<int>(b.size()));
+		ASSERT_EQUAL("test_copy_assign", 1, b[0]);
+		ASSERT_EQUAL("test_copy_assign", 2, b[1]);
+		ASSERT_EQUAL("test_copy_assign", 3, b[2]);
+	} catch (const StormByte::OutOfBoundsError& ex) {
+		std::cerr << ex.what() << std::endl;
+		result++;
+	}
+
+	RETURN_TEST("test_copy_assign", result);
+}
+
 class MyUniqueVector : public Iterable<std::vector<std::unique_ptr<int>>> {
 public:
     using base = Iterable<std::vector<std::unique_ptr<int>>>;
@@ -700,6 +718,7 @@ int main() {
 	result += test_map_has_item_and_key();
 	result += test_equality();
 	result += test_copy_and_move();
+	result += test_copy_assign();
 	result += test_map_distance_and_advance();
 	result += test_set_distance_and_advance();
 	result += test_unique_ptr_add_move();

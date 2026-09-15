@@ -297,14 +297,12 @@ namespace StormByte {
 			/**
 			 * @brief Copy constructor.
 			 */
-			Iterable(const Iterable&)
-			requires Type::CopyConstructible<Container> = default;
+			Iterable(const Iterable&) requires Type::CopyConstructible<Container> = default;
 
 			/**
 			 * @brief Move constructor.
 			 */
-			Iterable(Iterable&&)
-			requires Type::MoveConstructible<Container> = default;
+			Iterable(Iterable&&) requires Type::MoveConstructible<Container> = default;
 
 			/**
 			 * @brief Destructor.
@@ -315,15 +313,13 @@ namespace StormByte {
 			 * @brief Copy assignment.
 			 * @return `*this`.
 			 */
-			Iterable& operator=(const Iterable&)
-			requires Type::CopyConstructible<Container> = default;
+			Iterable& operator=(const Iterable&) requires Type::CopyAssignable<Container> = default;
 
 			/**
 			 * @brief Move assignment.
 			 * @return `*this`.
 			 */
-			Iterable& operator=(Iterable&&)
-			requires Type::MoveConstructible<Container> = default;
+			Iterable& operator=(Iterable&&) requires Type::MoveAssignable<Container> = default;
 
 			/**
 			 * @brief Equality of the underlying containers.

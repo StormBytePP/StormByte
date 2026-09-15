@@ -19,6 +19,8 @@
 
 #pragma once
 
+#include <StormByte/type_traits/containers.hxx>
+
 #include <type_traits>
 
 /**
@@ -40,7 +42,7 @@ namespace StormByte {
 
 			template<typename T>
 			inline constexpr bool ReallyCopyConstructible<
-				T, std::void_t<typename std::remove_cvref_t<T>::value_type>
+				T, std::enable_if_t<Container<std::remove_cvref_t<T>>>
 			> =
 				requires(const T& src) { T{src}; } &&
 				ReallyCopyConstructible<typename std::remove_cvref_t<T>::value_type>;
@@ -51,7 +53,7 @@ namespace StormByte {
 
 			template<typename T>
 			inline constexpr bool ReallyCopyAssignable<
-				T, std::void_t<typename std::remove_cvref_t<T>::value_type>
+				T, std::enable_if_t<Container<std::remove_cvref_t<T>>>
 			> =
 				requires(T& dest, const T& src) { dest = src; } &&
 				ReallyCopyAssignable<typename std::remove_cvref_t<T>::value_type>;
@@ -112,8 +114,10 @@ namespace StormByte {
 		 * Not `std::is_copy_constructible_v`: that is true for
 		 * `std::vector<std::unique_ptr<U>>` because `vector` declares
 		 * a copy constructor even when instantiating it is ill-formed.
-		 * If @p T exposes `value_type`, that type must also be
-		 * copy-constructible.
+		 * If @p T is a @ref Container, `value_type` must also be
+		 * copy-constructible. Views such as `std::span` are not
+		 * containers here, so they stay copyable even when the
+		 * element type is move-only.
 		 *
 		 * @code
 		 * static_assert(Type::CopyConstructible<std::vector<int>>);
@@ -141,8 +145,7 @@ namespace StormByte {
 		 *
 		 * Not `std::is_copy_assignable_v`: same caveat as
 		 * @ref CopyConstructible for containers of move-only values.
-		 * If @p T exposes `value_type`, that type must also be
-		 * copy-assignable.
+		 * Recurses into `value_type` only when @p T is a @ref Container.
 		 *
 		 * @code
 		 * template<Type::CopyAssignable T>
