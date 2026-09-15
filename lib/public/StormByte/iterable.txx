@@ -45,19 +45,35 @@ namespace StormByte {
 	typename Iterable<Container>::Iterator Iterable<Container>::Iterator::operator--(int) { Iterator tmp = *this; --m_it; return tmp; }
 
 	template <typename Container>
-	typename Iterable<Container>::Iterator& Iterable<Container>::Iterator::operator+=(difference_type n) { m_it += n; return *this; }
+	typename Iterable<Container>::Iterator& Iterable<Container>::Iterator::operator+=(difference_type n) {
+		std::advance(m_it, n);
+		return *this;
+	}
 
 	template <typename Container>
-	typename Iterable<Container>::Iterator& Iterable<Container>::Iterator::operator-=(difference_type n) { m_it -= n; return *this; }
+	typename Iterable<Container>::Iterator& Iterable<Container>::Iterator::operator-=(difference_type n) {
+		std::advance(m_it, -n);
+		return *this;
+	}
 
 	template <typename Container>
-	typename Iterable<Container>::Iterator Iterable<Container>::Iterator::operator+(difference_type n) const { return Iterator(m_it + n); }
+	typename Iterable<Container>::Iterator Iterable<Container>::Iterator::operator+(difference_type n) const {
+		Iterator result = *this;
+		std::advance(result.m_it, n);
+		return result;
+	}
 
 	template <typename Container>
-	typename Iterable<Container>::Iterator Iterable<Container>::Iterator::operator-(difference_type n) const { return Iterator(m_it - n); }
+	typename Iterable<Container>::Iterator Iterable<Container>::Iterator::operator-(difference_type n) const {
+		Iterator result = *this;
+		std::advance(result.m_it, -n);
+		return result;
+	}
 
 	template <typename Container>
-	typename Iterable<Container>::Iterator::difference_type Iterable<Container>::Iterator::operator-(const Iterator& other) const { return m_it - other.m_it; }
+	typename Iterable<Container>::Iterator::difference_type Iterable<Container>::Iterator::operator-(const Iterator& other) const {
+		return std::distance(other.m_it, m_it);
+	}
 
 	template <typename Container>
 	bool Iterable<Container>::Iterator::operator==(const Iterator& other) const { return m_it == other.m_it; }
@@ -89,19 +105,35 @@ namespace StormByte {
 	typename Iterable<Container>::ConstIterator Iterable<Container>::ConstIterator::operator--(int) { ConstIterator tmp = *this; --m_it; return tmp; }
 
 	template <typename Container>
-	typename Iterable<Container>::ConstIterator& Iterable<Container>::ConstIterator::operator+=(difference_type n) { m_it += n; return *this; }
+	typename Iterable<Container>::ConstIterator& Iterable<Container>::ConstIterator::operator+=(difference_type n) {
+		std::advance(m_it, n);
+		return *this;
+	}
 
 	template <typename Container>
-	typename Iterable<Container>::ConstIterator& Iterable<Container>::ConstIterator::operator-=(difference_type n) { m_it -= n; return *this; }
+	typename Iterable<Container>::ConstIterator& Iterable<Container>::ConstIterator::operator-=(difference_type n) {
+		std::advance(m_it, -n);
+		return *this;
+	}
 
 	template <typename Container>
-	typename Iterable<Container>::ConstIterator Iterable<Container>::ConstIterator::operator+(difference_type n) const { return ConstIterator(m_it + n); }
+	typename Iterable<Container>::ConstIterator Iterable<Container>::ConstIterator::operator+(difference_type n) const {
+		ConstIterator result = *this;
+		std::advance(result.m_it, n);
+		return result;
+	}
 
 	template <typename Container>
-	typename Iterable<Container>::ConstIterator Iterable<Container>::ConstIterator::operator-(difference_type n) const { return ConstIterator(m_it - n); }
+	typename Iterable<Container>::ConstIterator Iterable<Container>::ConstIterator::operator-(difference_type n) const {
+		ConstIterator result = *this;
+		std::advance(result.m_it, -n);
+		return result;
+	}
 
 	template <typename Container>
-	typename Iterable<Container>::ConstIterator::difference_type Iterable<Container>::ConstIterator::operator-(const ConstIterator& other) const { return m_it - other.m_it; }
+	typename Iterable<Container>::ConstIterator::difference_type Iterable<Container>::ConstIterator::operator-(const ConstIterator& other) const {
+		return std::distance(other.m_it, m_it);
+	}
 
 	template <typename Container>
 	bool Iterable<Container>::ConstIterator::operator==(const ConstIterator& other) const { return m_it == other.m_it; }

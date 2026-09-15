@@ -536,6 +536,15 @@ int test_map_distance_and_advance() {
 	ASSERT_TRUE("test_map_distance_and_advance", it != m.end());
 	std::advance(it, 1);
 	ASSERT_TRUE("test_map_distance_and_advance", it == m.end());
+
+	auto mit = m.begin();
+	mit += 2;
+	ASSERT_EQUAL("test_map_distance_and_advance", 3, mit->second);
+	mit -= 2;
+	ASSERT_EQUAL("test_map_distance_and_advance", 1, mit->second);
+	auto mit2 = m.begin() + 2;
+	ASSERT_EQUAL("test_map_distance_and_advance", 2, static_cast<int>(mit2 - m.begin()));
+
 	RETURN_TEST("test_map_distance_and_advance", result);
 }
 
@@ -546,6 +555,15 @@ int test_set_distance_and_advance() {
 	auto it = s.begin();
 	std::advance(it, 4);
 	ASSERT_TRUE("test_set_distance_and_advance", it == s.end());
+
+	auto sit = s.begin();
+	sit += 2;
+	ASSERT_EQUAL("test_set_distance_and_advance", 4, *sit);
+	sit -= 1;
+	ASSERT_EQUAL("test_set_distance_and_advance", 3, *sit);
+	auto sit2 = s.begin() + 3;
+	ASSERT_EQUAL("test_set_distance_and_advance", 3, static_cast<int>(sit2 - s.begin()));
+
 	RETURN_TEST("test_set_distance_and_advance", result);
 }
 

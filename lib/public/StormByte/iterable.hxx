@@ -65,10 +65,10 @@ namespace StormByte {
 				friend class Iterable;
 				public:
 					using iterator_category = typename std::iterator_traits<typename Container::iterator>::iterator_category;	///< Matches the underlying container iterator; not assumed random-access.
-					using value_type = typename Container::value_type;			///< Element type.
-					using difference_type = typename Container::difference_type;	///< Distance type.
-					using pointer = typename Container::pointer;				///< Mutable pointer.
-					using reference = typename Container::reference;			///< Mutable reference.
+					using value_type = typename std::iterator_traits<typename Container::iterator>::value_type;
+					using difference_type = typename std::iterator_traits<typename Container::iterator>::difference_type;
+					using pointer = typename std::iterator_traits<typename Container::iterator>::pointer;
+					using reference = typename std::iterator_traits<typename Container::iterator>::reference;
 
 					/**
 					 * @brief Dereference.
@@ -160,7 +160,6 @@ namespace StormByte {
 					Iterator(typename Container::iterator it);
 			};
 
-
 			/**
 			 * @class ConstIterator
 			 * @brief Const iterator adapter over `Container::const_iterator`.
@@ -169,10 +168,10 @@ namespace StormByte {
 				friend class Iterable;
 				public:
 					using iterator_category = typename std::iterator_traits<typename Container::const_iterator>::iterator_category;	///< Matches the underlying container iterator; not assumed random-access.
-					using value_type = typename Container::value_type;			///< Element type.
-					using difference_type = typename Container::difference_type;	///< Distance type.
-					using pointer = typename Container::const_pointer;			///< Const pointer.
-					using reference = typename Container::const_reference;		///< Const reference.
+					using value_type = typename std::iterator_traits<typename Container::const_iterator>::value_type;
+					using difference_type = typename std::iterator_traits<typename Container::const_iterator>::difference_type;
+					using pointer = typename std::iterator_traits<typename Container::const_iterator>::pointer;
+					using reference = typename std::iterator_traits<typename Container::const_iterator>::reference;
 
 					/**
 					 * @brief Dereference.

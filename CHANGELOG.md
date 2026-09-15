@@ -31,6 +31,7 @@ If you landed here from a release link and have not read the tree:
 - **Iterable::add** — one forwarding `add(T&&)` plus a by-value sink for braced-init (`add({"k", v})`). The sink writes to the container; it does not call `add` again (that recursed until a stack overflow). clang-cl / MSVC no longer instantiate `push_back(const unique_ptr&)`.
 - **Iterable** container constructor — single `Iterable(C&&)` constrained to `Container`. An lvalue copy requires `Type::CopyConstructible` on `value_type`; a move requires `Type::MoveConstructible`.
 - **Iterable** copy / move — defaulted copy and copy-assign require `Type::CopyConstructible<Container>`; move and move-assign require `Type::MoveConstructible<Container>`. `Iterable<std::vector<std::unique_ptr<T>>>` is move-only.
+- **Iterable::Iterator / ConstIterator** — arithmetic (`+=`, `-=`, `+`, difference) uses `std::advance` / `std::distance` instead of `m_it += n`, so it compiles on bidirectional containers (`list`, `map`, `set`). `reference` / `pointer` come from `std::iterator_traits` of the wrapped iterator, not `Container::reference` (`*it` on `std::set` is `const T&`).
 
 [Unreleased]: https://github.com/StormBytePP/StormByte/compare/1.1.0...HEAD
 
