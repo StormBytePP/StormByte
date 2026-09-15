@@ -296,8 +296,14 @@ namespace StormByte {
 
 			/**
 			 * @brief Copy constructor.
+			 * @param other Source iterable.
+			 * @throws StormByte::Exception If `Container` is not copy-constructible.
+			 *
+			 * Always declared so clang-cl / MSVC can export a derived
+			 * class. The `vector` copy is behind `if constexpr`; a
+			 * `requires = default` is still instantiated under `dllexport`.
 			 */
-			Iterable(const Iterable&) requires Type::CopyConstructible<Container> = default;
+			Iterable(const Iterable& other);
 
 			/**
 			 * @brief Move constructor.
@@ -311,9 +317,11 @@ namespace StormByte {
 
 			/**
 			 * @brief Copy assignment.
+			 * @param other Source iterable.
 			 * @return `*this`.
+			 * @throws StormByte::Exception If `Container` is not copy-assignable.
 			 */
-			Iterable& operator=(const Iterable&) requires Type::CopyAssignable<Container> = default;
+			Iterable& operator=(const Iterable& other);
 
 			/**
 			 * @brief Move assignment.

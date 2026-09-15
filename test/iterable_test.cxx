@@ -23,13 +23,16 @@
 #include <iostream>
 #include <iterator>
 #include <map>
+#include <memory>
 #include <set>
 #include <span>
 #include <string>
 #include <type_traits>
 #include <utility>
 #include <vector>
+
 using namespace StormByte;
+
 // ---------------------------------------------------------------------------
 // Test wrappers (expose protected m_data only for construction helpers)
 // ---------------------------------------------------------------------------
@@ -50,6 +53,7 @@ public:
 	using base::cend;
 	using base::has_item;
 };
+
 class MyQueue : public Iterable<std::deque<int>> {
 public:
 	using base = Iterable<std::deque<int>>;
@@ -67,6 +71,7 @@ public:
 	using base::cend;
 	using base::has_item;
 };
+
 class MyMap : public Iterable<std::map<std::string, int>> {
 public:
 	using base = Iterable<std::map<std::string, int>>;
@@ -88,6 +93,7 @@ public:
 	using base::has_item;
 	using base::has_key;
 };
+
 class MySet : public Iterable<std::set<int>> {
 public:
 	using base = Iterable<std::set<int>>;
@@ -100,6 +106,7 @@ public:
 	using base::end;
 	using base::has_item;
 };
+
 // ---------------------------------------------------------------------------
 // Compile-time guards: wrong add() overload must not be viable
 // (catches the clang-cl / MSVC STL regression without running code)
@@ -116,6 +123,7 @@ static_assert(Type::HasInsert<std::map<std::string, int>>);
 static_assert(!Type::HasPushBack<std::set<int>>);
 static_assert(!Type::HasPushFront<std::set<int>>);
 static_assert(Type::HasInsert<std::set<int>>);
+
 // ---------------------------------------------------------------------------
 // iterator_category must match the underlying container iterator, not be
 // hardcoded to random_access_iterator_tag (regression: std::distance /
@@ -126,6 +134,7 @@ static_assert(std::is_same_v<MyQueue::iterator::iterator_category, std::random_a
 static_assert(std::is_same_v<MyMap::iterator::iterator_category, std::bidirectional_iterator_tag>);
 static_assert(std::is_same_v<MyMap::const_iterator::iterator_category, std::bidirectional_iterator_tag>);
 static_assert(std::is_same_v<MySet::iterator::iterator_category, std::bidirectional_iterator_tag>);
+
 // ---------------------------------------------------------------------------
 // Vector: add / index / empty
 // ---------------------------------------------------------------------------
@@ -586,31 +595,34 @@ int test_copy_assign() {
 	RETURN_TEST("test_copy_assign", result);
 }
 
+// ---------------------------------------------------------------------------
+// Move-only value_type (vector<unique_ptr>)
+// ---------------------------------------------------------------------------
 class MyUniqueVector : public Iterable<std::vector<std::unique_ptr<int>>> {
 public:
-    using base = Iterable<std::vector<std::unique_ptr<int>>>;
-    MyUniqueVector() = default;
-    MyUniqueVector(const MyUniqueVector&) = delete;
-    MyUniqueVector& operator=(const MyUniqueVector&) = delete;
-    MyUniqueVector(MyUniqueVector&&) = default;
-    MyUniqueVector& operator=(MyUniqueVector&&) = default;
-    using base::base;
-    using base::add;
-    using base::operator[];
-    using base::size;
-    using base::empty;
-    using base::begin;
-    using base::end;
+	using base = Iterable<std::vector<std::unique_ptr<int>>>;
+	MyUniqueVector() = default;
+	MyUniqueVector(const MyUniqueVector&) = delete;
+	MyUniqueVector& operator=(const MyUniqueVector&) = delete;
+	MyUniqueVector(MyUniqueVector&&) = default;
+	MyUniqueVector& operator=(MyUniqueVector&&) = default;
+	using base::base;
+	using base::add;
+	using base::operator[];
+	using base::size;
+	using base::empty;
+	using base::begin;
+	using base::end;
 };
 
 template<typename I, typename A>
 concept CanAdd = requires(I& it, A&& arg) {
-    it.add(std::forward<A>(arg));
+	it.add(std::forward<A>(arg));
 };
 
 template<typename I, typename C>
 concept CanConstructFrom = requires(C&& container) {
-    I{std::forward<C>(container)};
+	I{std::forward<C>(container)};
 };
 
 using UniquePtr = std::unique_ptr<int>;
@@ -627,10 +639,12 @@ static_assert(!CanConstructFrom<MyUniqueVector, UniqueContainer&>);
 static_assert(!CanConstructFrom<MyUniqueVector, const UniqueContainer&>);
 
 static_assert(!Type::CopyConstructible<UniqueContainer>);
+static_assert(!Type::CopyAssignable<UniqueContainer>);
 static_assert(Type::MoveConstructible<UniqueContainer>);
+static_assert(Type::MoveAssignable<UniqueContainer>);
 
-static_assert(!std::is_copy_constructible_v<Iterable<UniqueContainer>>);
-static_assert(!std::is_copy_assignable_v<Iterable<UniqueContainer>>);
+static_assert(std::is_copy_constructible_v<Iterable<UniqueContainer>>);
+static_assert(std::is_copy_assignable_v<Iterable<UniqueContainer>>);
 static_assert(std::is_move_constructible_v<Iterable<UniqueContainer>>);
 static_assert(std::is_move_assignable_v<Iterable<UniqueContainer>>);
 
@@ -696,6 +710,16 @@ int test_unique_ptr_move_iterable() {
 	RETURN_TEST("test_unique_ptr_move_iterable", result);
 }
 
+int test_unique_ptr_copy_throws() {
+	int result = 0;
+	Iterable<UniqueContainer> src;
+	src.add(std::make_unique<int>(1));
+	ASSERT_THROWS("test_unique_ptr_copy_throws", Iterable<UniqueContainer>(src), StormByte::Exception);
+	Iterable<UniqueContainer> dest;
+	ASSERT_THROWS("test_unique_ptr_copy_throws", dest = src, StormByte::Exception);
+	RETURN_TEST("test_unique_ptr_copy_throws", result);
+}
+
 int test_copy_concepts_container_vs_span() {
 	int result = 0;
 	ASSERT_TRUE("test_copy_concepts_container_vs_span", (Type::CopyConstructible<std::vector<int>>));
@@ -708,33 +732,54 @@ int test_copy_concepts_container_vs_span() {
 
 int main() {
 	int result = 0;
+
+	// vector
 	result += test_vector_add_and_index();
 	result += test_vector_add_move();
 	result += test_vector_add_preserves_order();
+
+	// iteration
 	result += test_forward_iteration();
 	result += test_reverse_iteration();
 	result += test_const_iteration();
 	result += test_iterator_arithmetic();
+
+	// bounds
 	result += test_vector_out_of_bounds();
 	result += test_const_vector_out_of_bounds();
+
+	// deque
 	result += test_queue_add_and_index();
 	result += test_queue_out_of_bounds();
+
+	// map
 	result += test_map_add_and_key_access();
 	result += test_map_add_move_pair();
 	result += test_map_subscript_inserts();
 	result += test_map_const_missing_key_throws();
+
+	// set
 	result += test_set_add();
+
+	// has_item / has_key
 	result += test_vector_has_item();
 	result += test_queue_has_item();
 	result += test_map_has_item_and_key();
+
+	// equality / copy / move
 	result += test_equality();
 	result += test_copy_and_move();
 	result += test_copy_assign();
+
+	// bidirectional distance / advance
 	result += test_map_distance_and_advance();
 	result += test_set_distance_and_advance();
+
+	// move-only value_type
 	result += test_unique_ptr_add_move();
 	result += test_unique_ptr_construct_from_moved_container();
 	result += test_unique_ptr_move_iterable();
+	result += test_unique_ptr_copy_throws();
 	result += test_copy_concepts_container_vs_span();
 
 	if (result == 0) {

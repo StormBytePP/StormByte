@@ -155,6 +155,31 @@ namespace StormByte {
 	): m_data(std::forward<C>(data)) {}
 
 	template <typename Container>
+	Iterable<Container>::Iterable(const Iterable& other)
+	: m_data([&] {
+		if constexpr (Type::CopyConstructible<Container>) {
+			return other.m_data;
+		} else {
+			return Container{};
+		}
+	}()) {
+		if constexpr (!Type::CopyConstructible<Container>) {
+			throw Exception(Component("Iterable"), "container type is not copyable");
+		}
+	}
+
+	template <typename Container>
+	Iterable<Container>& Iterable<Container>::operator=(const Iterable& other) {
+		if constexpr (Type::CopyAssignable<Container>) {
+			if (this != &other)
+				m_data = other.m_data;
+			return *this;
+		} else {
+			throw Exception(Component("Iterable"), "container type is not copy-assignable");
+		}
+	}
+
+	template <typename Container>
 	bool Iterable<Container>::operator==(const Iterable& other) const { return m_data == other.m_data; }
 
 	template <typename Container>

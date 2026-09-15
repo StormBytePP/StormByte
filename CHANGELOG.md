@@ -51,6 +51,7 @@ If you landed here from a release link and have not read the tree:
 - **System::TempFileName** — throws `SystemError` instead of `std::runtime_error`. The file is created and left on disk; the caller unlinks it. Windows still only uses the first three characters of `prefix`.
 - **System::ExecutablePath** — grows the platform buffer instead of truncating at 256 bytes (`GetModuleFileNameW` / `readlink`). Failure is `SystemError`, not a fake path.
 - **System::CurrentPath** — wraps `std::filesystem::filesystem_error` in `SystemError` instead of leaking a standard exception.
+- **Iterable copy / copy-assign** — user-provided members with `if constexpr` on `Type::CopyConstructible` / `CopyAssignable`. clang-cl / MSVC `dllexport` of a derived class no longer instantiates `vector<unique_ptr<T>>` copy via `requires = default`.
 
 [1.1.1]: https://github.com/StormBytePP/StormByte/compare/1.1.0...1.1.1
 
