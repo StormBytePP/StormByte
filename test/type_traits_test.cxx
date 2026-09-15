@@ -371,6 +371,17 @@ int test_array_container_behaviour() {
 	RETURN_TEST("test_array_container_behaviour", result);
 }
 
+int test_mutation_concepts_accept_move_only() {
+	int result = 0;
+	ASSERT_TRUE("test_mutation_concepts_accept_move_only", (Type::HasPushBack<std::vector<int>>));
+	ASSERT_TRUE("test_mutation_concepts_accept_move_only", (Type::HasPushBack<std::vector<std::unique_ptr<int>>>));
+	ASSERT_TRUE("test_mutation_concepts_accept_move_only", (Type::HasPushFront<std::deque<std::unique_ptr<int>>>));
+	ASSERT_FALSE("test_mutation_concepts_accept_move_only", (Type::HasPushFront<std::vector<std::unique_ptr<int>>>));
+	ASSERT_TRUE("test_mutation_concepts_accept_move_only", (Type::HasInsert<std::set<int>>));
+	ASSERT_FALSE("test_mutation_concepts_accept_move_only", (Type::HasInsert<std::vector<std::unique_ptr<int>>>));
+	RETURN_TEST("test_mutation_concepts_accept_move_only", result);
+}
+
 int main() {
 	int result = 0;
 	result += test_string_concept();
@@ -395,6 +406,8 @@ int main() {
 	result += test_trivially_copyable();
 	result += test_extended_type_concepts();
 	result += test_array_container_behaviour();
+	result += test_mutation_concepts_accept_move_only();
+
 	if (result == 0) {
 		std::cout << "All tests passed!" << std::endl;
 	} else {

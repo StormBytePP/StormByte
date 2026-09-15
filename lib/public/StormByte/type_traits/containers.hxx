@@ -22,6 +22,7 @@
 #include <concepts>
 #include <string>
 #include <type_traits>
+#include <utility>
 
 /**
  * @namespace StormByte
@@ -109,27 +110,39 @@ namespace StormByte {
 			requires { typename std::remove_cvref_t<C>::mapped_type; };
 
 		/**
-		 * @brief @ref Container that accepts `push_back(value)`.
+		 * @brief @ref Container that accepts `push_back` of a `value_type`.
 		 * @tparam C Container type (cv/ref ignored).
+		 *
+		 * True if either `push_back(const value_type&)` or
+		 * `push_back(value_type&&)` is valid. The const-ref-only check
+		 * rejected `std::vector<std::unique_ptr<T>>`.
 		 *
 		 * Typical matches: `std::vector`, `std::deque`, `std::list`.
 		 *
 		 * @code
 		 * static_assert(Type::HasPushBack<std::vector<int>>);
+		 * static_assert(Type::HasPushBack<std::vector<std::unique_ptr<int>>>);
 		 * @endcode
 		 */
 		template<typename C>
 		concept HasPushBack =
 			Container<std::remove_cvref_t<C>> &&
-			requires(std::remove_cvref_t<C>& c,
-					typename std::remove_cvref_t<C>::value_type const& v) {
-				c.push_back(v);
-			};
+			(
+				requires(std::remove_cvref_t<C>& c,
+						typename std::remove_cvref_t<C>::value_type const& v) {
+					c.push_back(v);
+				} ||
+				requires(std::remove_cvref_t<C>& c,
+						typename std::remove_cvref_t<C>::value_type&& v) {
+					c.push_back(std::move(v));
+				}
+			);
 
 		/**
-		 * @brief @ref Container that accepts `push_front(value)`.
+		 * @brief @ref Container that accepts `push_front` of a `value_type`.
 		 * @tparam C Container type (cv/ref ignored).
 		 *
+		 * Same const-ref / rvalue split as @ref HasPushBack.
 		 * Typical matches: `std::deque`, `std::list`. `std::vector` does
 		 * **not** match.
 		 *
@@ -141,18 +154,24 @@ namespace StormByte {
 		template<typename C>
 		concept HasPushFront =
 			Container<std::remove_cvref_t<C>> &&
-			requires(std::remove_cvref_t<C>& c,
-					typename std::remove_cvref_t<C>::value_type const& v) {
-				c.push_front(v);
-			};
+			(
+				requires(std::remove_cvref_t<C>& c,
+						typename std::remove_cvref_t<C>::value_type const& v) {
+					c.push_front(v);
+				} ||
+				requires(std::remove_cvref_t<C>& c,
+						typename std::remove_cvref_t<C>::value_type&& v) {
+					c.push_front(std::move(v));
+				}
+			);
 
 		/**
-		 * @brief Associative @ref Container that accepts `insert(value)`.
+		 * @brief Associative @ref Container that accepts `insert` of a `value_type`.
 		 * @tparam C Container type (cv/ref ignored).
 		 *
 		 * Requires @ref HasKeyType or @ref HasMappedType so positional
 		 * `insert(iterator, value)` on `std::vector` does not satisfy this
-		 * on any standard library.
+		 * on any standard library. Accepts const-ref or rvalue `insert`.
 		 *
 		 * Typical matches: `std::map`, `std::set`, `std::unordered_map`,
 		 * `std::unordered_set`.
@@ -167,10 +186,16 @@ namespace StormByte {
 		concept HasInsert =
 			Container<std::remove_cvref_t<C>> &&
 			(HasKeyType<C> || HasMappedType<C>) &&
-			requires(std::remove_cvref_t<C>& c,
-					typename std::remove_cvref_t<C>::value_type const& v) {
-				c.insert(v);
-			};
+			(
+				requires(std::remove_cvref_t<C>& c,
+						typename std::remove_cvref_t<C>::value_type const& v) {
+					c.insert(v);
+				} ||
+				requires(std::remove_cvref_t<C>& c,
+						typename std::remove_cvref_t<C>::value_type&& v) {
+					c.insert(std::move(v));
+				}
+			);
 
 		/**
 		 * @brief @ref Container that supports `operator[]` with key/index @p U.
