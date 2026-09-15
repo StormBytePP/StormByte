@@ -275,26 +275,37 @@ namespace StormByte {
 			Iterable() = default;
 
 			/**
-			 * @brief Copy from a container.
-			 * @param data Container to copy.
+			 * @brief Builds from a container.
+			 * @tparam C Deduced container type (lvalue or rvalue of
+			 *         @p Container).
+			 * @param data Container to take. Lvalues are copied;
+			 *        rvalues are moved.
+			 *
+			 * One function template so clang-cl / MSVC STL do not
+			 * instantiate a copy of `vector<unique_ptr<T>>`. An lvalue
+			 * requires @ref Type::CopyConstructible on @ref value_type;
+			 * an rvalue requires @ref Type::MoveConstructible.
+			 * Constrained to @p Container so this constructor does not
+			 * hide @c Iterable copy / move.
 			 */
-			explicit Iterable(const Container& data);
-
-			/**
-			 * @brief Move from a container.
-			 * @param data Container to move.
-			 */
-			explicit Iterable(Container&& data);
+			template<typename C>
+			explicit Iterable(C&& data)
+			requires Type::SameAs<C, Container> && (
+				(Type::LvalueReference<C> && Type::CopyConstructible<value_type>) ||
+				(!Type::LvalueReference<C> && Type::MoveConstructible<value_type>)
+			);
 
 			/**
 			 * @brief Copy constructor.
 			 */
-			Iterable(const Iterable&) = default;
+			Iterable(const Iterable&)
+			requires Type::CopyConstructible<Container> = default;
 
 			/**
 			 * @brief Move constructor.
 			 */
-			Iterable(Iterable&&) = default;
+			Iterable(Iterable&&)
+			requires Type::MoveConstructible<Container> = default;
 
 			/**
 			 * @brief Destructor.
@@ -305,13 +316,15 @@ namespace StormByte {
 			 * @brief Copy assignment.
 			 * @return `*this`.
 			 */
-			Iterable& operator=(const Iterable&) = default;
+			Iterable& operator=(const Iterable&)
+			requires Type::CopyConstructible<Container> = default;
 
 			/**
 			 * @brief Move assignment.
 			 * @return `*this`.
 			 */
-			Iterable& operator=(Iterable&&) = default;
+			Iterable& operator=(Iterable&&)
+			requires Type::MoveConstructible<Container> = default;
 
 			/**
 			 * @brief Equality of the underlying containers.
@@ -435,21 +448,34 @@ namespace StormByte {
 			const_reference operator[](size_type i) const;
 
 			/**
-			 * @brief Inserts a copy via `push_back`, else `push_front`, else associative `insert`.
-			 * @param value Element to add.
+			 * @brief Inserts @p value via `push_back`, else `push_front`,
+			 *        else associative `insert`.
+			 * @tparam T Deduced argument type (lvalue or rvalue of
+			 *         @ref value_type).
+			 * @param value Element to add. Lvalues are copied; rvalues
+			 *        are moved.
 			 *
-			 * Constrained with @ref Type::CopyConstructible so clang-cl / MSVC
-			 * do not instantiate `push_back(const unique_ptr&)` when the
-			 * container holds move-only values.
+			 * One function template so clang-cl / MSVC STL do not
+			 * instantiate `push_back(const unique_ptr&)` when the
+			 * container holds move-only values. An lvalue requires
+			 * @ref Type::CopyConstructible; an rvalue requires
+			 * @ref Type::MoveConstructible.
 			 */
-			void add(const value_type& value)
-			requires Type::CopyConstructible<value_type>;
+			template<typename T>
+			void add(T&& value)
+			requires (
+				(Type::LvalueReference<T> && Type::CopyConstructible<value_type>) ||
+				(!Type::LvalueReference<T> && Type::MoveConstructible<value_type>)
+			);
 
 			/**
-			 * @brief Inserts by move via `push_back`, else `push_front`, else associative `insert`.
-			 * @param value Element to add.
+			 * @brief Inserts a temporary / braced value.
+			 * @param value Element constructed at the call site, then moved.
+			 *
+			 * Needed because a forwarding reference cannot deduce
+			 * from a braced-init-list (`add({"k", v})`).
 			 */
-			void add(value_type&& value)
+			void add(value_type value)
 			requires Type::MoveConstructible<value_type>;
 
 			/**

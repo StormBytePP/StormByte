@@ -505,6 +505,114 @@ int test_set_distance_and_advance() {
 	ASSERT_TRUE("test_set_distance_and_advance", it == s.end());
 	RETURN_TEST("test_set_distance_and_advance", result);
 }
+
+class MyUniqueVector : public Iterable<std::vector<std::unique_ptr<int>>> {
+public:
+    using base = Iterable<std::vector<std::unique_ptr<int>>>;
+    MyUniqueVector() = default;
+    MyUniqueVector(const MyUniqueVector&) = delete;
+    MyUniqueVector& operator=(const MyUniqueVector&) = delete;
+    MyUniqueVector(MyUniqueVector&&) = default;
+    MyUniqueVector& operator=(MyUniqueVector&&) = default;
+    using base::base;
+    using base::add;
+    using base::operator[];
+    using base::size;
+    using base::empty;
+    using base::begin;
+    using base::end;
+};
+
+template<typename I, typename A>
+concept CanAdd = requires(I& it, A&& arg) {
+    it.add(std::forward<A>(arg));
+};
+
+template<typename I, typename C>
+concept CanConstructFrom = requires(C&& container) {
+    I{std::forward<C>(container)};
+};
+
+using UniquePtr = std::unique_ptr<int>;
+using UniqueContainer = std::vector<UniquePtr>;
+
+static_assert(CanAdd<MyUniqueVector, UniquePtr>);
+static_assert(CanAdd<MyUniqueVector, UniquePtr&&>);
+static_assert(!CanAdd<MyUniqueVector, UniquePtr&>);
+static_assert(!CanAdd<MyUniqueVector, const UniquePtr&>);
+
+static_assert(CanConstructFrom<MyUniqueVector, UniqueContainer>);
+static_assert(CanConstructFrom<MyUniqueVector, UniqueContainer&&>);
+static_assert(!CanConstructFrom<MyUniqueVector, UniqueContainer&>);
+static_assert(!CanConstructFrom<MyUniqueVector, const UniqueContainer&>);
+
+static_assert(!Type::CopyConstructible<UniqueContainer>);
+static_assert(Type::MoveConstructible<UniqueContainer>);
+
+static_assert(!std::is_copy_constructible_v<Iterable<UniqueContainer>>);
+static_assert(!std::is_copy_assignable_v<Iterable<UniqueContainer>>);
+static_assert(std::is_move_constructible_v<Iterable<UniqueContainer>>);
+static_assert(std::is_move_assignable_v<Iterable<UniqueContainer>>);
+
+static_assert(!std::is_copy_constructible_v<MyUniqueVector>);
+static_assert(!std::is_copy_assignable_v<MyUniqueVector>);
+static_assert(std::is_move_constructible_v<MyUniqueVector>);
+static_assert(std::is_move_assignable_v<MyUniqueVector>);
+
+int test_unique_ptr_add_move() {
+	int result = 0;
+	try {
+		MyUniqueVector v;
+		v.add(std::make_unique<int>(10));
+		auto second = std::make_unique<int>(20);
+		v.add(std::move(second));
+		ASSERT_TRUE("test_unique_ptr_add_move", second == nullptr);
+		ASSERT_EQUAL("test_unique_ptr_add_move", 2, static_cast<int>(v.size()));
+		ASSERT_EQUAL("test_unique_ptr_add_move", 10, *v[0]);
+		ASSERT_EQUAL("test_unique_ptr_add_move", 20, *v[1]);
+	} catch (const StormByte::OutOfBoundsError& ex) {
+		std::cerr << ex.what() << std::endl;
+		result++;
+	}
+	RETURN_TEST("test_unique_ptr_add_move", result);
+}
+
+int test_unique_ptr_construct_from_moved_container() {
+	int result = 0;
+	try {
+		UniqueContainer raw;
+		raw.push_back(std::make_unique<int>(1));
+		raw.push_back(std::make_unique<int>(2));
+		MyUniqueVector v{std::move(raw)};
+		ASSERT_EQUAL("test_unique_ptr_construct_from_moved_container", 2, static_cast<int>(v.size()));
+		ASSERT_EQUAL("test_unique_ptr_construct_from_moved_container", 1, *v[0]);
+		ASSERT_EQUAL("test_unique_ptr_construct_from_moved_container", 2, *v[1]);
+	} catch (const StormByte::OutOfBoundsError& ex) {
+		std::cerr << ex.what() << std::endl;
+		result++;
+	}
+	RETURN_TEST("test_unique_ptr_construct_from_moved_container", result);
+}
+
+int test_unique_ptr_move_iterable() {
+	int result = 0;
+	try {
+		MyUniqueVector a;
+		a.add(std::make_unique<int>(7));
+		MyUniqueVector b{std::move(a)};
+		ASSERT_EQUAL("test_unique_ptr_move_iterable", 1, static_cast<int>(b.size()));
+		ASSERT_EQUAL("test_unique_ptr_move_iterable", 7, *b[0]);
+		MyUniqueVector c;
+		c = std::move(b);
+		ASSERT_EQUAL("test_unique_ptr_move_iterable", 1, static_cast<int>(c.size()));
+		ASSERT_EQUAL("test_unique_ptr_move_iterable", 7, *c[0]);
+	} catch (const StormByte::OutOfBoundsError& ex) {
+		std::cerr << ex.what() << std::endl;
+		result++;
+	}
+	RETURN_TEST("test_unique_ptr_move_iterable", result);
+}
+
 int main() {
 	int result = 0;
 	result += test_vector_add_and_index();
@@ -530,6 +638,10 @@ int main() {
 	result += test_copy_and_move();
 	result += test_map_distance_and_advance();
 	result += test_set_distance_and_advance();
+	result += test_unique_ptr_add_move();
+	result += test_unique_ptr_construct_from_moved_container();
+	result += test_unique_ptr_move_iterable();
+
 	if (result == 0) {
 		std::cout << "All tests passed!" << std::endl;
 	} else {

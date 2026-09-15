@@ -115,10 +115,12 @@ namespace StormByte {
 	// --- Iterable<Container> ---
 
 	template <typename Container>
-	Iterable<Container>::Iterable(const Container& data): m_data(data) {}
-
-	template <typename Container>
-	Iterable<Container>::Iterable(Container&& data): m_data(std::move(data)) {}
+	template <typename C>
+	Iterable<Container>::Iterable(C&& data)
+	requires Type::SameAs<C, Container> && (
+		(Type::LvalueReference<C> && Type::CopyConstructible<value_type>) ||
+		(!Type::LvalueReference<C> && Type::MoveConstructible<value_type>)
+	): m_data(std::forward<C>(data)) {}
 
 	template <typename Container>
 	bool Iterable<Container>::operator==(const Iterable& other) const { return m_data == other.m_data; }
@@ -213,14 +215,18 @@ namespace StormByte {
 	}
 
 	template <typename Container>
-	void Iterable<Container>::add(const value_type& value)
-	requires Type::CopyConstructible<value_type> {
+	template <typename T>
+	void Iterable<Container>::add(T&& value)
+	requires (
+		(Type::LvalueReference<T> && Type::CopyConstructible<value_type>) ||
+		(!Type::LvalueReference<T> && Type::MoveConstructible<value_type>)
+	) {
 		if constexpr (Type::HasPushBack<Container>) {
-			m_data.push_back(value);
+			m_data.push_back(std::forward<T>(value));
 		} else if constexpr (Type::HasPushFront<Container>) {
-			m_data.push_front(value);
+			m_data.push_front(std::forward<T>(value));
 		} else if constexpr (Type::HasInsert<Container>) {
-			m_data.insert(value);
+			m_data.insert(std::forward<T>(value));
 		} else {
 			static_assert(Type::HasPushBack<Container> || Type::HasPushFront<Container> || Type::HasInsert<Container>,
 				"StormByte::Iterable: container must support push_back, push_front, or insert");
@@ -228,7 +234,7 @@ namespace StormByte {
 	}
 
 	template <typename Container>
-	void Iterable<Container>::add(value_type&& value)
+	void Iterable<Container>::add(value_type value)
 	requires Type::MoveConstructible<value_type> {
 		if constexpr (Type::HasPushBack<Container>) {
 			m_data.push_back(std::move(value));

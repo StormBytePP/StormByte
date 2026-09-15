@@ -21,6 +21,17 @@ If you landed here from a release link and have not read the tree:
 
 ## [Unreleased]
 
+### Added
+
+- **Type** category concepts — `LvalueReference` and `RvalueReference` (`std::is_lvalue_reference` / `std::is_rvalue_reference`), next to the existing `Reference`.
+
+### Fixed
+
+- **Type::CopyConstructible / CopyAssignable** — no longer wrap `std::is_copy_*` alone. That trait is true for `std::vector<std::unique_ptr<T>>` even though the copy is ill-formed. The concepts now require a real `T{src}` / `dest = src` and, when `value_type` exists, that the element type is copyable too.
+- **Iterable::add** — one forwarding `add(T&&)` plus a by-value sink for braced-init (`add({"k", v})`). The sink writes to the container; it does not call `add` again (that recursed until a stack overflow). clang-cl / MSVC no longer instantiate `push_back(const unique_ptr&)`.
+- **Iterable** container constructor — single `Iterable(C&&)` constrained to `Container`. An lvalue copy requires `Type::CopyConstructible` on `value_type`; a move requires `Type::MoveConstructible`.
+- **Iterable** copy / move — defaulted copy and copy-assign require `Type::CopyConstructible<Container>`; move and move-assign require `Type::MoveConstructible<Container>`. `Iterable<std::vector<std::unique_ptr<T>>>` is move-only.
+
 [Unreleased]: https://github.com/StormBytePP/StormByte/compare/1.1.0...HEAD
 
 ## [1.1.0] - 2026-09-13

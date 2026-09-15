@@ -49,6 +49,37 @@ namespace StormByte {
 		concept Reference = std::is_reference_v<T>;
 
 		/**
+		 * @brief Lvalue reference type (`std::is_lvalue_reference`).
+		 * @tparam T Type to test as written.
+		 *
+		 * `int&` and `const int&` match. `int`, `int&&` and
+		 * `const int` do not.
+		 *
+		 * @code
+		 * template<typename T>
+		 * requires Type::LvalueReference<T>
+		 * void bind_lvalue(T&& ref);
+		 * @endcode
+		 */
+		template<typename T>
+		concept LvalueReference = std::is_lvalue_reference_v<T>;
+
+		/**
+		 * @brief Rvalue reference type (`std::is_rvalue_reference`).
+		 * @tparam T Type to test as written.
+		 *
+		 * `int&&` matches. `int`, `int&` and `const int&` do not.
+		 *
+		 * @code
+		 * template<typename T>
+		 * requires Type::RvalueReference<T>
+		 * void bind_rvalue(T&& ref);
+		 * @endcode
+		 */
+		template<typename T>
+		concept RvalueReference = std::is_rvalue_reference_v<T>;
+
+		/**
 		 * @brief Raw (possibly cv-qualified) pointer type. Not a smart pointer.
 		 * @tparam T Type to test.
 		 *

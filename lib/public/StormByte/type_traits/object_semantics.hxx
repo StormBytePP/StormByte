@@ -33,6 +33,30 @@ namespace StormByte {
 		 * @{
 		 */
 
+		namespace {
+			template<typename T, typename = void>
+			inline constexpr bool ReallyCopyConstructible =
+				requires(const T& src) { T{src}; };
+
+			template<typename T>
+			inline constexpr bool ReallyCopyConstructible<
+				T, std::void_t<typename std::remove_cvref_t<T>::value_type>
+			> =
+				requires(const T& src) { T{src}; } &&
+				ReallyCopyConstructible<typename std::remove_cvref_t<T>::value_type>;
+
+			template<typename T, typename = void>
+			inline constexpr bool ReallyCopyAssignable =
+				requires(T& dest, const T& src) { dest = src; };
+
+			template<typename T>
+			inline constexpr bool ReallyCopyAssignable<
+				T, std::void_t<typename std::remove_cvref_t<T>::value_type>
+			> =
+				requires(T& dest, const T& src) { dest = src; } &&
+				ReallyCopyAssignable<typename std::remove_cvref_t<T>::value_type>;
+		}
+
 		/**
 		 * @brief Type that may be copied with `memcpy` / as-if `memcpy`.
 		 * @tparam T Type to test.
@@ -82,16 +106,22 @@ namespace StormByte {
 		concept TriviallyDefaultConstructible = std::is_trivially_default_constructible_v<T>;
 
 		/**
-		 * @brief Type that can be copy-constructed.
+		 * @brief Type that can actually be copy-constructed.
 		 * @tparam T Type to test.
 		 *
+		 * Not `std::is_copy_constructible_v`: that is true for
+		 * `std::vector<std::unique_ptr<U>>` because `vector` declares
+		 * a copy constructor even when instantiating it is ill-formed.
+		 * If @p T exposes `value_type`, that type must also be
+		 * copy-constructible.
+		 *
 		 * @code
-		 * template<Type::CopyConstructible T>
-		 * T duplicate(const T& original) { return T{original}; }
+		 * static_assert(Type::CopyConstructible<std::vector<int>>);
+		 * static_assert(!Type::CopyConstructible<std::vector<std::unique_ptr<int>>>);
 		 * @endcode
 		 */
 		template<typename T>
-		concept CopyConstructible = std::is_copy_constructible_v<T>;
+		concept CopyConstructible = ReallyCopyConstructible<T>;
 
 		/**
 		 * @brief @ref CopyConstructible with a trivial copy constructor.
@@ -106,8 +136,13 @@ namespace StormByte {
 		concept TriviallyCopyConstructible = std::is_trivially_copy_constructible_v<T>;
 
 		/**
-		 * @brief Type that can be copy-assigned (`operator=(const T&)`).
+		 * @brief Type that can actually be copy-assigned.
 		 * @tparam T Type to test.
+		 *
+		 * Not `std::is_copy_assignable_v`: same caveat as
+		 * @ref CopyConstructible for containers of move-only values.
+		 * If @p T exposes `value_type`, that type must also be
+		 * copy-assignable.
 		 *
 		 * @code
 		 * template<Type::CopyAssignable T>
@@ -115,7 +150,7 @@ namespace StormByte {
 		 * @endcode
 		 */
 		template<typename T>
-		concept CopyAssignable = std::is_copy_assignable_v<T>;
+		concept CopyAssignable = ReallyCopyAssignable<T>;
 
 		/**
 		 * @brief @ref CopyAssignable with a trivial copy-assignment operator.
