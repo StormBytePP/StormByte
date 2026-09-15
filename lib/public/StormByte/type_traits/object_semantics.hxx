@@ -118,17 +118,18 @@ namespace StormByte {
 		 * @brief Type that can actually be copy-constructed.
 		 * @tparam T Type to test.
 		 *
-		 * Not `std::is_copy_constructible_v`: that is true for
-		 * `std::vector<std::unique_ptr<U>>` because `vector` declares
-		 * a copy constructor even when instantiating it is ill-formed.
-		 * If @p T is a @ref Container, `value_type` must also be
-		 * copy-constructible. Views such as `std::span` are not
-		 * containers here, so they stay copyable even when the
-		 * element type is move-only.
+		 * Not `std::is_copy_constructible_v`: that trait is true for
+		 * `std::vector<std::unique_ptr<U>>` because `vector` declares a
+		 * copy constructor even when instantiating it is ill-formed.
+		 * Recurses into `value_type` only when @p T is a @ref Container
+		 * and not a @ref View. `std::span<std::unique_ptr<U>>` is a
+		 * container *and* a view, so it stays copyable; an owning
+		 * `std::vector<std::unique_ptr<U>>` does not.
 		 *
 		 * @code
 		 * static_assert(Type::CopyConstructible<std::vector<int>>);
 		 * static_assert(!Type::CopyConstructible<std::vector<std::unique_ptr<int>>>);
+		 * static_assert(Type::CopyConstructible<std::span<std::unique_ptr<int>>>);
 		 * @endcode
 		 */
 		template<typename T>
@@ -152,7 +153,8 @@ namespace StormByte {
 		 *
 		 * Not `std::is_copy_assignable_v`: same caveat as
 		 * @ref CopyConstructible for containers of move-only values.
-		 * Recurses into `value_type` only when @p T is a @ref Container.
+		 * Recurses into `value_type` only when @p T is a @ref Container
+		 * and not a @ref View.
 		 *
 		 * @code
 		 * template<Type::CopyAssignable T>
