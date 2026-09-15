@@ -24,6 +24,7 @@ If you landed here from a release link and have not read the tree:
 ### Added
 
 - **Type** category concepts — `LvalueReference` and `RvalueReference` (`std::is_lvalue_reference` / `std::is_rvalue_reference`), next to the existing `Reference`.
+- **SystemError** — `Exception` specialization for `StormByte::System` helpers.
 
 ### Fixed
 
@@ -34,6 +35,7 @@ If you landed here from a release link and have not read the tree:
 - **Iterable::Iterator / ConstIterator** — arithmetic (`+=`, `-=`, `+`, difference) uses `std::advance` / `std::distance` instead of `m_it += n`, so it compiles on bidirectional containers (`list`, `map`, `set`). `reference` / `pointer` come from `std::iterator_traits` of the wrapped iterator, not `Container::reference` (`*it` on `std::set` is `const T&`).
 - **Type::CopyConstructible / CopyAssignable** — recurse into `value_type` only when `T` is a `Type::Container`. `std::span<std::unique_ptr<T>>` stays copyable; `std::vector<std::unique_ptr<T>>` does not.
 - **Iterable copy / move** — copy and copy-assign require `Type::CopyConstructible` / `Type::CopyAssignable` on `Container`; move and move-assign require `Type::MoveConstructible` / `Type::MoveAssignable`.
+- **System::TempFileName** — throws `SystemError` instead of `std::runtime_error`. The file is created and left on disk; the caller unlinks it. Windows still only uses the first three characters of `prefix`.
 
 [Unreleased]: https://github.com/StormBytePP/StormByte/compare/1.1.0...HEAD
 

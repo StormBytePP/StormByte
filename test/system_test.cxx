@@ -51,18 +51,13 @@ int test_several_sleeps() {
 }
 
 int test_temp_file_name_long_prefix_does_not_throw() {
-	// Regression: the old fixed 256-byte buffer for "/tmp/" + prefix + "XXXXXX"
-	// truncated away the required trailing "XXXXXX" once the prefix pushed the
-	// whole path past 256 bytes, making mkstemp fail. 247 chars is long enough
-	// to have hit that bug while staying under the 255-byte NAME_MAX filesystem
-	// limit for the resulting file name.
 	int result = 0;
 	try {
 		const std::string long_prefix(247, 'a');
 		auto path = TempFileName(long_prefix);
 		ASSERT_TRUE("test_temp_file_name_long_prefix_does_not_throw", std::filesystem::exists(path));
 		std::filesystem::remove(path);
-	} catch (const std::exception& ex) {
+	} catch (const StormByte::SystemError& ex) {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}

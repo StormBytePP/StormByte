@@ -18,6 +18,7 @@
  */
 
 #include <StormByte/system.hxx>
+#include <StormByte/exception.hxx>
 #include <StormByte/string.hxx>
 #ifdef WINDOWS
 #include <windows.h>
@@ -34,26 +35,26 @@
 #define MAX_PATH 256
 #endif
 #include <thread>
+
 namespace StormByte::System {
 	std::filesystem::path TempFileName(const std::string& prefix) {
 	#ifdef WINDOWS
 		wchar_t tempPath[MAX_PATH];
 		wchar_t tempFile[MAX_PATH];
 		if (GetTempPathW(MAX_PATH, tempPath) == 0) {
-			throw std::runtime_error("Error getting temp path");
+			throw SystemError(Component("System"), "Error getting temp path");
 		}
 
 		if (GetTempFileNameW(tempPath, String::UTF8Decode(prefix).c_str(), 0, tempFile) == 0) {
-			throw std::runtime_error("Error getting temp file name");
+			throw SystemError(Component("System"), "Error getting temp file name");
 		}
 
 		return String::UTF8Encode(std::wstring(tempFile));
 	#else
-		// Linux + macOS (and other UNIX)
 		std::string temp_filename = "/tmp/" + prefix + "XXXXXX";
 		int fd = mkstemp(temp_filename.data());
 		if (fd == -1) {
-			throw std::runtime_error("Failed to create temporary file");
+			throw SystemError(Component("System"), "Failed to create temporary file");
 		}
 
 		close(fd);
@@ -66,7 +67,6 @@ namespace StormByte::System {
 	}
 
 	std::filesystem::path ExecutablePath() {
-		// Directory that contains the running executable
 	#ifdef WINDOWS
 		char path[MAX_PATH];
 		if (GetModuleFileNameA(nullptr, path, MAX_PATH)) {

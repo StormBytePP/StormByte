@@ -35,9 +35,14 @@
  */
 namespace StormByte::System {
 	/**
-	 * @brief Builds a unique temporary file path.
+	 * @brief Creates a unique temporary file and returns its path.
 	 * @param prefix File-name prefix. Default `"TMP"`.
-	 * @return Absolute path of the temporary file.
+	 *        On Windows, `GetTempFileNameW` only uses the first three characters.
+	 * @return Absolute path of the created empty file.
+	 * @throws StormByte::SystemError If the path cannot be obtained or the file cannot be created.
+	 *
+	 * The file is created (POSIX: `mkstemp`, Windows: `GetTempFileNameW`) and left on disk.
+	 * The caller owns the unlink.
 	 */
 	STORMBYTE_PUBLIC std::filesystem::path TempFileName(const std::string& prefix = "TMP");
 

@@ -188,4 +188,13 @@ namespace StormByte {
 		public:
 			using Exception::Exception;
 	};
+
+	/**
+	 * @class SystemError
+	 * @brief Thrown when a System helper cannot obtain a path or create a temporary file.
+	 */
+	class STORMBYTE_PUBLIC SystemError: public Exception {
+		public:
+			using Exception::Exception;
+	};
 }
