@@ -24,17 +24,12 @@
 #include <windows.h>
 #elifdef MACOS
 #include <mach-o/dyld.h>
-#include <cstdlib>
-#include <cstring>
 #include <unistd.h>
-#include <vector>
 #else
-#include <cstdlib>
-#include <cstring>
 #include <unistd.h>
-#define MAX_PATH 256
 #endif
 #include <thread>
+#include <vector>
 
 namespace StormByte::System {
 	std::filesystem::path TempFileName(const std::string& prefix) {
@@ -68,33 +63,41 @@ namespace StormByte::System {
 
 	std::filesystem::path ExecutablePath() {
 	#ifdef WINDOWS
-		char path[MAX_PATH];
-		if (GetModuleFileNameA(nullptr, path, MAX_PATH)) {
-			return std::filesystem::path(path).remove_filename();
+		std::vector<wchar_t> buf(MAX_PATH);
+		for (;;) {
+			DWORD n = GetModuleFileNameW(nullptr, buf.data(), static_cast<DWORD>(buf.size()));
+			if (n == 0) {
+				throw SystemError(Component("System"), "Failed to resolve executable path");
+			}
+			if (n < buf.size()) {
+				return std::filesystem::path(String::UTF8Encode(std::wstring(buf.data(), n))).remove_filename();
+			}
+			buf.resize(buf.size() * 2);
 		}
 	#elifdef MACOS
 		uint32_t size = 0;
-		if (_NSGetExecutablePath(nullptr, &size) == -1 && size > 0) {
-			std::vector<char> buf(size);
-			if (_NSGetExecutablePath(buf.data(), &size) == 0) {
-				return std::filesystem::path(buf.data()).remove_filename();
-			}
+		_NSGetExecutablePath(nullptr, &size);
+		if (size == 0) {
+			throw SystemError(Component("System"), "Failed to resolve executable path");
 		}
-
-		char path[1024];
-		uint32_t fixed = static_cast<uint32_t>(sizeof(path));
-		if (_NSGetExecutablePath(path, &fixed) == 0) {
-			return std::filesystem::path(path).remove_filename();
+		std::vector<char> buf(size);
+		if (_NSGetExecutablePath(buf.data(), &size) != 0) {
+			throw SystemError(Component("System"), "Failed to resolve executable path");
 		}
+		return std::filesystem::path(buf.data()).remove_filename();
 	#else
-		char path[MAX_PATH];
-		ssize_t count = readlink("/proc/self/exe", path, sizeof(path) - 1);
-		if (count != -1) {
-			path[count] = '\0';
-			return std::filesystem::path(path).remove_filename();
+		std::vector<char> buf(256);
+		for (;;) {
+			ssize_t count = readlink("/proc/self/exe", buf.data(), buf.size());
+			if (count < 0) {
+				throw SystemError(Component("System"), "Failed to resolve executable path");
+			}
+			if (static_cast<size_t>(count) < buf.size()) {
+				return std::filesystem::path(std::string(buf.data(), static_cast<size_t>(count))).remove_filename();
+			}
+			buf.resize(buf.size() * 2);
 		}
 	#endif
-		return "NOPATH";
 	}
 
 	template <typename Rep, typename Period>

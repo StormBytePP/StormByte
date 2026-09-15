@@ -26,6 +26,9 @@ If you landed here from a release link and have not read the tree:
 - **Type** category concepts — `LvalueReference` and `RvalueReference` (`std::is_lvalue_reference` / `std::is_rvalue_reference`), next to the existing `Reference`.
 - **SystemError** — `Exception` specialization for `StormByte::System` helpers.
 
+### Change
+- **System::ExecutablePath** — throws `SystemError` instead of returning `"NOPATH"`. Paths longer than 256 bytes are resolved.
+
 ### Fixed
 
 - **Type::CopyConstructible / CopyAssignable** — no longer wrap `std::is_copy_*` alone. That trait is true for `std::vector<std::unique_ptr<T>>` even though the copy is ill-formed. The concepts now require a real `T{src}` / `dest = src` and, when `value_type` exists, that the element type is copyable too.
@@ -37,6 +40,7 @@ If you landed here from a release link and have not read the tree:
 - **Iterable copy / move** — copy and copy-assign require `Type::CopyConstructible` / `Type::CopyAssignable` on `Container`; move and move-assign require `Type::MoveConstructible` / `Type::MoveAssignable`.
 - **System::TempFileName** — throws `SystemError` instead of `std::runtime_error`. The file is created and left on disk; the caller unlinks it. Windows still only uses the first three characters of `prefix`.
 - **Type::HasPushBack / HasPushFront / HasInsert** — accept `value_type&&` as well as `const value_type&`. `std::vector<std::unique_ptr<T>>` is now `HasPushBack`, so `Iterable::add` takes the `push_back` path.
+- **System::ExecutablePath** — grows the platform buffer instead of truncating at 256 bytes (`GetModuleFileNameA` / `readlink`). Failure is `SystemError`, not a fake path.
 
 [Unreleased]: https://github.com/StormBytePP/StormByte/compare/1.1.0...HEAD
 

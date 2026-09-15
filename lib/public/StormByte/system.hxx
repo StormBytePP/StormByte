@@ -54,7 +54,8 @@ namespace StormByte::System {
 
 	/**
 	 * @brief Directory that contains the running executable.
-	 * @return That directory, or the path `"NOPATH"` if it cannot be resolved.
+	 * @return That directory.
+	 * @throws StormByte::SystemError If the executable path cannot be resolved.
 	 */
 	STORMBYTE_PUBLIC std::filesystem::path ExecutablePath();
 
