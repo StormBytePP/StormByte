@@ -23,27 +23,36 @@ If you landed here from a release link and have not read the tree:
 
 ### Added
 
+### Changed
+
+### Fixed
+
+[Unreleased]: https://github.com/StormBytePP/StormByte/compare/1.1.1...HEAD
+
+## [1.1.1] - 2026-09-15
+
+### Added
+
 - **Type** category concepts — `LvalueReference` and `RvalueReference` (`std::is_lvalue_reference` / `std::is_rvalue_reference`), next to the existing `Reference`.
 - **SystemError** — `Exception` specialization for `StormByte::System` helpers.
 
-### Change
+### Changed
+
 - **System::ExecutablePath** — throws `SystemError` instead of returning `"NOPATH"`. Paths longer than 256 bytes are resolved.
 
 ### Fixed
 
-- **Type::CopyConstructible / CopyAssignable** — no longer wrap `std::is_copy_*` alone. That trait is true for `std::vector<std::unique_ptr<T>>` even though the copy is ill-formed. The concepts now require a real `T{src}` / `dest = src` and, when `value_type` exists, that the element type is copyable too.
+- **Type::CopyConstructible / CopyAssignable** — no longer wrap `std::is_copy_*` alone. They require a real `T{src}` / `dest = src` and recurse into `value_type` only when `T` is a `Type::Container` and not a `Type::View`. `std::span<std::unique_ptr<T>>` stays copyable; `std::vector<std::unique_ptr<T>>` does not.
+- **Type::HasPushBack / HasPushFront / HasInsert** — accept `value_type&&` as well as `const value_type&`. `std::vector<std::unique_ptr<T>>` is now `HasPushBack`, so `Iterable::add` takes the `push_back` path.
 - **Iterable::add** — one forwarding `add(T&&)` plus a by-value sink for braced-init (`add({"k", v})`). The sink writes to the container; it does not call `add` again (that recursed until a stack overflow). clang-cl / MSVC no longer instantiate `push_back(const unique_ptr&)`.
 - **Iterable** container constructor — single `Iterable(C&&)` constrained to `Container`. An lvalue copy requires `Type::CopyConstructible` on `value_type`; a move requires `Type::MoveConstructible`.
-- **Iterable** copy / move — defaulted copy and copy-assign require `Type::CopyConstructible<Container>`; move and move-assign require `Type::MoveConstructible<Container>`. `Iterable<std::vector<std::unique_ptr<T>>>` is move-only.
+- **Iterable** copy / move — defaulted copy and copy-assign require `Type::CopyConstructible` / `Type::CopyAssignable` on `Container`; move and move-assign require `Type::MoveConstructible` / `Type::MoveAssignable`. `Iterable<std::vector<std::unique_ptr<T>>>` is move-only.
 - **Iterable::Iterator / ConstIterator** — arithmetic (`+=`, `-=`, `+`, difference) uses `std::advance` / `std::distance` instead of `m_it += n`, so it compiles on bidirectional containers (`list`, `map`, `set`). `reference` / `pointer` come from `std::iterator_traits` of the wrapped iterator, not `Container::reference` (`*it` on `std::set` is `const T&`).
-- **Type::CopyConstructible / CopyAssignable** — recurse into `value_type` only when `T` is a `Type::Container`. `std::span<std::unique_ptr<T>>` stays copyable; `std::vector<std::unique_ptr<T>>` does not.
-- **Iterable copy / move** — copy and copy-assign require `Type::CopyConstructible` / `Type::CopyAssignable` on `Container`; move and move-assign require `Type::MoveConstructible` / `Type::MoveAssignable`.
 - **System::TempFileName** — throws `SystemError` instead of `std::runtime_error`. The file is created and left on disk; the caller unlinks it. Windows still only uses the first three characters of `prefix`.
-- **Type::HasPushBack / HasPushFront / HasInsert** — accept `value_type&&` as well as `const value_type&`. `std::vector<std::unique_ptr<T>>` is now `HasPushBack`, so `Iterable::add` takes the `push_back` path.
-- **System::ExecutablePath** — grows the platform buffer instead of truncating at 256 bytes (`GetModuleFileNameA` / `readlink`). Failure is `SystemError`, not a fake path.
+- **System::ExecutablePath** — grows the platform buffer instead of truncating at 256 bytes (`GetModuleFileNameW` / `readlink`). Failure is `SystemError`, not a fake path.
 - **System::CurrentPath** — wraps `std::filesystem::filesystem_error` in `SystemError` instead of leaking a standard exception.
 
-[Unreleased]: https://github.com/StormBytePP/StormByte/compare/1.1.0...HEAD
+[1.1.1]: https://github.com/StormBytePP/StormByte/compare/1.1.0...1.1.1
 
 ## [1.1.0] - 2026-09-13
 
