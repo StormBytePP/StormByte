@@ -20,6 +20,7 @@
 #pragma once
 
 #include <StormByte/type_traits/containers.hxx>
+#include <StormByte/type_traits/ranges.hxx>
 
 #include <type_traits>
 
@@ -42,7 +43,10 @@ namespace StormByte {
 
 			template<typename T>
 			inline constexpr bool ReallyCopyConstructible<
-				T, std::enable_if_t<Container<std::remove_cvref_t<T>>>
+				T, std::enable_if_t<
+					Container<std::remove_cvref_t<T>> &&
+					!View<std::remove_cvref_t<T>>
+				>
 			> =
 				requires(const T& src) { T{src}; } &&
 				ReallyCopyConstructible<typename std::remove_cvref_t<T>::value_type>;
@@ -53,7 +57,10 @@ namespace StormByte {
 
 			template<typename T>
 			inline constexpr bool ReallyCopyAssignable<
-				T, std::enable_if_t<Container<std::remove_cvref_t<T>>>
+				T, std::enable_if_t<
+					Container<std::remove_cvref_t<T>> &&
+					!View<std::remove_cvref_t<T>>
+				>
 			> =
 				requires(T& dest, const T& src) { dest = src; } &&
 				ReallyCopyAssignable<typename std::remove_cvref_t<T>::value_type>;

@@ -24,6 +24,7 @@
 #include <iterator>
 #include <map>
 #include <set>
+#include <span>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -695,6 +696,16 @@ int test_unique_ptr_move_iterable() {
 	RETURN_TEST("test_unique_ptr_move_iterable", result);
 }
 
+int test_copy_concepts_container_vs_span() {
+	int result = 0;
+	ASSERT_TRUE("test_copy_concepts_container_vs_span", (Type::CopyConstructible<std::vector<int>>));
+	ASSERT_FALSE("test_copy_concepts_container_vs_span", (Type::CopyConstructible<std::vector<std::unique_ptr<int>>>));
+	ASSERT_FALSE("test_copy_concepts_container_vs_span", (Type::CopyAssignable<std::vector<std::unique_ptr<int>>>));
+	ASSERT_TRUE("test_copy_concepts_container_vs_span", (Type::CopyConstructible<std::span<std::unique_ptr<int>>>));
+	ASSERT_TRUE("test_copy_concepts_container_vs_span", (Type::CopyAssignable<std::span<std::unique_ptr<int>>>));
+	RETURN_TEST("test_copy_concepts_container_vs_span", result);
+}
+
 int main() {
 	int result = 0;
 	result += test_vector_add_and_index();
@@ -724,6 +735,7 @@ int main() {
 	result += test_unique_ptr_add_move();
 	result += test_unique_ptr_construct_from_moved_container();
 	result += test_unique_ptr_move_iterable();
+	result += test_copy_concepts_container_vs_span();
 
 	if (result == 0) {
 		std::cout << "All tests passed!" << std::endl;
