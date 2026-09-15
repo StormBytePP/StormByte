@@ -19,10 +19,12 @@
 
 #include <StormByte/type_traits.hxx>
 #include <StormByte/test_handlers.h>
+
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <deque>
+#include <iostream>
 #include <list>
 #include <map>
 #include <memory>
@@ -35,16 +37,19 @@
 #include <utility>
 #include <variant>
 #include <vector>
-#include <iostream>
+
 using namespace StormByte;
+
 struct TraitBase {};
 struct TraitDerived: TraitBase {};
 struct TraitUnrelated {};
+
 struct MoveOnlyValue {
 	MoveOnlyValue() = default;
 	MoveOnlyValue(const MoveOnlyValue&) = delete;
 	MoveOnlyValue(MoveOnlyValue&&) = default;
 };
+
 template<typename T>
 constexpr bool is_string_v = Type::String<T>;
 template<typename T>
@@ -69,6 +74,7 @@ template<typename T>
 constexpr bool is_variant_v = Type::Variant<T>;
 template<typename T, typename U>
 constexpr bool variant_has_type_v = Type::VariantHasType<T, U>;
+
 int test_string_concept() {
 	int result = 0;
 	ASSERT_TRUE("test_string_concept", is_string_v<std::string>);
@@ -91,6 +97,16 @@ int test_container_excludes_string() {
 	ASSERT_FALSE("test_container_excludes_string", is_container_v<int>);
 	ASSERT_FALSE("test_container_excludes_string", is_container_v<void*>);
 	RETURN_TEST("test_container_excludes_string", result);
+}
+
+int test_array_container_behaviour() {
+	int result = 0;
+	ASSERT_TRUE("test_array_container_behaviour", (is_container_v<std::array<int, 3>>));
+	ASSERT_FALSE("test_array_container_behaviour", (has_push_back_v<std::array<int, 3>>));
+	ASSERT_FALSE("test_array_container_behaviour", (has_push_front_v<std::array<int, 3>>));
+	ASSERT_FALSE("test_array_container_behaviour", (has_insert_v<std::array<int, 3>>));
+	ASSERT_TRUE("test_array_container_behaviour", (has_subscript_v<std::array<int, 3>, std::size_t>));
+	RETURN_TEST("test_array_container_behaviour", result);
 }
 
 int test_has_push_back_sequences() {
@@ -125,6 +141,17 @@ int test_has_insert_associative_only() {
 	ASSERT_FALSE("test_has_insert_associative_only", (has_insert_v<std::list<int>>));
 	ASSERT_FALSE("test_has_insert_associative_only", has_insert_v<std::string>);
 	RETURN_TEST("test_has_insert_associative_only", result);
+}
+
+int test_mutation_concepts_accept_move_only() {
+	int result = 0;
+	ASSERT_TRUE("test_mutation_concepts_accept_move_only", (Type::HasPushBack<std::vector<int>>));
+	ASSERT_TRUE("test_mutation_concepts_accept_move_only", (Type::HasPushBack<std::vector<std::unique_ptr<int>>>));
+	ASSERT_TRUE("test_mutation_concepts_accept_move_only", (Type::HasPushFront<std::deque<std::unique_ptr<int>>>));
+	ASSERT_FALSE("test_mutation_concepts_accept_move_only", (Type::HasPushFront<std::vector<std::unique_ptr<int>>>));
+	ASSERT_TRUE("test_mutation_concepts_accept_move_only", (Type::HasInsert<std::set<int>>));
+	ASSERT_FALSE("test_mutation_concepts_accept_move_only", (Type::HasInsert<std::vector<std::unique_ptr<int>>>));
+	RETURN_TEST("test_mutation_concepts_accept_move_only", result);
 }
 
 int test_cvref_decay_on_container_concepts() {
@@ -230,6 +257,7 @@ int test_variant_concepts() {
 enum UnscopedEnum { UE_A = 1 };
 enum class ScopedEnum : std::uint16_t { A = 2 };
 enum class SignedScoped : int { B = -1 };
+
 int test_enum_concepts() {
 	int result = 0;
 	ASSERT_TRUE("test_enum_concepts", Type::Enum<UnscopedEnum>);
@@ -361,52 +389,47 @@ int test_extended_type_concepts() {
 	RETURN_TEST("test_extended_type_concepts", result);
 }
 
-int test_array_container_behaviour() {
-	int result = 0;
-	ASSERT_TRUE("test_array_container_behaviour", (is_container_v<std::array<int, 3>>));
-	ASSERT_FALSE("test_array_container_behaviour", (has_push_back_v<std::array<int, 3>>));
-	ASSERT_FALSE("test_array_container_behaviour", (has_push_front_v<std::array<int, 3>>));
-	ASSERT_FALSE("test_array_container_behaviour", (has_insert_v<std::array<int, 3>>));
-	ASSERT_TRUE("test_array_container_behaviour", (has_subscript_v<std::array<int, 3>, std::size_t>));
-	RETURN_TEST("test_array_container_behaviour", result);
-}
-
-int test_mutation_concepts_accept_move_only() {
-	int result = 0;
-	ASSERT_TRUE("test_mutation_concepts_accept_move_only", (Type::HasPushBack<std::vector<int>>));
-	ASSERT_TRUE("test_mutation_concepts_accept_move_only", (Type::HasPushBack<std::vector<std::unique_ptr<int>>>));
-	ASSERT_TRUE("test_mutation_concepts_accept_move_only", (Type::HasPushFront<std::deque<std::unique_ptr<int>>>));
-	ASSERT_FALSE("test_mutation_concepts_accept_move_only", (Type::HasPushFront<std::vector<std::unique_ptr<int>>>));
-	ASSERT_TRUE("test_mutation_concepts_accept_move_only", (Type::HasInsert<std::set<int>>));
-	ASSERT_FALSE("test_mutation_concepts_accept_move_only", (Type::HasInsert<std::vector<std::unique_ptr<int>>>));
-	RETURN_TEST("test_mutation_concepts_accept_move_only", result);
-}
-
 int main() {
 	int result = 0;
+
+	// containers
 	result += test_string_concept();
 	result += test_container_excludes_string();
+	result += test_array_container_behaviour();
 	result += test_has_push_back_sequences();
 	result += test_has_push_front_sequences();
 	result += test_has_insert_associative_only();
+	result += test_mutation_concepts_accept_move_only();
 	result += test_cvref_decay_on_container_concepts();
 	result += test_vector_add_path_is_push_back_only();
 	result += test_map_add_path_is_insert_only();
 	result += test_deque_may_have_both_push_apis();
 	result += test_has_key_and_mapped_type();
 	result += test_has_subscript();
+
+	// wrappers
 	result += test_optional_concept();
 	result += test_pair_concept();
 	result += test_variant_concepts();
+
+	// enums
 	result += test_enum_concepts();
+
+	// categories
 	result += test_arithmetic_and_cv_concepts();
+
+	// conversions / relations
 	result += test_same_as_and_convertible();
+
+	// ranges
 	result += test_range_and_byte_concepts();
+
+	// object semantics
 	result += test_constructible_and_callable();
 	result += test_trivially_copyable();
+
+	// sized / pointers / relations / comparison
 	result += test_extended_type_concepts();
-	result += test_array_container_behaviour();
-	result += test_mutation_concepts_accept_move_only();
 
 	if (result == 0) {
 		std::cout << "All tests passed!" << std::endl;
