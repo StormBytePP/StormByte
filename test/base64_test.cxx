@@ -31,8 +31,10 @@ static std::vector<std::byte> ToBytes(const std::string& str) {
 	for (char c : str) {
 		result.push_back(static_cast<std::byte>(c));
 	}
+
 	return result;
 }
+
 int test_base64_empty() {
 	int result = 0;
 	try {
@@ -45,8 +47,10 @@ int test_base64_empty() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_base64_empty", result);
 }
+
 int test_base64_simple() {
 	int result = 0;
 	try {
@@ -61,8 +65,10 @@ int test_base64_simple() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_base64_simple", result);
 }
+
 int test_base64_padding_cases() {
 	int result = 0;
 	try {
@@ -77,6 +83,7 @@ int test_base64_padding_cases() {
 				static_cast<unsigned char>('A'),
 				static_cast<unsigned char>(decoded[0]));
 		}
+
 		// 2 bytes → one padding character
 		{
 			auto bytes = ToBytes("AB");
@@ -85,6 +92,7 @@ int test_base64_padding_cases() {
 			auto decoded = Base64Decode(encoded);
 			ASSERT_EQUAL("test_base64_padding_cases", 2u, decoded.size());
 		}
+
 		// 3 bytes → no padding
 		{
 			auto bytes = ToBytes("ABC");
@@ -97,8 +105,10 @@ int test_base64_padding_cases() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_base64_padding_cases", result);
 }
+
 int test_base64_binary_data() {
 	int result = 0;
 	try {
@@ -107,6 +117,7 @@ int test_base64_binary_data() {
 		for (std::size_t i = 0; i < 256; ++i) {
 			original[i] = static_cast<std::byte>(i);
 		}
+
 		std::string encoded = Base64Encode(original);
 		auto decoded = Base64Decode(encoded);
 		ASSERT_EQUAL("test_base64_binary_data", original.size(), decoded.size());
@@ -115,8 +126,10 @@ int test_base64_binary_data() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_base64_binary_data", result);
 }
+
 int test_base64_span_overload() {
 	int result = 0;
 	try {
@@ -132,8 +145,10 @@ int test_base64_span_overload() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_base64_span_overload", result);
 }
+
 int test_base64_whitespace_in_input() {
 	int result = 0;
 	try {
@@ -146,8 +161,10 @@ int test_base64_whitespace_in_input() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_base64_whitespace_in_input", result);
 }
+
 int test_base64_invalid_character() {
 	int result = 0;
 	try {
@@ -157,13 +174,16 @@ int test_base64_invalid_character() {
 		} catch (const Base64Error&) {
 			thrown = true;
 		}
+
 		ASSERT_TRUE("test_base64_invalid_character", thrown);
 	} catch (const Exception& ex) {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_base64_invalid_character", result);
 }
+
 int test_base64_long_string() {
 	int result = 0;
 	try {
@@ -178,8 +198,10 @@ int test_base64_long_string() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_base64_long_string", result);
 }
+
 int test_base64_roundtrip_various_sizes() {
 	int result = 0;
 	try {
@@ -195,8 +217,10 @@ int test_base64_roundtrip_various_sizes() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_base64_roundtrip_various_sizes", result);
 }
+
 int main() {
 	int result = 0;
 	try {
@@ -213,10 +237,12 @@ int main() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	if (result == 0) {
 		std::cout << "All tests passed!" << std::endl;
 	} else {
 		std::cout << result << " tests failed." << std::endl;
 	}
+
 	return result;
 }

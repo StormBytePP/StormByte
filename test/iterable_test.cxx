@@ -73,6 +73,7 @@ public:
 	MyMap(std::initializer_list<std::pair<const std::string, int>> init) {
 		m_data = std::map<std::string, int>(init);
 	}
+
 	using base::add;
 	using base::operator[];
 	using base::size;
@@ -144,8 +145,10 @@ int test_vector_add_and_index() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_vector_add_and_index", result);
 }
+
 int test_vector_add_move() {
 	int result = 0;
 	try {
@@ -163,8 +166,10 @@ int test_vector_add_move() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_vector_add_move", result);
 }
+
 int test_vector_add_preserves_order() {
 	int result = 0;
 	try {
@@ -179,8 +184,10 @@ int test_vector_add_preserves_order() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_vector_add_preserves_order", result);
 }
+
 // ---------------------------------------------------------------------------
 // Iteration
 // ---------------------------------------------------------------------------
@@ -200,8 +207,10 @@ int test_forward_iteration() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_forward_iteration", result);
 }
+
 int test_reverse_iteration() {
 	int result = 0;
 	try {
@@ -217,8 +226,10 @@ int test_reverse_iteration() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_reverse_iteration", result);
 }
+
 int test_const_iteration() {
 	int result = 0;
 	try {
@@ -236,8 +247,10 @@ int test_const_iteration() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_const_iteration", result);
 }
+
 int test_iterator_arithmetic() {
 	int result = 0;
 	try {
@@ -257,8 +270,10 @@ int test_iterator_arithmetic() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_iterator_arithmetic", result);
 }
+
 // ---------------------------------------------------------------------------
 // Bounds
 // ---------------------------------------------------------------------------
@@ -272,6 +287,7 @@ int test_vector_out_of_bounds() {
 	} catch (const StormByte::OutOfBoundsError&) {
 		// expected
 	}
+
 	try {
 		(void)v[100];
 		std::cerr << "Expected OutOfBoundsError not thrown (index 100)" << std::endl;
@@ -279,6 +295,7 @@ int test_vector_out_of_bounds() {
 	} catch (const StormByte::OutOfBoundsError&) {
 		// expected
 	}
+
 	try {
 		MyVector empty;
 		(void)empty[0];
@@ -287,8 +304,10 @@ int test_vector_out_of_bounds() {
 	} catch (const StormByte::OutOfBoundsError&) {
 		// expected
 	}
+
 	RETURN_TEST("test_vector_out_of_bounds", result);
 }
+
 int test_const_vector_out_of_bounds() {
 	int result = 0;
 	const MyVector v{1, 2};
@@ -299,8 +318,10 @@ int test_const_vector_out_of_bounds() {
 	} catch (const StormByte::OutOfBoundsError&) {
 		// expected
 	}
+
 	RETURN_TEST("test_const_vector_out_of_bounds", result);
 }
+
 // ---------------------------------------------------------------------------
 // Deque (push_back preferred over push_front)
 // ---------------------------------------------------------------------------
@@ -320,8 +341,10 @@ int test_queue_add_and_index() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_queue_add_and_index", result);
 }
+
 int test_queue_out_of_bounds() {
 	int result = 0;
 	MyQueue q;
@@ -332,8 +355,10 @@ int test_queue_out_of_bounds() {
 	} catch (const StormByte::OutOfBoundsError&) {
 		// expected
 	}
+
 	RETURN_TEST("test_queue_out_of_bounds", result);
 }
+
 // ---------------------------------------------------------------------------
 // Map (associative insert)
 // ---------------------------------------------------------------------------
@@ -352,8 +377,10 @@ int test_map_add_and_key_access() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_map_add_and_key_access", result);
 }
+
 int test_map_add_move_pair() {
 	int result = 0;
 	try {
@@ -366,8 +393,10 @@ int test_map_add_move_pair() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_map_add_move_pair", result);
 }
+
 int test_map_subscript_inserts() {
 	int result = 0;
 	try {
@@ -380,8 +409,10 @@ int test_map_subscript_inserts() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_map_subscript_inserts", result);
 }
+
 int test_map_const_missing_key_throws() {
 	int result = 0;
 	const MyMap m{{"a", 1}};
@@ -392,14 +423,17 @@ int test_map_const_missing_key_throws() {
 	} catch (const StormByte::OutOfBoundsError&) {
 		// expected
 	}
+
 	try {
 		ASSERT_EQUAL("test_map_const_missing_key_throws", 1, m["a"]);
 	} catch (const StormByte::OutOfBoundsError& ex) {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_map_const_missing_key_throws", result);
 }
+
 // ---------------------------------------------------------------------------
 // Set (HasInsert via key_type, no mapped_type)
 // ---------------------------------------------------------------------------
@@ -420,8 +454,10 @@ int test_set_add() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_set_add", result);
 }
+
 // ---------------------------------------------------------------------------
 // has_item / has_key
 // ---------------------------------------------------------------------------
@@ -433,6 +469,7 @@ int test_vector_has_item() {
 	ASSERT_FALSE("test_vector_has_item", MyVector{}.has_item(0));
 	RETURN_TEST("test_vector_has_item", result);
 }
+
 int test_queue_has_item() {
 	int result = 0;
 	MyQueue q{10, 20, 30, 40, 50};
@@ -440,6 +477,7 @@ int test_queue_has_item() {
 	ASSERT_FALSE("test_queue_has_item", q.has_item(99));
 	RETURN_TEST("test_queue_has_item", result);
 }
+
 int test_map_has_item_and_key() {
 	int result = 0;
 	MyMap m{{"a", 1}, {"b", 2}, {"c", 3}};
@@ -449,6 +487,7 @@ int test_map_has_item_and_key() {
 	ASSERT_FALSE("test_map_has_item_and_key", m.has_key("z"));
 	RETURN_TEST("test_map_has_item_and_key", result);
 }
+
 // ---------------------------------------------------------------------------
 // Equality
 // ---------------------------------------------------------------------------
@@ -463,6 +502,7 @@ int test_equality() {
 	ASSERT_FALSE("test_equality", a == c);
 	RETURN_TEST("test_equality", result);
 }
+
 // ---------------------------------------------------------------------------
 // Copy / move of wrapper
 // ---------------------------------------------------------------------------
@@ -480,8 +520,10 @@ int test_copy_and_move() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_copy_and_move", result);
 }
+
 // ---------------------------------------------------------------------------
 // std::distance / std::advance on bidirectional-only containers
 // ---------------------------------------------------------------------------
@@ -496,6 +538,7 @@ int test_map_distance_and_advance() {
 	ASSERT_TRUE("test_map_distance_and_advance", it == m.end());
 	RETURN_TEST("test_map_distance_and_advance", result);
 }
+
 int test_set_distance_and_advance() {
 	int result = 0;
 	MySet s{5, 3, 1, 4};
@@ -574,6 +617,7 @@ int test_unique_ptr_add_move() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_unique_ptr_add_move", result);
 }
 
@@ -591,6 +635,7 @@ int test_unique_ptr_construct_from_moved_container() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_unique_ptr_construct_from_moved_container", result);
 }
 
@@ -610,6 +655,7 @@ int test_unique_ptr_move_iterable() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_unique_ptr_move_iterable", result);
 }
 
@@ -647,5 +693,6 @@ int main() {
 	} else {
 		std::cout << result << " tests failed." << std::endl;
 	}
+
 	return result;
 }

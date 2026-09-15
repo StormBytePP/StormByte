@@ -46,8 +46,10 @@ int test_several_sleeps() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_several_sleeps", result);
 }
+
 int test_temp_file_name_long_prefix_does_not_throw() {
 	// Regression: the old fixed 256-byte buffer for "/tmp/" + prefix + "XXXXXX"
 	// truncated away the required trailing "XXXXXX" once the prefix pushed the
@@ -64,8 +66,10 @@ int test_temp_file_name_long_prefix_does_not_throw() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_temp_file_name_long_prefix_does_not_throw", result);
 }
+
 int main() {
 	int result = 0;
 	result += test_several_sleeps();
@@ -75,5 +79,6 @@ int main() {
 	} else {
 		std::cout << result << " tests failed." << std::endl;
 	}
+
 	return result;
 }

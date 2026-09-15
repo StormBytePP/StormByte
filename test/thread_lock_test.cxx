@@ -55,8 +55,10 @@ int test_threadlock_reentrant() {
         std::cerr << ex.what() << std::endl;
         result++;
     }
+
     RETURN_TEST("test_threadlock_reentrant", result);
 }
+
 int test_threadlock_unlock_before_lock() {
     int result = 0;
     ThreadLock lock;
@@ -65,6 +67,7 @@ int test_threadlock_unlock_before_lock() {
     lock.Unlock();
     RETURN_TEST("test_threadlock_unlock_before_lock", result);
 }
+
 // Test that a thread attempting to Lock() will block until the owning thread Unlocks()
 int test_threadlock_blocking() {
     int result = 0;
@@ -88,8 +91,10 @@ int test_threadlock_blocking() {
         std::cerr << ex.what() << std::endl;
         result++;
     }
+
     RETURN_TEST("test_threadlock_blocking", result);
 }
+
 // Test multiple threads appending fixed-size tokens while using ThreadLock to ensure
 // each append is atomic (no interleaved writes). We verify final string length
 // and that each chunk is homogeneous (all characters in the chunk equal), which
@@ -115,6 +120,7 @@ int test_threadlock_many_writers() {
                 }
             });
         }
+
         for (auto &th : threads) th.join();
         const std::size_t expected_len = static_cast<std::size_t>(thread_count) * iterations * token_size;
         ASSERT_EQUAL("test_threadlock_many_writers", expected_len, shared.size());
@@ -132,8 +138,10 @@ int test_threadlock_many_writers() {
         std::cerr << ex.what() << std::endl;
         result++;
     }
+
     RETURN_TEST("test_threadlock_many_writers", result);
 }
+
 int main() {
     int result = 0;
     result += test_threadlock_reentrant();
@@ -145,5 +153,6 @@ int main() {
     } else {
         std::cout << result << " tests failed." << std::endl;
     }
+
     return result;
 }

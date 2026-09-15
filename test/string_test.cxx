@@ -38,8 +38,10 @@ int test_simple_explode() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_simple_explode", result);
 }
+
 int test_explode_consecutive_delimiters() {
 	int result = 0;
 	std::queue<std::string> parts = Explode("a,,c", ',');
@@ -51,6 +53,7 @@ int test_explode_consecutive_delimiters() {
 	ASSERT_EQUAL("test_explode_consecutive_delimiters", "c", parts.front());
 	RETURN_TEST("test_explode_consecutive_delimiters", result);
 }
+
 int test_path_explode() {
 	int result = 0;
 	try {
@@ -68,8 +71,10 @@ int test_path_explode() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_path_explode", result);
 }
+
 int test_explode_one_item() {
 	int result = 0;
 	try {
@@ -83,8 +88,10 @@ int test_explode_one_item() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_explode_one_item", result);
 }
+
 int test_temp_path() {
 	int result = 0;
 	try {
@@ -96,8 +103,10 @@ int test_temp_path() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_temp_path", result);
 }
+
 int test_human_readable_byte_size() {
     int result = 0;
     const std::string locale = "en_US.UTF-8"; // Can't be a constexpr or gcc complains
@@ -121,14 +130,17 @@ int test_human_readable_byte_size() {
         std::cerr << ex.what() << std::endl;
         result++;
     }
+
     RETURN_TEST("test_human_readable_byte_size", result);
 }
+
 int test_human_readable_negative_bytes() {
 	int result = 0;
 	const std::string size = HumanReadable<int>(-1024, Format::HumanReadableBytes, "C");
 	ASSERT_EQUAL("test_human_readable_negative_bytes", "-1 KiB", size);
 	RETURN_TEST("test_human_readable_negative_bytes", result);
 }
+
 int test_human_readable_number() {
 	int result = 0;
 	try {
@@ -140,8 +152,10 @@ int test_human_readable_number() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	RETURN_TEST("test_human_readable_number", result);
 }
+
 int test_buffer_to_string() {
 	const std::string test_string = "test_buffer_to_string";
 	std::vector<std::byte> buffer = StormByte::String::ToByteVector(test_string);
@@ -149,6 +163,7 @@ int test_buffer_to_string() {
 	ASSERT_EQUAL("test_buffer_to_string", test_string, str);
 	RETURN_TEST("test_buffer_to_string", 0);
 }
+
 int test_case_conversion_high_bytes() {
 	int result = 0;
 	const std::string input = "A\xC0\xFFz";
@@ -156,6 +171,7 @@ int test_case_conversion_high_bytes() {
 	ASSERT_EQUAL("test_case_conversion_high_bytes", std::string("A\xC0\xFFZ"), ToUpper(input));
 	RETURN_TEST("test_case_conversion_high_bytes", result);
 }
+
 int test_utf8_conversion_is_locale_independent() {
 	int result = 0;
 	const char* current_locale = std::setlocale(LC_ALL, nullptr);
@@ -170,9 +186,11 @@ int test_utf8_conversion_is_locale_independent() {
 		std::cerr << ex.what() << std::endl;
 		result++;
 	}
+
 	std::setlocale(LC_ALL, saved_locale.c_str());
 	RETURN_TEST("test_utf8_conversion_is_locale_independent", result);
 }
+
 int test_utf8_conversion_preserves_embedded_nul() {
 	int result = 0;
 	const std::wstring wide = {L'A', L'\0', L'\u00E9', L'\0', L'B'};
@@ -181,6 +199,7 @@ int test_utf8_conversion_preserves_embedded_nul() {
 	ASSERT_EQUAL("test_utf8_conversion_preserves_embedded_nul", wide, UTF8Decode(utf8));
 	RETURN_TEST("test_utf8_conversion_preserves_embedded_nul", result);
 }
+
 int test_utf8_conversion_rejects_invalid_input() {
 	int result = 0;
 	std::vector<std::string> invalid_utf8 = {
@@ -205,6 +224,7 @@ int test_utf8_conversion_rejects_invalid_input() {
 	for (int lead = 0xF5; lead <= 0xFF; ++lead) {
 		invalid_utf8.push_back(std::string(1, static_cast<char>(lead)));
 	}
+
 	for (const std::string& input : invalid_utf8) {
 		bool threw = false;
 		try {
@@ -212,14 +232,17 @@ int test_utf8_conversion_rejects_invalid_input() {
 		} catch (const StormByte::UTF8Error&) {
 			threw = true;
 		}
+
 		ASSERT_TRUE("test_utf8_conversion_rejects_invalid_input", threw);
 	}
+
 	bool threw = false;
 	try {
 		UTF8Encode(std::wstring(1, static_cast<wchar_t>(0xD800)));
 	} catch (const StormByte::UTF8Error&) {
 		threw = true;
 	}
+
 	ASSERT_TRUE("test_utf8_conversion_rejects_invalid_input", threw);
 	const std::vector<std::string> invalid_surrogates = {
 		std::string("\xED\xA0\x80", 3),
@@ -232,8 +255,10 @@ int test_utf8_conversion_rejects_invalid_input() {
 		} catch (const StormByte::UTF8Error&) {
 			threw = true;
 		}
+
 		ASSERT_TRUE("test_utf8_conversion_rejects_invalid_input", threw);
 	}
+
 	if constexpr (sizeof(wchar_t) == 2) {
 		const std::vector<std::wstring> invalid_wide = {
 			{static_cast<wchar_t>(0xD800)},
@@ -249,6 +274,7 @@ int test_utf8_conversion_rejects_invalid_input() {
 			} catch (const StormByte::UTF8Error&) {
 				threw = true;
 			}
+
 			ASSERT_TRUE("test_utf8_conversion_rejects_invalid_input", threw);
 		}
 	} else {
@@ -259,11 +285,14 @@ int test_utf8_conversion_rejects_invalid_input() {
 			} catch (const StormByte::UTF8Error&) {
 				threw = true;
 			}
+
 			ASSERT_TRUE("test_utf8_conversion_rejects_invalid_input", threw);
 		}
 	}
+
 	RETURN_TEST("test_utf8_conversion_rejects_invalid_input", result);
 }
+
 int test_utf8_conversion_boundaries() {
 	int result = 0;
 	const std::vector<std::pair<std::wstring, std::string>> cases = {
@@ -278,6 +307,7 @@ int test_utf8_conversion_boundaries() {
 		ASSERT_EQUAL("test_utf8_conversion_boundaries", utf8, UTF8Encode(wide));
 		ASSERT_EQUAL("test_utf8_conversion_boundaries", wide, UTF8Decode(utf8));
 	}
+
 	if constexpr (sizeof(wchar_t) == 2) {
 		const std::wstring pair = {static_cast<wchar_t>(0xD800), static_cast<wchar_t>(0xDC00)};
 		ASSERT_EQUAL("test_utf8_conversion_boundaries", std::string("\xF0\x90\x80\x80", 4), UTF8Encode(pair));
@@ -298,8 +328,10 @@ int test_utf8_conversion_boundaries() {
 			ASSERT_EQUAL("test_utf8_conversion_boundaries", wide, UTF8Decode(utf8));
 		}
 	}
+
 	RETURN_TEST("test_utf8_conversion_boundaries", result);
 }
+
 int main() {
     int result = 0;
     try {
@@ -321,10 +353,12 @@ int main() {
         std::cerr << ex.what() << std::endl;
         result++;
     }
+
     if (result == 0) {
         std::cout << "All tests passed!" << std::endl;
     } else {
         std::cout << result << " tests failed." << std::endl;
     }
+
     return result;
 }

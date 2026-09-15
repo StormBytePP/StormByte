@@ -34,12 +34,14 @@ int test_plain_message_no_args() {
 	ASSERT_EQUAL("test_plain_message_no_args", std::string("Key not found in Iterable::operator[]"), std::string(e.what()));
 	RETURN_TEST("test_plain_message_no_args", result);
 }
+
 int test_formatted_message_with_args() {
 	int result = 0;
 	Exception e("value is {}", 42);
 	ASSERT_EQUAL("test_formatted_message_with_args", std::string("value is 42"), std::string(e.what()));
 	RETURN_TEST("test_formatted_message_with_args", result);
 }
+
 int test_zero_args_format_string_ctor_is_as_is() {
 	// A bare string literal always binds to Exception(std::string&&), never to
 	// the format_string<> template, so force that branch explicitly with a
@@ -51,6 +53,7 @@ int test_zero_args_format_string_ctor_is_as_is() {
 	ASSERT_EQUAL("test_zero_args_format_string_ctor_is_as_is", std::string("literal {{brace}} as-is"), std::string(e.what()));
 	RETURN_TEST("test_zero_args_format_string_ctor_is_as_is", result);
 }
+
 // ---------------------------------------------------------------------------
 // Regression: Exception(component, fmt, args...) used to be silently hijacked
 // by the fmt-only constructor (the component string was treated as the whole
@@ -63,12 +66,14 @@ int test_component_prefixed_message() {
 	ASSERT_EQUAL("test_component_prefixed_message", std::string("StormByte::MyComponent: failed with code 7"), std::string(e.what()));
 	RETURN_TEST("test_component_prefixed_message", result);
 }
+
 int test_component_prefixed_message_no_args() {
 	int result = 0;
 	Exception e(Component("MyComponent"), "plain text");
 	ASSERT_EQUAL("test_component_prefixed_message_no_args", std::string("StormByte::MyComponent: plain text"), std::string(e.what()));
 	RETURN_TEST("test_component_prefixed_message_no_args", result);
 }
+
 int main() {
 	int result = 0;
 	result += test_plain_message_no_args();
@@ -81,5 +86,6 @@ int main() {
 	} else {
 		std::cout << result << " tests failed." << std::endl;
 	}
+
 	return result;
 }

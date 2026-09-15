@@ -29,6 +29,7 @@ void ThreadLock::Lock() noexcept {
 			return;
 		}
 	}
+
 	// Acquire the main mutex (blocks other threads). After acquiring, set ownership.
 	m_main_mutex.lock();
 	{
@@ -36,6 +37,7 @@ void ThreadLock::Lock() noexcept {
 		m_owner_thread_id = this_id;
 	}
 }
+
 void ThreadLock::Unlock() noexcept {
 	const auto this_id = std::this_thread::get_id();
 	std::unique_lock owner_lock(m_thread_owner_mutex);
@@ -44,6 +46,7 @@ void ThreadLock::Unlock() noexcept {
 		// Return without changing state.
 		return;
 	}
+
 	// Always fully release ownership and unlock the main mutex.
 	m_owner_thread_id = std::nullopt;
 	owner_lock.unlock();

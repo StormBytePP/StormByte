@@ -78,6 +78,7 @@ int test_string_concept() {
 	ASSERT_FALSE("test_string_concept", is_string_v<int>);
 	RETURN_TEST("test_string_concept", result);
 }
+
 int test_container_excludes_string() {
 	int result = 0;
 	ASSERT_TRUE("test_container_excludes_string", (is_container_v<std::vector<int>>));
@@ -91,6 +92,7 @@ int test_container_excludes_string() {
 	ASSERT_FALSE("test_container_excludes_string", is_container_v<void*>);
 	RETURN_TEST("test_container_excludes_string", result);
 }
+
 int test_has_push_back_sequences() {
 	int result = 0;
 	ASSERT_TRUE("test_has_push_back_sequences", (has_push_back_v<std::vector<int>>));
@@ -101,6 +103,7 @@ int test_has_push_back_sequences() {
 	ASSERT_FALSE("test_has_push_back_sequences", has_push_back_v<std::string>);
 	RETURN_TEST("test_has_push_back_sequences", result);
 }
+
 int test_has_push_front_sequences() {
 	int result = 0;
 	ASSERT_FALSE("test_has_push_front_sequences", (has_push_front_v<std::vector<int>>));
@@ -110,6 +113,7 @@ int test_has_push_front_sequences() {
 	ASSERT_FALSE("test_has_push_front_sequences", (has_push_front_v<std::set<int>>));
 	RETURN_TEST("test_has_push_front_sequences", result);
 }
+
 int test_has_insert_associative_only() {
 	int result = 0;
 	ASSERT_TRUE("test_has_insert_associative_only", (has_insert_v<std::map<int, int>>));
@@ -122,6 +126,7 @@ int test_has_insert_associative_only() {
 	ASSERT_FALSE("test_has_insert_associative_only", has_insert_v<std::string>);
 	RETURN_TEST("test_has_insert_associative_only", result);
 }
+
 int test_cvref_decay_on_container_concepts() {
 	int result = 0;
 	ASSERT_TRUE("test_cvref_decay_on_container_concepts", (has_push_back_v<std::vector<int>&>));
@@ -134,6 +139,7 @@ int test_cvref_decay_on_container_concepts() {
 	ASSERT_FALSE("test_cvref_decay_on_container_concepts", (has_insert_v<std::vector<int>&>));
 	RETURN_TEST("test_cvref_decay_on_container_concepts", result);
 }
+
 int test_vector_add_path_is_push_back_only() {
 	int result = 0;
 	constexpr bool pb = Type::HasPushBack<std::vector<int>>;
@@ -145,6 +151,7 @@ int test_vector_add_path_is_push_back_only() {
 	ASSERT_EQUAL("test_vector_add_path_is_push_back_only", 1, (pb ? 1 : 0) + (pf ? 1 : 0) + (ins ? 1 : 0));
 	RETURN_TEST("test_vector_add_path_is_push_back_only", result);
 }
+
 int test_map_add_path_is_insert_only() {
 	int result = 0;
 	constexpr bool pb = Type::HasPushBack<std::map<std::string, int>>;
@@ -156,6 +163,7 @@ int test_map_add_path_is_insert_only() {
 	ASSERT_EQUAL("test_map_add_path_is_insert_only", 1, (pb ? 1 : 0) + (pf ? 1 : 0) + (ins ? 1 : 0));
 	RETURN_TEST("test_map_add_path_is_insert_only", result);
 }
+
 int test_deque_may_have_both_push_apis() {
 	int result = 0;
 	ASSERT_TRUE("test_deque_may_have_both_push_apis", (has_push_back_v<std::deque<int>>));
@@ -163,6 +171,7 @@ int test_deque_may_have_both_push_apis() {
 	ASSERT_FALSE("test_deque_may_have_both_push_apis", (has_insert_v<std::deque<int>>));
 	RETURN_TEST("test_deque_may_have_both_push_apis", result);
 }
+
 int test_has_key_and_mapped_type() {
 	int result = 0;
 	ASSERT_TRUE("test_has_key_and_mapped_type", (has_key_type_v<std::map<int, int>>));
@@ -173,6 +182,7 @@ int test_has_key_and_mapped_type() {
 	ASSERT_FALSE("test_has_key_and_mapped_type", (has_mapped_type_v<std::vector<int>>));
 	RETURN_TEST("test_has_key_and_mapped_type", result);
 }
+
 int test_has_subscript() {
 	int result = 0;
 	ASSERT_TRUE("test_has_subscript", (has_subscript_v<std::vector<int>, std::size_t>));
@@ -182,6 +192,7 @@ int test_has_subscript() {
 	ASSERT_FALSE("test_has_subscript", (has_subscript_v<std::set<int>, int>));
 	RETURN_TEST("test_has_subscript", result);
 }
+
 int test_optional_concept() {
 	int result = 0;
 	ASSERT_TRUE("test_optional_concept", (is_optional_v<std::optional<int>>));
@@ -190,6 +201,7 @@ int test_optional_concept() {
 	ASSERT_FALSE("test_optional_concept", (is_optional_v<std::vector<int>>));
 	RETURN_TEST("test_optional_concept", result);
 }
+
 int test_pair_concept() {
 	int result = 0;
 	ASSERT_TRUE("test_pair_concept", (is_pair_v<std::pair<int, int>>));
@@ -198,6 +210,7 @@ int test_pair_concept() {
 	ASSERT_FALSE("test_pair_concept", (is_pair_v<std::vector<int>>));
 	RETURN_TEST("test_pair_concept", result);
 }
+
 int test_variant_concepts() {
 	int result = 0;
 	using V = std::variant<int, std::string, double>;
@@ -213,6 +226,7 @@ int test_variant_concepts() {
 	ASSERT_TRUE("test_variant_concepts", (variant_has_type_v<V, int&>));
 	RETURN_TEST("test_variant_concepts", result);
 }
+
 enum UnscopedEnum { UE_A = 1 };
 enum class ScopedEnum : std::uint16_t { A = 2 };
 enum class SignedScoped : int { B = -1 };
@@ -229,6 +243,7 @@ int test_enum_concepts() {
 	ASSERT_TRUE("test_enum_concepts", (Type::SameAs<Type::UnderlyingType<ScopedEnum>, std::uint16_t>));
 	RETURN_TEST("test_enum_concepts", result);
 }
+
 int test_arithmetic_and_cv_concepts() {
 	int result = 0;
 	ASSERT_TRUE("test_arithmetic_and_cv_concepts", Type::Integral<int>);
@@ -248,6 +263,7 @@ int test_arithmetic_and_cv_concepts() {
 	ASSERT_FALSE("test_arithmetic_and_cv_concepts", Type::Class<int>);
 	RETURN_TEST("test_arithmetic_and_cv_concepts", result);
 }
+
 int test_same_as_and_convertible() {
 	int result = 0;
 	ASSERT_TRUE("test_same_as_and_convertible", (Type::SameAs<int, int>));
@@ -257,6 +273,7 @@ int test_same_as_and_convertible() {
 	ASSERT_FALSE("test_same_as_and_convertible", (Type::ConvertibleTo<std::string, int>));
 	RETURN_TEST("test_same_as_and_convertible", result);
 }
+
 int test_range_and_byte_concepts() {
 	int result = 0;
 	using Values = std::vector<int>;
@@ -300,6 +317,7 @@ int test_range_and_byte_concepts() {
 	ASSERT_FALSE("test_range_and_byte_concepts", (Type::ByteInputIterator<std::vector<std::string>::iterator>));
 	RETURN_TEST("test_range_and_byte_concepts", result);
 }
+
 int test_constructible_and_callable() {
 	int result = 0;
 	ASSERT_TRUE("test_constructible_and_callable", Type::DefaultConstructible<int>);
@@ -311,6 +329,7 @@ int test_constructible_and_callable() {
 	ASSERT_FALSE("test_constructible_and_callable", (Type::Callable<int, int>));
 	RETURN_TEST("test_constructible_and_callable", result);
 }
+
 int test_trivially_copyable() {
 	int result = 0;
 	ASSERT_TRUE("test_trivially_copyable", Type::TriviallyCopyable<int>);
@@ -318,6 +337,7 @@ int test_trivially_copyable() {
 	ASSERT_FALSE("test_trivially_copyable", Type::TriviallyCopyable<std::string>);
 	RETURN_TEST("test_trivially_copyable", result);
 }
+
 int test_extended_type_concepts() {
 	int result = 0;
 	ASSERT_TRUE("test_extended_type_concepts", Type::Sized<std::vector<int>>);
@@ -340,6 +360,7 @@ int test_extended_type_concepts() {
 	ASSERT_FALSE("test_extended_type_concepts", Type::Hashable<std::vector<int>>);
 	RETURN_TEST("test_extended_type_concepts", result);
 }
+
 int test_array_container_behaviour() {
 	int result = 0;
 	ASSERT_TRUE("test_array_container_behaviour", (is_container_v<std::array<int, 3>>));
@@ -349,6 +370,7 @@ int test_array_container_behaviour() {
 	ASSERT_TRUE("test_array_container_behaviour", (has_subscript_v<std::array<int, 3>, std::size_t>));
 	RETURN_TEST("test_array_container_behaviour", result);
 }
+
 int main() {
 	int result = 0;
 	result += test_string_concept();
@@ -378,5 +400,6 @@ int main() {
 	} else {
 		std::cout << result << " tests failed." << std::endl;
 	}
+
 	return result;
 }

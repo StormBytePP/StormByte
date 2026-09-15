@@ -102,8 +102,10 @@ namespace StormByte {
 				} else if (unit >= 0xDC00u && unit <= 0xDFFFu) {
 					cp = 0xFFFDu;
 				}
+
 				append_utf8(out, cp);
 			}
+
 			return out;
 		}
 
@@ -158,14 +160,17 @@ namespace StormByte {
 					cp = 0xFFFDu;
 					return true;
 				}
+
 				const auto cont = static_cast<unsigned char>(s[i]);
 				if ((cont & 0xC0u) != 0x80u) {
 					cp = 0xFFFDu;
 					return true;
 				}
+
 				++i;
 				cp = (cp << 6) | (cont & 0x3Fu);
 			}
+
 			if (cp > 0x10FFFFu || (cp >= 0xD800u && cp <= 0xDFFFu))
 				cp = 0xFFFDu;
 			return true;
@@ -188,6 +193,7 @@ namespace StormByte {
 					out.push_back(static_cast<wchar_t>(cp));
 				}
 			}
+
 			return out;
 		}
 
@@ -204,6 +210,7 @@ namespace StormByte {
 					out.push_back(static_cast<char16_t>(0xDC00u + (cp & 0x3FFu)));
 				}
 			}
+
 			return out;
 		}
 

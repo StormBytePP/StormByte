@@ -56,6 +56,7 @@ namespace StormByte {
 			std::memcpy(b.data(), &r1, 8);
 			std::memcpy(b.data() + 8, &r2, 8);
 		}
+
 		// Set RFC4122 version = 4
 		b[6] = static_cast<uint8_t>((b[6] & 0x0F) | 0x40);
 		// Set RFC4122 variant = 10xxxxxx

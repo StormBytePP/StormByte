@@ -46,6 +46,7 @@ int test_bitmask_operations() {
 	ASSERT_TRUE("test_bitmask_operations", ((d.Value() & MyFlags::FlagA) == static_cast<MyFlags>(0)));
 	RETURN_TEST("test_bitmask_operations", result);
 }
+
 int main() {
 	int result = 0;
 	result += test_bitmask_operations();
@@ -54,5 +55,6 @@ int main() {
 	} else {
 		std::cout << result << " tests failed." << std::endl;
 	}
+
 	return result;
 }

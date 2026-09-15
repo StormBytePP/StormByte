@@ -29,6 +29,7 @@ namespace {
 	struct TestBaseError {
 		virtual ~TestBaseError() = default;
 		explicit TestBaseError(std::string message): message(std::move(message)) {}
+
 		std::string message;
 	};
 	struct TestDerivedError: TestBaseError {
@@ -78,5 +79,6 @@ int main() {
 	} else {
 		std::cout << result << " tests failed." << std::endl;
 	}
+
 	return result;
 }

@@ -38,6 +38,7 @@ namespace {
 	[[noreturn]] void ThrowInvalidUnicode() {
 		throw StormByte::UTF8Error("Invalid Unicode input");
 	}
+
 	void AppendUTF8(std::string& result, const uint32_t codepoint) {
 		if (codepoint <= 0x7F) {
 			result.push_back(static_cast<char>(codepoint));
@@ -57,6 +58,7 @@ namespace {
 			ThrowInvalidUnicode();
 		}
 	}
+
 	uint32_t DecodeUTF8Codepoint(const std::string& input, std::size_t& index) {
 		const auto first = static_cast<unsigned char>(input[index]);
 		std::size_t length = 0;
@@ -80,18 +82,22 @@ namespace {
 		} else {
 			ThrowInvalidUnicode();
 		}
+
 		if (index + length > input.size()) ThrowInvalidUnicode();
 		for (std::size_t offset = 1; offset < length; ++offset) {
 			const auto continuation = static_cast<unsigned char>(input[index + offset]);
 			if ((continuation & 0xC0) != 0x80) ThrowInvalidUnicode();
 			codepoint = (codepoint << 6) | (continuation & 0x3F);
 		}
+
 		if (codepoint < minimum || codepoint > 0x10FFFF || (codepoint >= 0xD800 && codepoint <= 0xDFFF)) {
 			ThrowInvalidUnicode();
 		}
+
 		index += length;
 		return codepoint;
 	}
+
 	template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
 	std::string HumanReadableByteSize(const T& bytes, const std::string& locale) noexcept {
 		try {
@@ -121,12 +127,14 @@ namespace {
 				value /= KB;
 				suffix = "KiB";
 			}
+
 			std::ostringstream oss;
 			try {
 				oss.imbue(std::locale(locale));
 			} catch (...) {
 				oss.imbue(std::locale("C"));
 			}
+
 			if (std::fabs(value - std::round(value)) < 0.01) {
 				oss << static_cast<int64_t>(std::round(value));
 			} else if (value < 0.01) {
@@ -134,11 +142,13 @@ namespace {
 			} else {
 				oss << std::fixed << std::setprecision(2) << value;
 			}
+
 			return (negative ? "-" : "") + oss.str() + " " + suffix;
 		} catch (...) {
 			return std::to_string(bytes) + " Bytes";
 		}
 	}
+
 	template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T> && !std::is_same_v<T, wchar_t>>>
 	std::string HumanReadableNumber(const T& number, const std::string& locale) noexcept {
 		try {
@@ -148,6 +158,7 @@ namespace {
 			} catch (...) {
 				oss.imbue(std::locale("C"));
 			}
+
 			if constexpr (std::is_integral_v<T>) {
 				oss << number;
 			} else if constexpr (std::is_floating_point_v<T>) {
@@ -157,12 +168,14 @@ namespace {
 					oss << std::fixed << std::setprecision(2) << number;
 				}
 			}
+
 			return oss.str();
 		} catch (...) {
 			return std::to_string(number);
 		}
 	}
 }
+
 namespace StormByte::String {
 	std::queue<std::string> Explode(const std::string& str, const char delimiter) {
 		std::queue<std::string> result;
@@ -171,8 +184,10 @@ namespace StormByte::String {
 			// Convert each part into a std::string and push it to the queue
 			result.emplace(part.begin(), part.end());
 		}
+
 		return result;
 	}
+
 	std::vector<std::string> Split(const std::string& str) {
 		std::istringstream iss(str);
 		std::vector<std::string> result;
@@ -180,8 +195,10 @@ namespace StormByte::String {
 		while (iss >> word) {
 			result.push_back(word); // Insert each word into the vector
 		}
+
 		return result;
 	}
+
 	std::string ToLower(const std::string& str) noexcept {
 		std::string result = str;
 		std::transform(result.begin(), result.end(), result.begin(), [](unsigned char c) {
@@ -189,6 +206,7 @@ namespace StormByte::String {
 		});
 		return result;
 	}
+
 	std::string ToUpper(const std::string& str) noexcept {
 		std::string result = str;
 		std::transform(result.begin(), result.end(), result.begin(), [](unsigned char c) {
@@ -196,6 +214,7 @@ namespace StormByte::String {
 		});
 		return result;
 	}
+
 	template <typename T, typename>
 	std::string HumanReadable(const T& number, const Format& format, const std::string& locale) noexcept {
 		switch (format) {
@@ -209,6 +228,7 @@ namespace StormByte::String {
 			return std::to_string(number);
 		}
 	}
+
 	std::string UTF8Encode(const std::wstring& wstr) {
 		std::string result;
 		result.reserve(wstr.size());
@@ -228,10 +248,13 @@ namespace StormByte::String {
 			} else {
 				static_assert(sizeof(wchar_t) == 2 || sizeof(wchar_t) == 4, "Unsupported wchar_t size");
 			}
+
 			AppendUTF8(result, codepoint);
 		}
+
 		return result;
 	}
+
 	std::wstring UTF8Decode(const std::string& str) {
 		std::wstring result;
 		result.reserve(str.size());
@@ -250,27 +273,33 @@ namespace StormByte::String {
 				static_assert(sizeof(wchar_t) == 2 || sizeof(wchar_t) == 4, "Unsupported wchar_t size");
 			}
 		}
+
 		return result;
 	}
+
 	std::string SanitizeNewlines(const std::string& str) noexcept {
 		std::string result = str;
 		return std::regex_replace(str, std::regex("\r\n"), "\n");
 	}
+
 	std::string FromByteVector(const std::vector<std::byte>& byte_vector) noexcept {
 		auto span = std::span<const std::byte>(byte_vector.data(), byte_vector.size());
 		return std::string(reinterpret_cast<const char*>(span.data()), span.size());
 	}
+
 	std::vector<std::byte> ToByteVector(const std::string& str) noexcept {
 		std::vector<std::byte> byte_vector(str.size());
 		std::memcpy(byte_vector.data(), str.data(), str.size());
 		return byte_vector;
 	}
+
 	std::string RemoveWhitespace(const std::string& str) noexcept {
 		std::string out;
 		out.reserve(str.size());
 		for (char c : str) if (!isspace(static_cast<unsigned char>(c))) out.push_back(c);
 		return out;
 	}
+
 	bool IsInteger(const std::string& str) noexcept {
 		if (str.empty()) return false;
 		size_t start = 0;
@@ -278,13 +307,16 @@ namespace StormByte::String {
 			if (str.size() == 1) return false; // Only sign, no digits
 			start = 1;
 		}
+
 		for (size_t i = start; i < str.size(); ++i) {
 			if (!std::isdigit(static_cast<unsigned char>(str[i]))) {
 				return false;
 			}
 		}
+
 		return true;
 	}
+
 	// Explicit instantiations for `HumanReadable` (ordered by category).
 	// Note: `wchar_t`, `char16_t`, and `char32_t` are excluded because they are not
 	// streamed to `std::ostringstream` on many standard library implementations.

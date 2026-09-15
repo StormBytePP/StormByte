@@ -34,13 +34,16 @@ namespace StormByte {
 				table['A' + i] = i;
 				table['a' + i] = 26 + i;
 			}
+
 			for (std::uint8_t i = 0; i < 10; ++i) {
 				table['0' + i] = 52 + i;
 			}
+
 			table['+'] = 62;
 			table['/'] = 63;
 			return table;
 		}
+
 		constexpr auto DecodeTable = MakeDecodeTable();
 		std::string EncodeImpl(std::span<const std::byte> input) {
 			const std::size_t size = input.size();
@@ -58,6 +61,7 @@ namespace StormByte {
 				*out++ = EncodeTable[ n        & 0x3F];
 				i += 3;
 			}
+
 			if (i < size) {
 				std::uint32_t n = static_cast<std::uint32_t>(input[i]) << 16;
 				*out++ = EncodeTable[(n >> 18) & 0x3F];
@@ -72,9 +76,11 @@ namespace StormByte {
 					*out++ = '=';
 				}
 			}
+
 			return output;
 		}
 	}
+
 	std::vector<std::byte> Base64Decode(const std::string& input) {
 		std::vector<std::byte> output;
 		output.reserve((input.size() / 4) * 3);
@@ -89,6 +95,7 @@ namespace StormByte {
 			if (value == 255) {
 				throw Base64Error(Component("Base64"), "Invalid character '{}' in input", c);
 			}
+
 			buffer = (buffer << 6) | value;
 			bits_collected += 6;
 			if (bits_collected >= 8) {
@@ -96,11 +103,14 @@ namespace StormByte {
 				output.push_back(static_cast<std::byte>((buffer >> bits_collected) & 0xFF));
 			}
 		}
+
 		return output;
 	}
+
 	std::string Base64Encode(const std::vector<std::byte>& input) {
 		return EncodeImpl(input);
 	}
+
 	std::string Base64Encode(std::span<const std::byte> input) {
 		return EncodeImpl(input);
 	}
