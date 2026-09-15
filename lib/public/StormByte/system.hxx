@@ -49,6 +49,7 @@ namespace StormByte::System {
 	/**
 	 * @brief Current working directory.
 	 * @return Absolute path of the process cwd.
+	 * @throws StormByte::SystemError If the cwd cannot be obtained.
 	 */
 	STORMBYTE_PUBLIC std::filesystem::path CurrentPath();
 

@@ -79,11 +79,25 @@ int test_executable_path_resolves() {
 	RETURN_TEST("test_executable_path_resolves", result);
 }
 
+int test_current_path_resolves() {
+	int result = 0;
+	try {
+		auto path = CurrentPath();
+		ASSERT_TRUE("test_current_path_resolves", std::filesystem::is_directory(path));
+	} catch (const StormByte::SystemError& ex) {
+		std::cerr << ex.what() << std::endl;
+		result++;
+	}
+
+	RETURN_TEST("test_current_path_resolves", result);
+}
+
 int main() {
 	int result = 0;
 	result += test_several_sleeps();
 	result += test_temp_file_name_long_prefix_does_not_throw();
 	result += test_executable_path_resolves();
+	result += test_current_path_resolves();
 
 	if (result == 0) {
 		std::cout << "All tests passed!" << std::endl;

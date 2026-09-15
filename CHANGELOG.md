@@ -41,6 +41,7 @@ If you landed here from a release link and have not read the tree:
 - **System::TempFileName** — throws `SystemError` instead of `std::runtime_error`. The file is created and left on disk; the caller unlinks it. Windows still only uses the first three characters of `prefix`.
 - **Type::HasPushBack / HasPushFront / HasInsert** — accept `value_type&&` as well as `const value_type&`. `std::vector<std::unique_ptr<T>>` is now `HasPushBack`, so `Iterable::add` takes the `push_back` path.
 - **System::ExecutablePath** — grows the platform buffer instead of truncating at 256 bytes (`GetModuleFileNameA` / `readlink`). Failure is `SystemError`, not a fake path.
+- **System::CurrentPath** — wraps `std::filesystem::filesystem_error` in `SystemError` instead of leaking a standard exception.
 
 [Unreleased]: https://github.com/StormBytePP/StormByte/compare/1.1.0...HEAD
 

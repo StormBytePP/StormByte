@@ -58,7 +58,11 @@ namespace StormByte::System {
 	}
 
 	std::filesystem::path CurrentPath() {
-		return std::filesystem::current_path();
+		try {
+			return std::filesystem::current_path();
+		} catch (const std::filesystem::filesystem_error& ex) {
+			throw SystemError(Component("System"), "Failed to obtain current path: {}", ex.what());
+		}
 	}
 
 	std::filesystem::path ExecutablePath() {
