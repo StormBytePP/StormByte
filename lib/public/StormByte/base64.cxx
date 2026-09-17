@@ -21,6 +21,7 @@
 #include <StormByte/exception.hxx>
 #include <array>
 #include <cstdint>
+
 namespace StormByte {
 	namespace {
 		constexpr char EncodeTable[] =
@@ -81,7 +82,7 @@ namespace StormByte {
 		}
 	}
 
-	std::vector<std::byte> Base64Decode(const std::string& input) {
+	std::vector<std::byte> Base64Decode(std::string_view input) {
 		std::vector<std::byte> output;
 		output.reserve((input.size() / 4) * 3);
 		std::uint32_t buffer = 0;
@@ -92,9 +93,8 @@ namespace StormByte {
 			if (c == '=')
 				break;
 			std::uint8_t value = DecodeTable[static_cast<unsigned char>(c)];
-			if (value == 255) {
+			if (value == 255)
 				throw Base64Error(Component("Base64"), "Invalid character '{}' in input", c);
-			}
 
 			buffer = (buffer << 6) | value;
 			bits_collected += 6;

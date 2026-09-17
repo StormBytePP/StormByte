@@ -18,22 +18,24 @@
  */
 
 #include <StormByte/string.hxx>
+#include <cctype>
+#include <cstdint>
 #include <cstring>
 #include <cwchar>
 #include <cstdlib>
+#include <queue>
 #include <ranges>
+#include <span>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <vector>
-#include <queue>
-#include <regex>
-#include <stdexcept>
-#include <cstdint>
 #ifdef WINDOWS
 #include <cwchar>
-#include <direct.h> // For _getcwd
-#include <windows.h> // For MAX_PATH
+#include <direct.h>
+#include <windows.h>
 #endif
+
 namespace {
 	[[noreturn]] void ThrowInvalidUnicode() {
 		throw StormByte::UTF8Error("Invalid Unicode input");
@@ -59,7 +61,7 @@ namespace {
 		}
 	}
 
-	uint32_t DecodeUTF8Codepoint(const std::string& input, std::size_t& index) {
+	uint32_t DecodeUTF8Codepoint(std::string_view input, std::size_t& index) {
 		const auto first = static_cast<unsigned char>(input[index]);
 		std::size_t length = 0;
 		uint32_t codepoint = 0;
@@ -83,16 +85,17 @@ namespace {
 			ThrowInvalidUnicode();
 		}
 
-		if (index + length > input.size()) ThrowInvalidUnicode();
+		if (index + length > input.size())
+			ThrowInvalidUnicode();
 		for (std::size_t offset = 1; offset < length; ++offset) {
 			const auto continuation = static_cast<unsigned char>(input[index + offset]);
-			if ((continuation & 0xC0) != 0x80) ThrowInvalidUnicode();
+			if ((continuation & 0xC0) != 0x80)
+				ThrowInvalidUnicode();
 			codepoint = (codepoint << 6) | (continuation & 0x3F);
 		}
 
-		if (codepoint < minimum || codepoint > 0x10FFFF || (codepoint >= 0xD800 && codepoint <= 0xDFFF)) {
+		if (codepoint < minimum || codepoint > 0x10FFFF || (codepoint >= 0xD800 && codepoint <= 0xDFFF))
 			ThrowInvalidUnicode();
-		}
 
 		index += length;
 		return codepoint;
@@ -177,38 +180,40 @@ namespace {
 }
 
 namespace StormByte::String {
-	std::queue<std::string> Explode(const std::string& str, const char delimiter) {
+	std::queue<std::string> Explode(std::string_view str, const char delimiter) {
 		std::queue<std::string> result;
-		// Use ranges to split the string by the delimiter and iterate over parts
-		for (auto part : std::string_view(str) | std::views::split(delimiter)) {
-			// Convert each part into a std::string and push it to the queue
+		for (auto part : str | std::views::split(delimiter))
 			result.emplace(part.begin(), part.end());
-		}
-
 		return result;
 	}
 
-	std::vector<std::string> Split(const std::string& str) {
-		std::istringstream iss(str);
+	std::vector<std::string> Split(std::string_view str) {
 		std::vector<std::string> result;
-		std::string word;
-		while (iss >> word) {
-			result.push_back(word); // Insert each word into the vector
+		std::size_t i = 0;
+		while (i < str.size()) {
+			while (i < str.size() && std::isspace(static_cast<unsigned char>(str[i])))
+				++i;
+			if (i >= str.size())
+				break;
+			std::size_t j = i;
+			while (j < str.size() && !std::isspace(static_cast<unsigned char>(str[j])))
+				++j;
+			result.emplace_back(str.substr(i, j - i));
+			i = j;
 		}
-
 		return result;
 	}
 
-	std::string ToLower(const std::string& str) noexcept {
-		std::string result = str;
+	std::string ToLower(std::string_view str) noexcept {
+		std::string result(str);
 		std::transform(result.begin(), result.end(), result.begin(), [](unsigned char c) {
 			return static_cast<char>(std::tolower(c));
 		});
 		return result;
 	}
 
-	std::string ToUpper(const std::string& str) noexcept {
-		std::string result = str;
+	std::string ToUpper(std::string_view str) noexcept {
+		std::string result(str);
 		std::transform(result.begin(), result.end(), result.begin(), [](unsigned char c) {
 			return static_cast<char>(std::toupper(c));
 		});
@@ -229,22 +234,25 @@ namespace StormByte::String {
 		}
 	}
 
-	std::string UTF8Encode(const std::wstring& wstr) {
+	std::string UTF8Encode(std::wstring_view wstr) {
 		std::string result;
 		result.reserve(wstr.size());
 		for (std::size_t index = 0; index < wstr.size(); ++index) {
 			uint32_t codepoint = static_cast<uint32_t>(wstr[index]);
 			if constexpr (sizeof(wchar_t) == 2) {
 				if (codepoint >= 0xD800 && codepoint <= 0xDBFF) {
-					if (index + 1 >= wstr.size()) ThrowInvalidUnicode();
+					if (index + 1 >= wstr.size())
+						ThrowInvalidUnicode();
 					const uint32_t low = static_cast<uint32_t>(wstr[++index]);
-					if (low < 0xDC00 || low > 0xDFFF) ThrowInvalidUnicode();
+					if (low < 0xDC00 || low > 0xDFFF)
+						ThrowInvalidUnicode();
 					codepoint = 0x10000 + ((codepoint - 0xD800) << 10) + (low - 0xDC00);
 				} else if (codepoint >= 0xDC00 && codepoint <= 0xDFFF) {
 					ThrowInvalidUnicode();
 				}
 			} else if constexpr (sizeof(wchar_t) == 4) {
-				if (codepoint > 0x10FFFF || (codepoint >= 0xD800 && codepoint <= 0xDFFF)) ThrowInvalidUnicode();
+				if (codepoint > 0x10FFFF || (codepoint >= 0xD800 && codepoint <= 0xDFFF))
+					ThrowInvalidUnicode();
 			} else {
 				static_assert(sizeof(wchar_t) == 2 || sizeof(wchar_t) == 4, "Unsupported wchar_t size");
 			}
@@ -255,7 +263,7 @@ namespace StormByte::String {
 		return result;
 	}
 
-	std::wstring UTF8Decode(const std::string& str) {
+	std::wstring UTF8Decode(std::string_view str) {
 		std::wstring result;
 		result.reserve(str.size());
 		for (std::size_t index = 0; index < str.size();) {
@@ -277,9 +285,18 @@ namespace StormByte::String {
 		return result;
 	}
 
-	std::string SanitizeNewlines(const std::string& str) noexcept {
-		std::string result = str;
-		return std::regex_replace(str, std::regex("\r\n"), "\n");
+	std::string SanitizeNewlines(std::string_view str) noexcept {
+		std::string out;
+		out.reserve(str.size());
+		for (std::size_t i = 0; i < str.size(); ++i) {
+			if (str[i] == '\r' && i + 1 < str.size() && str[i + 1] == '\n') {
+				out.push_back('\n');
+				++i;
+			} else {
+				out.push_back(str[i]);
+			}
+		}
+		return out;
 	}
 
 	std::string FromByteVector(const std::vector<std::byte>& byte_vector) noexcept {
@@ -287,58 +304,49 @@ namespace StormByte::String {
 		return std::string(reinterpret_cast<const char*>(span.data()), span.size());
 	}
 
-	std::vector<std::byte> ToByteVector(const std::string& str) noexcept {
+	std::vector<std::byte> ToByteVector(std::string_view str) noexcept {
 		std::vector<std::byte> byte_vector(str.size());
 		std::memcpy(byte_vector.data(), str.data(), str.size());
 		return byte_vector;
 	}
 
-	std::string RemoveWhitespace(const std::string& str) noexcept {
+	std::string RemoveWhitespace(std::string_view str) noexcept {
 		std::string out;
 		out.reserve(str.size());
-		for (char c : str) if (!isspace(static_cast<unsigned char>(c))) out.push_back(c);
+		for (char c : str)
+			if (!std::isspace(static_cast<unsigned char>(c)))
+				out.push_back(c);
 		return out;
 	}
 
-	bool IsInteger(const std::string& str) noexcept {
-		if (str.empty()) return false;
-		size_t start = 0;
+	bool IsInteger(std::string_view str) noexcept {
+		if (str.empty())
+			return false;
+		std::size_t start = 0;
 		if (str[0] == '-' || str[0] == '+') {
-			if (str.size() == 1) return false; // Only sign, no digits
+			if (str.size() == 1)
+				return false;
 			start = 1;
 		}
-
-		for (size_t i = start; i < str.size(); ++i) {
-			if (!std::isdigit(static_cast<unsigned char>(str[i]))) {
+		for (std::size_t i = start; i < str.size(); ++i) {
+			if (!std::isdigit(static_cast<unsigned char>(str[i])))
 				return false;
-			}
 		}
-
 		return true;
 	}
 
-	// Explicit instantiations for `HumanReadable` (ordered by category).
-	// Note: `wchar_t`, `char16_t`, and `char32_t` are excluded because they are not
-	// streamed to `std::ostringstream` on many standard library implementations.
-	// Boolean
 	template STORMBYTE_PUBLIC std::string HumanReadable<bool>(const bool&, const Format&, const std::string&) noexcept;
-	// Character types
 	template STORMBYTE_PUBLIC std::string HumanReadable<char>(const char&, const Format&, const std::string&) noexcept;
 	template STORMBYTE_PUBLIC std::string HumanReadable<signed char>(const signed char&, const Format&, const std::string&) noexcept;
 	template STORMBYTE_PUBLIC std::string HumanReadable<unsigned char>(const unsigned char&, const Format&, const std::string&) noexcept;
-	// Short
 	template STORMBYTE_PUBLIC std::string HumanReadable<short>(const short&, const Format&, const std::string&) noexcept;
 	template STORMBYTE_PUBLIC std::string HumanReadable<unsigned short>(const unsigned short&, const Format&, const std::string&) noexcept;
-	// Integer
 	template STORMBYTE_PUBLIC std::string HumanReadable<int>(const int&, const Format&, const std::string&) noexcept;
 	template STORMBYTE_PUBLIC std::string HumanReadable<unsigned int>(const unsigned int&, const Format&, const std::string&) noexcept;
-	// Long
 	template STORMBYTE_PUBLIC std::string HumanReadable<long>(const long&, const Format&, const std::string&) noexcept;
 	template STORMBYTE_PUBLIC std::string HumanReadable<unsigned long>(const unsigned long&, const Format&, const std::string&) noexcept;
-	// Long long
 	template STORMBYTE_PUBLIC std::string HumanReadable<long long>(const long long&, const Format&, const std::string&) noexcept;
 	template STORMBYTE_PUBLIC std::string HumanReadable<unsigned long long>(const unsigned long long&, const Format&, const std::string&) noexcept;
-	// Floating point
 	template STORMBYTE_PUBLIC std::string HumanReadable<float>(const float&, const Format&, const std::string&) noexcept;
 	template STORMBYTE_PUBLIC std::string HumanReadable<double>(const double&, const Format&, const std::string&) noexcept;
 	template STORMBYTE_PUBLIC std::string HumanReadable<long double>(const long double&, const Format&, const std::string&) noexcept;

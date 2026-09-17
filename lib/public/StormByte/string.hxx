@@ -26,11 +26,13 @@
 #include <algorithm>
 #include <cstddef>
 #include <cmath>
+#include <cctype>
 #include <iomanip>
 #include <locale>
 #include <queue>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -41,6 +43,9 @@
 /**
  * @namespace StormByte::String
  * @brief String helpers (case, split, UTF-8, human-readable numbers).
+ *
+ * Read-only inputs are @c std::string_view / @c std::wstring_view.
+ * @c std::string, @c std::wstring and string literals convert to those views.
  */
 namespace StormByte::String {
 	/**
@@ -62,38 +67,42 @@ namespace StormByte::String {
 	}
 
 	/**
-	 * @brief `true` when every character is a decimal digit (`::isdigit`).
-	 * @param str String to test.
-	 * @note Empty string is not numeric.
+	 * @brief `true` when every character is a decimal digit (`std::isdigit`).
+	 * @param str Text to test.
+	 * @note Empty text is not numeric.
 	 */
-	constexpr STORMBYTE_PUBLIC bool IsNumeric(const std::string& str) noexcept {
-		return !str.empty() && std::all_of(str.begin(), str.end(), ::isdigit);
+	constexpr STORMBYTE_PUBLIC bool IsNumeric(std::string_view str) noexcept {
+		return !str.empty() && std::all_of(str.begin(), str.end(), [](unsigned char c) {
+			return std::isdigit(c) != 0;
+		});
 	}
 
 	/**
-	 * @brief Lowercase copy.
-	 * @param str Input.
+	 * @brief Lowercase copy of @p str.
+	 * @param str Input text.
+	 * @return New string; input is not modified.
 	 */
-	STORMBYTE_PUBLIC std::string ToLower(const std::string& str) noexcept;
+	STORMBYTE_PUBLIC std::string ToLower(std::string_view str) noexcept;
 
 	/**
-	 * @brief Uppercase copy.
-	 * @param str Input.
+	 * @brief Uppercase copy of @p str.
+	 * @param str Input text.
+	 * @return New string; input is not modified.
 	 */
-	STORMBYTE_PUBLIC std::string ToUpper(const std::string& str) noexcept;
+	STORMBYTE_PUBLIC std::string ToUpper(std::string_view str) noexcept;
 
 	/**
 	 * @brief Splits on @p delimiter into a queue (empty tokens kept).
-	 * @param str Input.
+	 * @param str Input text.
 	 * @param delimiter Separator.
 	 */
-	STORMBYTE_PUBLIC std::queue<std::string> Explode(const std::string& str, const char delimiter);
+	STORMBYTE_PUBLIC std::queue<std::string> Explode(std::string_view str, const char delimiter);
 
 	/**
-	 * @brief Splits on spaces into a vector.
-	 * @param str Input.
+	 * @brief Splits on ASCII whitespace into a vector.
+	 * @param str Input text.
 	 */
-	STORMBYTE_PUBLIC std::vector<std::string> Split(const std::string& str);
+	STORMBYTE_PUBLIC std::vector<std::string> Split(std::string_view str);
 
 	/**
 	 * @brief Formats an arithmetic value (not `wchar_t`).
@@ -106,24 +115,24 @@ namespace StormByte::String {
 	STORMBYTE_PUBLIC std::string HumanReadable(const T& number, const Format& format, const std::string& locale = "en_US.UTF-8") noexcept;
 
 	/**
-	 * @brief Wide string to UTF-8.
+	 * @brief Wide text to UTF-8.
 	 * @param ws Wide input.
 	 * @throws StormByte::UTF8Error On invalid Unicode input.
 	 */
-	STORMBYTE_PUBLIC std::string UTF8Encode(const std::wstring& ws);
+	STORMBYTE_PUBLIC std::string UTF8Encode(std::wstring_view ws);
 
 	/**
-	 * @brief UTF-8 to wide string.
+	 * @brief UTF-8 text to wide string.
 	 * @param s UTF-8 input.
 	 * @throws StormByte::UTF8Error On invalid Unicode input.
 	 */
-	STORMBYTE_PUBLIC std::wstring UTF8Decode(const std::string& s);
+	STORMBYTE_PUBLIC std::wstring UTF8Decode(std::string_view s);
 
 	/**
-	 * @brief Normalizes `\n` / `\r\n` to a single newline style.
-	 * @param str Input.
+	 * @brief Normalizes `\r\n` to `\n`. Lone `\r` is kept.
+	 * @param str Input text.
 	 */
-	STORMBYTE_PUBLIC std::string SanitizeNewlines(const std::string& str) noexcept;
+	STORMBYTE_PUBLIC std::string SanitizeNewlines(std::string_view str) noexcept;
 
 	/**
 	 * @brief Interprets bytes as `char` and builds a string.
@@ -132,20 +141,20 @@ namespace StormByte::String {
 	STORMBYTE_PUBLIC std::string FromByteVector(const std::vector<std::byte>& byte_vector) noexcept;
 
 	/**
-	 * @brief Copies string bytes into a `vector<std::byte>`.
-	 * @param str Input.
+	 * @brief Copies text bytes into a `vector<std::byte>`.
+	 * @param str Input text.
 	 */
-	STORMBYTE_PUBLIC std::vector<std::byte> ToByteVector(const std::string& str) noexcept;
+	STORMBYTE_PUBLIC std::vector<std::byte> ToByteVector(std::string_view str) noexcept;
 
 	/**
 	 * @brief Strips every whitespace character.
-	 * @param str Input.
+	 * @param str Input text.
 	 */
-	STORMBYTE_PUBLIC std::string RemoveWhitespace(const std::string& str) noexcept;
+	STORMBYTE_PUBLIC std::string RemoveWhitespace(std::string_view str) noexcept;
 
 	/**
-	 * @brief `true` when @p str parses as an integer.
-	 * @param str Input.
+	 * @brief `true` when @p str parses as an integer (optional leading `+`/`-`).
+	 * @param str Input text.
 	 */
-	STORMBYTE_PUBLIC bool IsInteger(const std::string& str) noexcept;
+	STORMBYTE_PUBLIC bool IsInteger(std::string_view str) noexcept;
 }

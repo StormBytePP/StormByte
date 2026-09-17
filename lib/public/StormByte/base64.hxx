@@ -24,6 +24,7 @@
 #include <cstddef>
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 /**
@@ -32,18 +33,18 @@
  */
 namespace StormByte {
 	/**
-	 * @brief Decodes a Base64 string into bytes.
+	 * @brief Decodes Base64 text into bytes.
 	 *
 	 * Alphabet `A–Z a–z 0–9 + /` and padding `=`.
 	 * Space, tab, newline and CR are ignored.
 	 * Decoding stops at the first `=`.
 	 * Padding is accepted but not strictly checked.
 	 *
-	 * @param input Base64 text (`std::string` or `const char*` via conversion).
+	 * @param input Base64 text (`std::string_view`, `std::string` or a string literal).
 	 * @return Decoded bytes.
 	 * @throws StormByte::Base64Error If a character is outside the alphabet.
 	 */
-	std::vector<std::byte> STORMBYTE_PUBLIC Base64Decode(const std::string& input);
+	std::vector<std::byte> STORMBYTE_PUBLIC Base64Decode(std::string_view input);
 
 	/**
 	 * @brief Encodes bytes as Base64 with `=` padding.
