@@ -258,3 +258,10 @@ Issues only on this repository. Fork and open a pull request against `master`.
 ## License
 
 GNU Lesser General Public License version 3 or later. See [LICENSE](LICENSE) and <https://www.gnu.org/licenses/lgpl-3.0.html>.
+
+## Support
+
+StormByte is developed in spare time. Sponsorship is optional and does not buy features, priority or support.
+
+- [GitHub Sponsors](https://github.com/sponsors/StormBytePP)
+- [PayPal](https://paypal.me/StormBytePP)
