@@ -23,12 +23,21 @@ If you landed here from a release link and have not read the tree:
 
 ### Added
 
+### Changed
+
+### Fixed
+
+[Unreleased]: https://github.com/StormBytePP/StormByte/compare/1.2.0...HEAD
+
+## [1.2.0] - 2026-09-17
+
+### Added
+
 - `String` helpers that only read the input now take `std::string_view` /
   `std::wstring_view`: `IsNumeric`, `ToLower`, `ToUpper`, `Explode`, `Split`,
   `UTF8Encode`, `UTF8Decode`, `SanitizeNewlines`, `ToByteVector`,
   `RemoveWhitespace`, `IsInteger`. `std::string`, `std::wstring` and
-  literals convert to the views; there is no second `const string&`
-  overload (that pair is ambiguous for `"…"`).
+  literals convert to the views.
 - `Base64Decode(std::string_view)` replaces `Base64Decode(const std::string&)`.
 
 ### Changed
@@ -36,7 +45,7 @@ If you landed here from a release link and have not read the tree:
 - `SanitizeNewlines` no longer builds a throwaway copy and a `std::regex`;
   it walks the view and maps `\r\n` to `\n`.
 
-[Unreleased]: https://github.com/StormBytePP/StormByte/compare/1.1.1...HEAD
+[1.2.0]: https://github.com/StormBytePP/StormByte/compare/1.1.1...1.2.0
 
 ## [1.1.1] - 2026-09-15
 
