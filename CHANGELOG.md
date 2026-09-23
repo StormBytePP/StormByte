@@ -24,6 +24,7 @@ If you landed here from a release link and have not read the tree:
 ### Added
 
 - **CString** — owned NUL-terminated buffer for text that must cross a DLL boundary. Not a `std::string`. Copy, move, `Reset`, `Length`, explicit `const char*` (same lifetime as `std::string::c_str()`), implicit `std::string` and `operator<<` (inline, caller CRT). Covered by `CStringTests`.
+- **WCString** — wide counterpart of `CString` (`wchar_t` / `std::wstring` / `std::wostream`). Same lifetime rules as `std::wstring::c_str()`. Covered by `WCStringTests`.
 - **Error** — `Domain`, `Category`, `Code` (`Success`, `Unknown`) and `Fault`. Modules specialize `Domain` for their enums; `make_error_code` lives next to the enum so ADL feeds `std::error_code`. Category singletons stay in the module `.cxx`. `Fault` holds the code and a `CString`. Not thrown. Covered by `ErrorTests`.
 - **ClonableTests** — clone / move coverage.
 

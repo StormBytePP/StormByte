@@ -61,4 +61,8 @@ if(ENABLE_TEST)
 	add_executable(UUIDTest uuid_test.cxx)
 	target_link_libraries(UUIDTest StormByte)
 	add_test(NAME UUIDTest COMMAND UUIDTest)
+
+	add_executable(WCStringTests wcstring_test.cxx)
+	target_link_libraries(WCStringTests StormByte)
+	add_test(NAME WCStringTests COMMAND WCStringTests)
 endif()
