@@ -68,17 +68,15 @@ CString& CString::operator=(CString&& other) noexcept {
 	return *this;
 }
 
-const char* CString::Get() const noexcept {
-	return m_data;
-}
-
-const char* CString::Release() noexcept {
-	const char* out = m_data;
-	m_data = nullptr;
-	return out;
-}
-
 void CString::Reset(const char* str) noexcept {
 	delete[] m_data;
 	m_data = Duplicate(str);
+}
+
+std::size_t CString::Length() const noexcept {
+	return m_data ? std::strlen(m_data) : 0;
+}
+
+CString::operator const char*() const noexcept {
+	return m_data;
 }

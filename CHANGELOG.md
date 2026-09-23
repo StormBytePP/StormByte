@@ -23,31 +23,17 @@ If you landed here from a release link and have not read the tree:
 
 ### Added
 
-- **CString** — owned NUL-terminated buffer for text that must cross a
-  DLL boundary. Not a `std::string`. Copy, move, `Get`, `Reset`,
-  `Release`. Allocation lives in the StormByte DLL. Use `std::string`
-  when the text never leaves the module or the build is not Windows.
-  Covered by `CStringTests`.
-- **Error** — `Domain`, `Category`, `Code` (`Success`, `Unknown`) and
-  `Fault`. Modules specialize `Domain` for their enums; `make_error_code`
-  lives next to the enum so ADL feeds `std::error_code`. Category
-  singletons stay in the module `.cxx` (`error.txx` is included only
-  there). `Fault` holds the code and a `CString` message. Not thrown;
-  `Exception` / `Expected` stay separate. Covered by `ErrorTests`
-  (suite codes, two fake domains, `Fault`, and `std::ranges` against
-  types that report those codes).
-- **ClonableTests** — clone / move coverage that used to live in
-  `CoreApiTests`.
+- **CString** — owned NUL-terminated buffer for text that must cross a DLL boundary. Not a `std::string`. Copy, move, `Reset`, `Length`, explicit `const char*` (same lifetime as `std::string::c_str()`), implicit `std::string` and `operator<<` (inline, caller CRT). Covered by `CStringTests`.
+- **Error** — `Domain`, `Category`, `Code` (`Success`, `Unknown`) and `Fault`. Modules specialize `Domain` for their enums; `make_error_code` lives next to the enum so ADL feeds `std::error_code`. Category singletons stay in the module `.cxx`. `Fault` holds the code and a `CString`. Not thrown. Covered by `ErrorTests`.
+- **ClonableTests** — clone / move coverage.
 
 ### Changed
 
-- **Exception** — the message is a `CString`. Copy, move, assign and
-  the destructor are defaulted. `what()` still returns a NUL-terminated
-  pointer owned by the exception. Public constructors are unchanged.
+- **Exception** — the message is stored in a `CString`. Copy, move, assign and the destructor are defaulted. The change is transparent: `what()` and the constructors are unchanged, consumers do not rebuild against a new layout contract, and the DLL boundary is the same (`const char*` owned by the exception).
 
 ### Removed
 
-- **CoreApiTests** — split into `ClonableTests` and `ErrorTests`.
+- **CoreApiTests** — coverage lives in `ClonableTests` and `ErrorTests`.
 
 ### Fixed
 

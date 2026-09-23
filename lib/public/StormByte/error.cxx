@@ -43,7 +43,7 @@ const std::error_code& Error::Fault::code() const noexcept {
 }
 
 const char* Error::Fault::what() const noexcept {
-	const char* text = m_what.Get();
+	const char* text = static_cast<const char*>(m_what);
 	return text ? text : "";
 }
 

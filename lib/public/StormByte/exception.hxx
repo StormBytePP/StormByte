@@ -20,6 +20,7 @@
 #pragma once
 
 #include <StormByte/cstring.hxx>
+#include <StormByte/visibility.h>
 
 #include <format>
 #include <string>
@@ -102,35 +103,10 @@ namespace StormByte {
 			m_what.Reset(full.c_str());
 		}
 
-		/**
-		 * @brief Copy constructor.
-		 * @param e Exception to copy.
-		 */
 		Exception(const Exception& e) = default;
-
-		/**
-		 * @brief Move constructor.
-		 * @param e Exception to move.
-		 */
 		Exception(Exception&& e) noexcept = default;
-
-		/**
-		 * @brief Destructor.
-		 */
 		virtual ~Exception() noexcept = default;
-
-		/**
-		 * @brief Copy assignment.
-		 * @param e Exception to copy.
-		 * @return Reference to this exception.
-		 */
 		Exception& operator=(const Exception& e) = default;
-
-		/**
-		 * @brief Move assignment.
-		 * @param e Exception to move.
-		 * @return Reference to this exception.
-		 */
 		Exception& operator=(Exception&& e) noexcept = default;
 
 		/**
