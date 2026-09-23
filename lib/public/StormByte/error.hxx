@@ -19,10 +19,13 @@
 
 #pragma once
 
+#include <StormByte/cstring.hxx>
 #include <StormByte/visibility.h>
 
+#include <concepts>
 #include <string>
 #include <system_error>
+#include <type_traits>
 
 /**
  * @namespace StormByte
@@ -31,63 +34,167 @@
 namespace StormByte {
 	/**
 	 * @namespace StormByte::Error
-	 * @brief `std::error_code` integration for suite-wide codes.
+	 * @brief Error-code domains and the @ref Fault value type.
+	 *
+	 * Modules specialize @ref Domain for their enums. The category
+	 * singleton for each enum lives in that module's `.cxx`.
+	 * @ref Exception is unrelated: throw / Expected stay there.
 	 */
 	namespace Error {
 		/**
-		 * @enum Code
-		 * @brief Suite error codes (`std::error_code` enum).
-		 * @note No enumerators are defined yet; the category and `make_error_code` are in place for when they are.
+		 * @brief Description of one error-code enum.
+		 * @tparam Enum Scoped enum used as `std::error_code` value.
+		 *
+		 * Specialize in the module that owns @p Enum.
+		 * `Name` is a stable NUL-terminated tag.
 		 */
-		enum class Code {
-			
-		};
+		template<typename Enum>
+		struct Domain;
+
+		/**
+		 * @brief Enum that has a @ref Domain specialization.
+		 * @tparam Enum Candidate enum.
+		 */
+		template<typename Enum>
+		concept Described = std::is_enum_v<Enum>
+			&& requires(Enum e) {
+				{ Domain<Enum>::Name } -> std::convertible_to<const char*>;
+				{ Domain<Enum>::Message(e) } -> std::convertible_to<std::string>;
+			};
 
 		/**
 		 * @class Category
-		 * @brief `std::error_category` for `StormByte::Error::Code`.
+		 * @brief `std::error_category` backed by @ref Domain.
+		 * @tparam Enum Enum described by @ref Domain.
+		 *
+		 * Method bodies are in `error.txx`. Include that file only
+		 * from a `.cxx` and keep the singleton there.
 		 */
-		class STORMBYTE_PUBLIC Category: public std::error_category {
+		template<Described Enum>
+		class Category final: public std::error_category {
 			public:
 				/**
-				 * @brief Category name.
-				 * @return Stable C string identifying this category.
+				 * @brief Category name (`Domain<Enum>::Name`).
+				 * @return Stable C string.
 				 */
 				const char* name() const noexcept override;
 
 				/**
-				 * @brief Message for an enumerator value.
-				 * @param ev Integer value of `Code`.
-				 * @return Human-readable message.
+				 * @brief Message for the enumerator stored in @p ev.
+				 * @param ev Integer value of @p Enum.
+				 * @return Text from `Domain<Enum>::Message`.
 				 */
 				std::string message(int ev) const override;
-
-				/**
-				 * @brief Default `std::error_condition` for an enumerator value.
-				 * @param ev Integer value of `Code`.
-				 * @return Matching condition.
-				 */
-				std::error_condition default_error_condition(int ev) const noexcept override;
 		};
 
 		/**
-		 * @brief Process-wide category singleton.
-		 * @return Reference to the suite category.
+		 * @enum Code
+		 * @brief Suite-level codes that are not module-specific.
 		 */
-		STORMBYTE_PUBLIC const class Category& category() noexcept;
-	}
+		enum class Code {
+			Success = 0,	///< No error
+			Unknown			///< Unclassified suite error
+		};
 
-	/**
-	 * @brief Builds an `std::error_code` from `Error::Code`.
-	 * @param e Suite error enumerator.
-	 * @return `std::error_code` in `Error::category()`.
-	 */
-	STORMBYTE_PUBLIC std::error_code make_error_code(Error::Code e);
+		/**
+		 * @brief Domain for @ref Code.
+		 */
+		template<>
+		struct Domain<Code> {
+			static constexpr const char* Name = "StormByte";
+
+			static std::string Message(Code e) {
+				switch (e) {
+					case Code::Success:
+						return "Success";
+					case Code::Unknown:
+						return "Unknown StormByte error";
+				}
+				return "Unknown StormByte error";
+			}
+		};
+
+		/**
+		 * @brief Process-wide category for @ref Code.
+		 * @return Category singleton (defined in error.cxx).
+		 */
+		STORMBYTE_PUBLIC const Category<Code>& category() noexcept;
+
+		/**
+		 * @brief Builds an `std::error_code` from @ref Code.
+		 * @param e Suite enumerator.
+		 * @return Code in the suite category.
+		 *
+		 * Lives in this namespace so ADL finds it for `std::error_code{Code}`.
+		 */
+		STORMBYTE_PUBLIC std::error_code make_error_code(Code e) noexcept;
+
+		/**
+		 * @class Fault
+		 * @brief Held error: an `std::error_code` and a @ref CString message.
+		 *
+		 * Used as object state (`File`, tube `Fail`). Not thrown.
+		 * `operator bool` is true when the code is an error.
+		 */
+		class STORMBYTE_PUBLIC Fault {
+			public:
+				/**
+				 * @brief Success.
+				 */
+				Fault() noexcept;
+
+				/**
+				 * @brief From an `std::error_code`.
+				 * @param code Code to hold.
+				 */
+				explicit Fault(const std::error_code& code);
+
+				/**
+				 * @brief From a described enumerator.
+				 * @tparam Enum Enum described by @ref Domain.
+				 * @param e Enumerator.
+				 *
+				 * Uses ADL `make_error_code(e)` so the module singleton
+				 * category is the one stored in the code.
+				 */
+				template<Described Enum>
+				explicit Fault(Enum e): Fault(make_error_code(e)) {}
+
+				Fault(const Fault& other) = default;
+				Fault(Fault&& other) noexcept = default;
+				~Fault() noexcept = default;
+				Fault& operator=(const Fault& other) = default;
+				Fault& operator=(Fault&& other) noexcept = default;
+
+				/**
+				 * @brief Held code.
+				 * @return Code.
+				 */
+				const std::error_code& code() const noexcept;
+
+				/**
+				 * @brief Owned message (`category: message`).
+				 * @return NUL-terminated text owned by this object.
+				 */
+				const char* what() const noexcept;
+
+				/**
+				 * @brief Whether this is an error.
+				 * @return true if @ref code is non-zero.
+				 */
+				explicit operator bool() const noexcept;
+
+			private:
+				std::error_code m_code;	///< Held code
+				CString m_what;			///< Owned message
+		};
+	}
 }
 
 namespace std {
 	/**
 	 * @brief Marks `StormByte::Error::Code` as an `std::error_code` enum.
 	 */
-	template<> struct is_error_code_enum<StormByte::Error::Code>: true_type {};
+	template<>
+	struct is_error_code_enum<StormByte::Error::Code>: true_type {};
 }

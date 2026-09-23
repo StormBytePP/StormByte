@@ -18,10 +18,8 @@
  */
 
 #include <StormByte/clonable.hxx>
-#include <StormByte/error.hxx>
 #include <StormByte/test_handlers.h>
-#include <memory>
-#include <string>
+
 using namespace StormByte;
 
 namespace {
@@ -53,24 +51,17 @@ int test_clonable_copy_and_move() {
 	RETURN_TEST("test_clonable_copy_and_move", result);
 }
 
-int test_error_code_integration() {
-	int result = 0;
-	const auto code = make_error_code(static_cast<Error::Code>(0));
-	ASSERT_TRUE("test_error_code_integration", code.category() == Error::category());
-	ASSERT_EQUAL("test_error_code_integration", std::string("StormByte Error"), std::string(code.category().name()));
-	ASSERT_EQUAL("test_error_code_integration", std::string("Unknown StormByte error"), code.message());
-	RETURN_TEST("test_error_code_integration", result);
-}
-
 int main() {
 	int result = 0;
-	result += test_clonable_copy_and_move();
-	result += test_error_code_integration();
-	if (result == 0) {
-		std::cout << "All tests passed!" << std::endl;
-	} else {
-		std::cout << result << " tests failed." << std::endl;
-	}
 
+	// -------------------
+	// Clone / move
+	// -------------------
+	result += test_clonable_copy_and_move();
+
+	if (result == 0)
+		std::cout << "All tests passed!" << std::endl;
+	else
+		std::cout << result << " tests failed." << std::endl;
 	return result;
 }

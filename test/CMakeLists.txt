@@ -10,17 +10,21 @@ if(ENABLE_TEST)
 	target_link_libraries(BitmaskTests StormByte)
 	add_test(NAME BitmaskTests COMMAND BitmaskTests)
 
+	add_executable(ClonableTests clonable_test.cxx)
+	target_link_libraries(ClonableTests StormByte)
+	add_test(NAME ClonableTests COMMAND ClonableTests)
+
 	add_executable(CStringTests cstring_test.cxx)
 	target_link_libraries(CStringTests StormByte)
 	add_test(NAME CStringTests COMMAND CStringTests)
 
+	add_executable(ErrorTests error_test.cxx)
+	target_link_libraries(ErrorTests StormByte)
+	add_test(NAME ErrorTests COMMAND ErrorTests)
+
 	add_executable(ExceptionTests exception_test.cxx)
 	target_link_libraries(ExceptionTests StormByte)
 	add_test(NAME ExceptionTests COMMAND ExceptionTests)
-
-	add_executable(CoreApiTests core_api_test.cxx)
-	target_link_libraries(CoreApiTests StormByte)
-	add_test(NAME CoreApiTests COMMAND CoreApiTests)
 
 	add_executable(ExpectedTests expected_test.cxx)
 	target_link_libraries(ExpectedTests StormByte)
@@ -29,7 +33,7 @@ if(ENABLE_TEST)
 	add_executable(IterableTests iterable_test.cxx)
 	target_link_libraries(IterableTests StormByte)
 	add_test(NAME IterableTests COMMAND IterableTests)
-	
+
 	add_executable(SerializationTests serialization_test.cxx)
 	target_link_libraries(SerializationTests StormByte)
 	add_test(NAME SerializationTests COMMAND SerializationTests)
@@ -42,13 +46,13 @@ if(ENABLE_TEST)
 	target_link_libraries(SystemTests StormByte)
 	add_test(NAME SystemTests COMMAND SystemTests)
 
-	add_executable(ThreadLockTests thread_lock_test.cxx)
-	target_link_libraries(ThreadLockTests StormByte)
-	add_test(NAME ThreadLockTests COMMAND ThreadLockTests)
-
 	add_executable(TestHandlersTests test_handlers_test.cxx)
 	target_link_libraries(TestHandlersTests StormByte)
 	add_test(NAME TestHandlersTests COMMAND TestHandlersTests)
+
+	add_executable(ThreadLockTests thread_lock_test.cxx)
+	target_link_libraries(ThreadLockTests StormByte)
+	add_test(NAME ThreadLockTests COMMAND ThreadLockTests)
 
 	add_executable(TypeTraitsTests type_traits_test.cxx)
 	target_link_libraries(TypeTraitsTests StormByte)
