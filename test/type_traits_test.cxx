@@ -17,21 +17,21 @@
  * <https://www.gnu.org/licenses/lgpl-3.0.html>.
  */
 
-#include <StormByte/type_traits.hxx>
 #include <StormByte/test_handlers.h>
+#include <StormByte/type_traits.hxx>
 
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <deque>
-#include <iostream>
+#include <iterator>
 #include <list>
 #include <map>
 #include <memory>
 #include <optional>
+#include <ranges>
 #include <set>
 #include <string>
-#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -74,6 +74,10 @@ template<typename T>
 constexpr bool is_variant_v = Type::Variant<T>;
 template<typename T, typename U>
 constexpr bool variant_has_type_v = Type::VariantHasType<T, U>;
+
+// -------------------
+// Containers
+// -------------------
 
 int test_string_concept() {
 	int result = 0;
@@ -220,6 +224,10 @@ int test_has_subscript() {
 	RETURN_TEST("test_has_subscript", result);
 }
 
+// -------------------
+// Wrappers
+// -------------------
+
 int test_optional_concept() {
 	int result = 0;
 	ASSERT_TRUE("test_optional_concept", (is_optional_v<std::optional<int>>));
@@ -254,6 +262,10 @@ int test_variant_concepts() {
 	RETURN_TEST("test_variant_concepts", result);
 }
 
+// -------------------
+// Enums
+// -------------------
+
 enum UnscopedEnum { UE_A = 1 };
 enum class ScopedEnum : std::uint16_t { A = 2 };
 enum class SignedScoped : int { B = -1 };
@@ -272,6 +284,10 @@ int test_enum_concepts() {
 	RETURN_TEST("test_enum_concepts", result);
 }
 
+// -------------------
+// Categories
+// -------------------
+
 int test_arithmetic_and_cv_concepts() {
 	int result = 0;
 	ASSERT_TRUE("test_arithmetic_and_cv_concepts", Type::Integral<int>);
@@ -287,10 +303,18 @@ int test_arithmetic_and_cv_concepts() {
 	ASSERT_TRUE("test_arithmetic_and_cv_concepts", Type::Reference<int&>);
 	ASSERT_TRUE("test_arithmetic_and_cv_concepts", Type::Reference<int&&>);
 	ASSERT_FALSE("test_arithmetic_and_cv_concepts", Type::Reference<int>);
+	ASSERT_TRUE("test_arithmetic_and_cv_concepts", Type::LvalueReference<int&>);
+	ASSERT_FALSE("test_arithmetic_and_cv_concepts", Type::LvalueReference<int&&>);
+	ASSERT_TRUE("test_arithmetic_and_cv_concepts", Type::RvalueReference<int&&>);
+	ASSERT_FALSE("test_arithmetic_and_cv_concepts", Type::RvalueReference<int&>);
 	ASSERT_TRUE("test_arithmetic_and_cv_concepts", Type::Class<std::string>);
 	ASSERT_FALSE("test_arithmetic_and_cv_concepts", Type::Class<int>);
 	RETURN_TEST("test_arithmetic_and_cv_concepts", result);
 }
+
+// -------------------
+// Conversions
+// -------------------
 
 int test_same_as_and_convertible() {
 	int result = 0;
@@ -301,6 +325,10 @@ int test_same_as_and_convertible() {
 	ASSERT_FALSE("test_same_as_and_convertible", (Type::ConvertibleTo<std::string, int>));
 	RETURN_TEST("test_same_as_and_convertible", result);
 }
+
+// -------------------
+// Ranges
+// -------------------
 
 int test_range_and_byte_concepts() {
 	int result = 0;
@@ -345,6 +373,10 @@ int test_range_and_byte_concepts() {
 	ASSERT_FALSE("test_range_and_byte_concepts", (Type::ByteInputIterator<std::vector<std::string>::iterator>));
 	RETURN_TEST("test_range_and_byte_concepts", result);
 }
+
+// -------------------
+// Object semantics
+// -------------------
 
 int test_constructible_and_callable() {
 	int result = 0;
@@ -392,7 +424,9 @@ int test_extended_type_concepts() {
 int main() {
 	int result = 0;
 
-	// containers
+	// -------------------
+	// Containers
+	// -------------------
 	result += test_string_concept();
 	result += test_container_excludes_string();
 	result += test_array_container_behaviour();
@@ -407,35 +441,43 @@ int main() {
 	result += test_has_key_and_mapped_type();
 	result += test_has_subscript();
 
-	// wrappers
+	// -------------------
+	// Wrappers
+	// -------------------
 	result += test_optional_concept();
 	result += test_pair_concept();
 	result += test_variant_concepts();
 
-	// enums
+	// -------------------
+	// Enums
+	// -------------------
 	result += test_enum_concepts();
 
-	// categories
+	// -------------------
+	// Categories
+	// -------------------
 	result += test_arithmetic_and_cv_concepts();
 
-	// conversions / relations
+	// -------------------
+	// Conversions
+	// -------------------
 	result += test_same_as_and_convertible();
 
-	// ranges
+	// -------------------
+	// Ranges
+	// -------------------
 	result += test_range_and_byte_concepts();
 
-	// object semantics
+	// -------------------
+	// Object semantics
+	// -------------------
 	result += test_constructible_and_callable();
 	result += test_trivially_copyable();
-
-	// sized / pointers / relations / comparison
 	result += test_extended_type_concepts();
 
-	if (result == 0) {
+	if (result == 0)
 		std::cout << "All tests passed!" << std::endl;
-	} else {
+	else
 		std::cout << result << " tests failed." << std::endl;
-	}
-
 	return result;
 }

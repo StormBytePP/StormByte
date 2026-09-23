@@ -18,47 +18,102 @@
  */
 
 #include <StormByte/test_handlers.h>
+
 #include <array>
 #include <stdexcept>
 #include <string>
 
-int test_existing_assertions() {
+// -------------------
+// Compare
+// -------------------
+
+int test_assert_equal() {
 	int result = 0;
 	const std::array<int, 3> expected{1, 2, 3};
 	const std::array<int, 3> actual{1, 2, 3};
-	ASSERT_EQUAL("test_existing_assertions", expected, actual);
-	ASSERT_NOT_EQUAL("test_existing_assertions", 1, 2);
-	ASSERT_TRUE("test_existing_assertions", true);
-	ASSERT_FALSE("test_existing_assertions", false);
-	RETURN_TEST("test_existing_assertions", result);
+	ASSERT_EQUAL("test_assert_equal", expected, actual);
+	ASSERT_EQUAL("test_assert_equal", 1, 1);
+	RETURN_TEST("test_assert_equal", result);
 }
 
-int test_exception_assertions() {
+int test_assert_not_equal() {
 	int result = 0;
-	ASSERT_THROWS("test_exception_assertions", throw std::runtime_error("expected"), std::runtime_error);
-	ASSERT_NO_THROW("test_exception_assertions", std::string("no throw"));
-	RETURN_TEST("test_exception_assertions", result);
+	ASSERT_NOT_EQUAL("test_assert_not_equal", 1, 2);
+	RETURN_TEST("test_assert_not_equal", result);
 }
 
-int test_value_assertions() {
+int test_assert_true_false() {
 	int result = 0;
-	ASSERT_NEAR("test_value_assertions", 1.0, 1.0001, 0.001);
-	ASSERT_CONTAINS("test_value_assertions", std::string("StormByte tests"), "Byte");
+	ASSERT_TRUE("test_assert_true_false", true);
+	ASSERT_FALSE("test_assert_true_false", false);
+	RETURN_TEST("test_assert_true_false", result);
+}
+
+// -------------------
+// Exception
+// -------------------
+
+int test_assert_throws() {
+	int result = 0;
+	ASSERT_THROWS("test_assert_throws", throw std::runtime_error("expected"), std::runtime_error);
+	RETURN_TEST("test_assert_throws", result);
+}
+
+int test_assert_no_throw() {
+	int result = 0;
+	ASSERT_NO_THROW("test_assert_no_throw", std::string("no throw"));
+	RETURN_TEST("test_assert_no_throw", result);
+}
+
+// -------------------
+// Value
+// -------------------
+
+int test_assert_near() {
+	int result = 0;
+	ASSERT_NEAR("test_assert_near", 1.0, 1.0001, 0.001);
+	RETURN_TEST("test_assert_near", result);
+}
+
+int test_assert_contains() {
+	int result = 0;
+	ASSERT_CONTAINS("test_assert_contains", std::string("StormByte tests"), "Byte");
+	RETURN_TEST("test_assert_contains", result);
+}
+
+int test_assert_not_null() {
+	int result = 0;
 	int value = 42;
-	ASSERT_NOT_NULL("test_value_assertions", &value);
-	RETURN_TEST("test_value_assertions", result);
+	ASSERT_NOT_NULL("test_assert_not_null", &value);
+	RETURN_TEST("test_assert_not_null", result);
 }
 
 int main() {
 	int result = 0;
-	result += test_existing_assertions();
-	result += test_exception_assertions();
-	result += test_value_assertions();
-	if (result == 0) {
-		std::cout << "All tests passed!" << std::endl;
-	} else {
-		std::cout << result << " tests failed." << std::endl;
-	}
 
+	// -------------------
+	// Compare
+	// -------------------
+	result += test_assert_equal();
+	result += test_assert_not_equal();
+	result += test_assert_true_false();
+
+	// -------------------
+	// Exception
+	// -------------------
+	result += test_assert_throws();
+	result += test_assert_no_throw();
+
+	// -------------------
+	// Value
+	// -------------------
+	result += test_assert_near();
+	result += test_assert_contains();
+	result += test_assert_not_null();
+
+	if (result == 0)
+		std::cout << "All tests passed!" << std::endl;
+	else
+		std::cout << result << " tests failed." << std::endl;
 	return result;
 }

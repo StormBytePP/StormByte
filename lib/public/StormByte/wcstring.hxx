@@ -45,6 +45,10 @@ namespace StormByte {
 	 * The pointer is valid only until this object is destroyed, moved
 	 * from, assigned or @ref Reset. Using it afterwards is use-after-free.
 	 *
+	 * `operator std::wstring_view` is explicit and follows the same
+	 * lifetime. A null buffer yields an empty view. The view covers
+	 * `[0, Length())` and does not include the trailing NUL.
+	 *
 	 * `operator bool` is true when the pointer is not null. A buffer
 	 * constructed from `L""` is empty (`Length() == 0`) and valid.
 	 * A default-constructed object is null.
@@ -56,8 +60,8 @@ namespace StormByte {
 	 * Equality and `<=>` compare text, not addresses. Two nulls are
 	 * equal. Null is not equal to `L""`. Null orders before any text.
 	 *
-	 * `operator std::wstring` and `operator<<` are inline so the
-	 * `std::wstring` / stream write run in the caller’s translation unit.
+	 * `operator std::wstring`, `operator std::wstring_view` and
+	 * `operator<<` are inline so they run in the caller’s translation unit.
 	 */
 	class STORMBYTE_PUBLIC WCString {
 		public:
@@ -170,6 +174,16 @@ namespace StormByte {
 			 * @note Same lifetime rules as `std::wstring::c_str()`.
 			 */
 			explicit operator const wchar_t*() const noexcept;
+
+			/**
+			 * @brief Non-owning view of the text.
+			 * @return Empty view when the buffer is null.
+			 * @note Same lifetime rules as `std::wstring::c_str()`.
+			 */
+			inline explicit operator std::wstring_view() const noexcept {
+				const wchar_t* text = static_cast<const wchar_t*>(*this);
+				return text ? std::wstring_view(text) : std::wstring_view();
+			}
 
 			/**
 			 * @brief Copy of the text in the caller’s heap.

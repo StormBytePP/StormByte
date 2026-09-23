@@ -45,6 +45,10 @@ namespace StormByte {
 	 * The pointer is valid only until this object is destroyed, moved
 	 * from, assigned or @ref Reset. Using it afterwards is use-after-free.
 	 *
+	 * `operator std::string_view` is explicit and follows the same
+	 * lifetime. A null buffer yields an empty view. The view covers
+	 * `[0, Length())` and does not include the trailing NUL.
+	 *
 	 * `operator bool` is true when the pointer is not null. A buffer
 	 * constructed from `""` is empty (`Length() == 0`) and valid.
 	 * A default-constructed object is null.
@@ -56,8 +60,8 @@ namespace StormByte {
 	 * Equality and `<=>` compare text, not addresses. Two nulls are
 	 * equal. Null is not equal to `""`. Null orders before any text.
 	 *
-	 * `operator std::string` and `operator<<` are inline so the
-	 * `std::string` / stream write run in the caller’s translation unit.
+	 * `operator std::string`, `operator std::string_view` and
+	 * `operator<<` are inline so they run in the caller’s translation unit.
 	 *
 	 * If the text never leaves the module that created it, or the
 	 * program is not built for Windows, use `std::string`.
@@ -173,6 +177,16 @@ namespace StormByte {
 			 * @note Same lifetime rules as `std::string::c_str()`.
 			 */
 			explicit operator const char*() const noexcept;
+
+			/**
+			 * @brief Non-owning view of the text.
+			 * @return Empty view when the buffer is null.
+			 * @note Same lifetime rules as `std::string::c_str()`.
+			 */
+			inline explicit operator std::string_view() const noexcept {
+				const char* text = static_cast<const char*>(*this);
+				return text ? std::string_view(text) : std::string_view();
+			}
 
 			/**
 			 * @brief Copy of the text in the caller’s heap.
