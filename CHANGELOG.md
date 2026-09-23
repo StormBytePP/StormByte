@@ -1,10 +1,3 @@
-# Changelog
-
-All notable changes to this project are documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
 ## [Summary]
 
 StormByte Base is the C++26 foundation of the StormByte suite.
@@ -12,14 +5,18 @@ StormByte Base is the C++26 foundation of the StormByte suite.
 Every other module links this library.
 This repository is not Buffer, Config, Crypto, Database, Logger, Multimedia, Network or System — those live in their own repos and depend on Base.
 
-Public headers under `StormByte/` cover exceptions, `Expected`, little-endian `Serializable`, strings, paths, UUID v4, bitmasks, clonable types, `ThreadLock`, and `StormByte::Type` concepts.
+Public headers under `StormByte/` cover exceptions, `Expected`, little-endian `Serializable`, strings, paths, UUID v4, bitmasks, clonable types, `ThreadLock`, `Size`, and `StormByte::Type` concepts.
 
 If you landed here from a release link and have not read the tree:
 
 - What this module is, how to build it, and short examples: [README.md](https://github.com/StormBytePP/StormByte/blob/master/README.md)
-- License: GNU Lesser General Public License version 3 or later, [LICENSE](https://github.com/StormBytePP/StormByte/blob/master/LICENSE)
+- Since 2.0.0 license changed: original source in this repository is dual-licensed, LGPL v3 or later **or** a commercial license from the copyright holder. The grant does not cover other StormByte modules or `thirdparty/`. [LICENSE](https://github.com/StormBytePP/StormByte/blob/master/LICENSE)
 
 ## [Unreleased]
+
+[Unreleased]: https://github.com/StormBytePP/StormByte/compare/2.0.0...HEAD
+
+## [2.0.0] - 2026-09-23
 
 ### Added
 
@@ -31,6 +28,7 @@ If you landed here from a release link and have not read the tree:
 
 ### Changed
 
+- **License change** — original source in this repository is dual-licensed: GNU LGPL v3 or later, or a commercial license from the copyright holder. The grant applies only to original StormByte source in this repository. It does not cover other StormByte modules or third-party material (including `thirdparty/`). No patent rights are granted.
 - **Exception** — the message is stored in a `CString`. Copy, move, assign and the destructor are defaulted. The change is transparent: `what()` and the constructors are unchanged, consumers do not rebuild against a new layout contract, and the DLL boundary is the same (`const char*` owned by the exception).
 - **Type::String** — also matches `StormByte::String::String` and `StormByte::String::WString` (forward-declared in Base). They stay out of `Type::Container`.
 - **GenerateUUIDv4** — returns `CString` instead of `std::string`.
@@ -43,9 +41,7 @@ If you landed here from a release link and have not read the tree:
 - **System** (`StormByte::System` in Base: `TempFileName`, `CurrentPath`, `ExecutablePath`, `Sleep`) — leaves Base. Absorbed by the existing StormByte-System module.
 - **CoreApiTests** — coverage lives in `ClonableTests` and `ErrorTests`.
 
-### Fixed
-
-[Unreleased]: https://github.com/StormBytePP/StormByte/compare/1.2.0...HEAD
+[2.0.0]: https://github.com/StormBytePP/StormByte/compare/1.2.0...2.0.0
 
 ## [1.2.0] - 2026-09-17
 
