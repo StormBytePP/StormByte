@@ -23,8 +23,8 @@ If you landed here from a release link and have not read the tree:
 
 ### Added
 
-- **CString** — owned NUL-terminated buffer, safe to use across a DLL boundary. Not a `std::string`. Copy, move, `Reset`, `swap`, `Length`, explicit `operator bool` (non-null pointer; `""` is valid empty text), explicit `const char*` (same lifetime as `std::string::c_str()`), implicit `std::string`, `operator<<`, content `==` / `!=` / `<=>`, and `std::hash`. Covered by `CStringTests`.
-- **WCString** — wide counterpart of `CString` (`wchar_t` / `std::wstring` / `std::wostream`). Same comparison, hash and lifetime rules as `std::wstring::c_str()`. Covered by `WCStringTests`.
+- **CString** — owned NUL-terminated buffer, safe to use across a DLL boundary. Not a `std::string`. Copy, move, `Reset`, `swap`, `Length`, observer `operator[]` (indices `[0, Length()]`; `Length()` is the trailing NUL; null or past `Length()` is undefined and `assert`s when assertions are on), explicit `operator bool` (non-null pointer; `""` is valid empty text), explicit `const char*` (same lifetime as `std::string::c_str()`), implicit `std::string`, `operator<<`, content `==` / `!=` / `<=>`, and `std::hash`. Covered by `CStringTests`.
+- **WCString** — wide counterpart of `CString` (`wchar_t` / `std::wstring` / `std::wostream`). Same comparison, hash, subscript and lifetime rules as `std::wstring::c_str()`. Covered by `WCStringTests`.
 - **Error** — `Domain`, `Category`, `Code` (`Success`, `Unknown`) and `Fault`. Modules specialize `Domain` for their enums; `make_error_code` lives next to the enum so ADL feeds `std::error_code`. Category singletons stay in the module `.cxx`. `Fault` holds the code and a `CString`. Not thrown. Covered by `ErrorTests`.
 - **ClonableTests** — clone / move coverage.
 
@@ -32,6 +32,8 @@ If you landed here from a release link and have not read the tree:
 
 - **Exception** — the message is stored in a `CString`. Copy, move, assign and the destructor are defaulted. The change is transparent: `what()` and the constructors are unchanged, consumers do not rebuild against a new layout contract, and the DLL boundary is the same (`const char*` owned by the exception).
 - **Type::String** — also matches `StormByte::String::String` and `StormByte::String::WString` (forward-declared in Base). They stay out of `Type::Container`.
+- **GenerateUUIDv4** — returns `CString` instead of `std::string`.
+- **Base64Encode** — both overloads return `CString` instead of `std::string`. `Base64Decode` still returns `std::vector<std::byte>`.
 
 ### Removed
 

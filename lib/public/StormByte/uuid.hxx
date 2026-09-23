@@ -19,9 +19,7 @@
 
 #pragma once
 
-#include <StormByte/visibility.h>
-
-#include <string>
+#include <StormByte/cstring.hxx>
 
 /**
  * @namespace StormByte
@@ -30,8 +28,8 @@
 namespace StormByte {
 	/**
 	 * @brief RFC 4122 UUID version 4 (lowercase).
-	 * @return 36-character string `xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx` where `y` is `8`, `9`, `a` or `b`.
+	 * @return 36-character `CString` `xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx` where `y` is `8`, `9`, `a` or `b`.
 	 * @note Prefers the OS CSPRNG; falls back to a PRNG. Details in `uuid.cxx`.
 	 */
-	STORMBYTE_PUBLIC std::string GenerateUUIDv4() noexcept;
+	CString STORMBYTE_PUBLIC GenerateUUIDv4() noexcept;
 }

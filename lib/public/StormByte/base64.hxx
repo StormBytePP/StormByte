@@ -19,11 +19,10 @@
 
 #pragma once
 
-#include <StormByte/visibility.h>
+#include <StormByte/cstring.hxx>
 
 #include <cstddef>
 #include <span>
-#include <string>
 #include <string_view>
 #include <vector>
 
@@ -49,12 +48,14 @@ namespace StormByte {
 	/**
 	 * @brief Encodes bytes as Base64 with `=` padding.
 	 * @param input Bytes to encode.
+	 * @return Base64 text as a `CString`.
 	 */
-	std::string STORMBYTE_PUBLIC Base64Encode(const std::vector<std::byte>& input);
+	CString STORMBYTE_PUBLIC Base64Encode(const std::vector<std::byte>& input);
 
 	/**
 	 * @brief Encodes a contiguous byte span as Base64 with `=` padding.
 	 * @param input Bytes to encode.
+	 * @return Base64 text as a `CString`.
 	 */
-	std::string STORMBYTE_PUBLIC Base64Encode(std::span<const std::byte> input);
+	CString STORMBYTE_PUBLIC Base64Encode(std::span<const std::byte> input);
 }

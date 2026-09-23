@@ -216,6 +216,33 @@ int test_swap_exchanges() {
 }
 
 // -------------------
+// Observers
+// -------------------
+
+int test_subscript_characters() {
+	int result = 0;
+	WCString text(L"ab");
+	ASSERT_EQUAL("test_subscript_characters", L'a', text[0]);
+	ASSERT_EQUAL("test_subscript_characters", L'b', text[1]);
+	RETURN_TEST("test_subscript_characters", result);
+}
+
+int test_subscript_nul_at_length() {
+	int result = 0;
+	WCString text(L"ab");
+	ASSERT_EQUAL("test_subscript_nul_at_length", L'\0', text[text.Length()]);
+	RETURN_TEST("test_subscript_nul_at_length", result);
+}
+
+int test_subscript_empty() {
+	int result = 0;
+	WCString text(L"");
+	ASSERT_EQUAL("test_subscript_empty", L'\0', text[0]);
+	ASSERT_EQUAL("test_subscript_empty", L'\0', text[text.Length()]);
+	RETURN_TEST("test_subscript_empty", result);
+}
+
+// -------------------
 // Conversions / streams
 // -------------------
 
@@ -360,6 +387,13 @@ int main() {
 	// -------------------
 	result += test_reset_replaces();
 	result += test_swap_exchanges();
+
+	// -------------------
+	// Observers
+	// -------------------
+	result += test_subscript_characters();
+	result += test_subscript_nul_at_length();
+	result += test_subscript_empty();
 
 	// -------------------
 	// Conversions / streams

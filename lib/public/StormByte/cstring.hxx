@@ -39,7 +39,7 @@ namespace StormByte {
 	 *
 	 * This is not a replacement or reimplementation of `std::string`.
 	 * The class is minimal on purpose: copy, move, reset, a C-string
-	 * view, `Length`, equality, ordering, swap and conversions.
+	 * view, `Length`, subscript, equality, ordering, swap and conversions.
 	 *
 	 * `operator const char*` is the analogue of `std::string::c_str()`.
 	 * The pointer is valid only until this object is destroyed, moved
@@ -48,6 +48,10 @@ namespace StormByte {
 	 * `operator bool` is true when the pointer is not null. A buffer
 	 * constructed from `""` is empty (`Length() == 0`) and valid.
 	 * A default-constructed object is null.
+	 *
+	 * `operator[]` is an observer. Valid indices are `[0, Length()]`;
+	 * `Length()` is the trailing NUL. A null buffer or an index past
+	 * `Length()` is undefined and `assert`s when assertions are on.
 	 *
 	 * Equality and `<=>` compare text, not addresses. Two nulls are
 	 * equal. Null is not equal to `""`. Null orders before any text.
@@ -138,6 +142,14 @@ namespace StormByte {
 			 * @return Length.
 			 */
 			std::size_t Length() const noexcept;
+
+			/**
+			 * @brief Character at @p index.
+			 * @param index Position in `[0, Length()]`. `Length()` is the trailing NUL.
+			 * @return The character.
+			 * @note Null or `index > Length()` is undefined. Checked with `assert` when assertions are on.
+			 */
+			char operator[](std::size_t index) const noexcept;
 
 			/**
 			 * @brief `true` when the buffer pointer is not null.

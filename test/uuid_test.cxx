@@ -17,40 +17,135 @@
  * <https://www.gnu.org/licenses/lgpl-3.0.html>.
  */
 
+#include <StormByte/test_handlers.h>
 #include <StormByte/uuid.hxx>
-#include <iostream>
+
 #include <set>
 #include <string>
-bool IsHex(char c) {
-	return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f');
+
+using namespace StormByte;
+
+namespace {
+	bool IsHex(char c) {
+		return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f');
+	}
+
+	bool IsVariant(char c) {
+		return c == '8' || c == '9' || c == 'a' || c == 'b';
+	}
+}
+
+// -------------------
+// Generate
+// -------------------
+
+int test_generate_not_null() {
+	int result = 0;
+	const auto uuid = GenerateUUIDv4();
+	ASSERT_TRUE("test_generate_not_null", static_cast<bool>(uuid));
+	ASSERT_EQUAL("test_generate_not_null", 36u, uuid.Length());
+	RETURN_TEST("test_generate_not_null", result);
+}
+
+int test_generate_implicit_string() {
+	int result = 0;
+	const std::string text = GenerateUUIDv4();
+	ASSERT_EQUAL("test_generate_implicit_string", 36u, text.size());
+	RETURN_TEST("test_generate_implicit_string", result);
+}
+
+// -------------------
+// Format
+// -------------------
+
+int test_format_hyphens() {
+	int result = 0;
+	const auto uuid = GenerateUUIDv4();
+	ASSERT_EQUAL("test_format_hyphens", '-', uuid[8]);
+	ASSERT_EQUAL("test_format_hyphens", '-', uuid[13]);
+	ASSERT_EQUAL("test_format_hyphens", '-', uuid[18]);
+	ASSERT_EQUAL("test_format_hyphens", '-', uuid[23]);
+	RETURN_TEST("test_format_hyphens", result);
+}
+
+int test_format_version_is_4() {
+	int result = 0;
+	const auto uuid = GenerateUUIDv4();
+	ASSERT_EQUAL("test_format_version_is_4", '4', uuid[14]);
+	RETURN_TEST("test_format_version_is_4", result);
+}
+
+int test_format_variant_rfc4122() {
+	int result = 0;
+	const auto uuid = GenerateUUIDv4();
+	ASSERT_TRUE("test_format_variant_rfc4122", IsVariant(uuid[19]));
+	RETURN_TEST("test_format_variant_rfc4122", result);
+}
+
+int test_format_hex_lowercase() {
+	int result = 0;
+	const auto uuid = GenerateUUIDv4();
+	for (std::size_t i = 0; i < uuid.Length(); ++i) {
+		if (i == 8 || i == 13 || i == 18 || i == 23)
+			continue;
+		ASSERT_TRUE("test_format_hex_lowercase", IsHex(uuid[i]));
+		ASSERT_TRUE("test_format_hex_lowercase", uuid[i] < 'A' || uuid[i] > 'F');
+	}
+	RETURN_TEST("test_format_hex_lowercase", result);
+}
+
+int test_format_rejects_wrong_length_shape() {
+	int result = 0;
+	const auto uuid = GenerateUUIDv4();
+	ASSERT_FALSE("test_format_rejects_wrong_length_shape", uuid.Length() != 36);
+	ASSERT_FALSE("test_format_rejects_wrong_length_shape", uuid[8] != '-');
+	ASSERT_FALSE("test_format_rejects_wrong_length_shape", uuid[14] != '4');
+	ASSERT_FALSE("test_format_rejects_wrong_length_shape", !IsVariant(uuid[19]));
+	RETURN_TEST("test_format_rejects_wrong_length_shape", result);
+}
+
+// -------------------
+// Uniqueness
+// -------------------
+
+int test_generate_distinct() {
+	int result = 0;
+	std::set<std::string> seen;
+	for (int i = 0; i < 1000; ++i) {
+		const auto uuid = GenerateUUIDv4();
+		ASSERT_TRUE("test_generate_distinct", !seen.contains(uuid));
+		seen.insert(uuid);
+	}
+	ASSERT_EQUAL("test_generate_distinct", 1000u, seen.size());
+	RETURN_TEST("test_generate_distinct", result);
 }
 
 int main() {
-    std::set<std::string> seen;
-    for (int i = 0; i < 1000; ++i) {
-        auto u = StormByte::GenerateUUIDv4();
-        if (u.size() != 36 || u[8] != '-' || u[13] != '-' || u[18] != '-' ||
-                u[23] != '-' || u[14] != '4' ||
-                (u[19] != '8' && u[19] != '9' && u[19] != 'a' && u[19] != 'b')) {
-            std::cerr << "Invalid UUIDv4 format: " << u << "\n";
-            return 3;
-        }
+	int result = 0;
 
-        for (std::size_t i = 0; i < u.size(); ++i) {
-            if (i != 8 && i != 13 && i != 18 && i != 23 && !IsHex(u[i])) {
-                std::cerr << "Invalid UUID character: " << u << "\n";
-                return 4;
-            }
-        }
+	// -------------------
+	// Generate
+	// -------------------
+	result += test_generate_not_null();
+	result += test_generate_implicit_string();
 
-        if (seen.find(u) != seen.end()) {
-            std::cerr << "Duplicate UUID generated: " << u << "\n";
-            return 2;
-        }
+	// -------------------
+	// Format
+	// -------------------
+	result += test_format_hyphens();
+	result += test_format_version_is_4();
+	result += test_format_variant_rfc4122();
+	result += test_format_hex_lowercase();
+	result += test_format_rejects_wrong_length_shape();
 
-        seen.insert(u);
-    }
+	// -------------------
+	// Uniqueness
+	// -------------------
+	result += test_generate_distinct();
 
-    std::cout << "Sample UUID: " << *seen.begin() << "\n";
-    return 0;
+	if (result == 0)
+		std::cout << "All tests passed!" << std::endl;
+	else
+		std::cout << result << " tests failed." << std::endl;
+	return result;
 }

@@ -19,6 +19,7 @@
 
 #include <StormByte/wcstring.hxx>
 
+#include <cassert>
 #include <cwchar>
 
 using namespace StormByte;
@@ -75,6 +76,12 @@ void WCString::Reset(const wchar_t* str) noexcept {
 
 std::size_t WCString::Length() const noexcept {
 	return m_data ? std::wcslen(m_data) : 0;
+}
+
+wchar_t WCString::operator[](std::size_t index) const noexcept {
+	assert(m_data != nullptr);
+	assert(index <= std::wcslen(m_data));
+	return m_data[index];
 }
 
 void WCString::swap(WCString& other) noexcept {

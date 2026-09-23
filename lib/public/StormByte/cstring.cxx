@@ -19,6 +19,7 @@
 
 #include <StormByte/cstring.hxx>
 
+#include <cassert>
 #include <cstring>
 
 using namespace StormByte;
@@ -75,6 +76,12 @@ void CString::Reset(const char* str) noexcept {
 
 std::size_t CString::Length() const noexcept {
 	return m_data ? std::strlen(m_data) : 0;
+}
+
+char CString::operator[](std::size_t index) const noexcept {
+	assert(m_data != nullptr);
+	assert(index <= std::strlen(m_data));
+	return m_data[index];
 }
 
 void CString::swap(CString& other) noexcept {
