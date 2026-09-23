@@ -1,15 +1,20 @@
 # FindStormByte.cmake
 # Finder for the StormByte core library and its optional modules.
+# Linux only (Windows builds consume the in-tree target).
 #
 # Usage:
 #   find_package(StormByte REQUIRED)
-#   find_package(StormByte REQUIRED COMPONENTS Buffer Logger)
-#   find_package(StormByte COMPONENTS Crypto)   # will automatically pull Buffer
+#   find_package(StormByte REQUIRED COMPONENTS String Logger)
+#   find_package(StormByte COMPONENTS Crypto)   # pulls Buffer, then Logger
 #
 # Provides:
 #   - Imported targets: StormByte and StormByte::<Component>
 #   - Variables: STORMBYTE_FOUND, STORMBYTE_INCLUDE_DIR, STORMBYTE_LIBRARY
 #                StormByte_<Component>_FOUND, STORMBYTE_<Component>_LIBRARY
+#
+# A shared install defines STORMBYTE_SHARED on StormByte and
+# STORMBYTE_<COMPONENT>_SHARED on each module target (INTERFACE).
+# A static .a defines nothing; headers then take the empty-macro branch.
 
 include(FindPackageHandleStandardArgs)
 include(FeatureSummary)
@@ -26,20 +31,20 @@ set(_STORMBYTE_AVAILABLE_COMPONENTS
 	Logger
 	Multimedia
 	Network
+	String
 	System
 )
 
-# Transitive dependencies (component → list of components it needs)
+# Transitive dependencies (component → list of components it needs).
+# Every component already links StormByte (the core). String needs only that.
 set(_STORMBYTE_COMPONENT_DEPS_Buffer    "Logger")
 set(_STORMBYTE_COMPONENT_DEPS_Crypto    "Buffer")
 set(_STORMBYTE_COMPONENT_DEPS_Network   "Buffer")
-# Add more as needed...
 
 # ----------------------------------------------------------------------
 # Internal helpers
 # ----------------------------------------------------------------------
 
-# Expand requested components with their transitive dependencies
 function(_stormbyte_expand_dependencies components_var)
 	set(_result ${${components_var}})
 	set(_changed TRUE)
@@ -60,6 +65,20 @@ function(_stormbyte_expand_dependencies components_var)
 
 	list(REMOVE_DUPLICATES _result)
 	set(${components_var} ${_result} PARENT_SCOPE)
+endfunction()
+
+# True when the on-disk artifact is a shared object (.so, .so.N, …).
+function(_stormbyte_library_is_shared lib_path out_var)
+	if(NOT lib_path)
+		set(${out_var} FALSE PARENT_SCOPE)
+		return()
+	endif()
+	get_filename_component(_name "${lib_path}" NAME)
+	if(_name MATCHES "\\.so($|\\.)")
+		set(${out_var} TRUE PARENT_SCOPE)
+	else()
+		set(${out_var} FALSE PARENT_SCOPE)
+	endif()
 endfunction()
 
 # ----------------------------------------------------------------------
@@ -84,7 +103,6 @@ find_library(STORMBYTE_LIBRARY
 		/usr/local/lib /usr/local/lib64
 )
 
-# Fallback for include dir when only the library was found
 if(STORMBYTE_LIBRARY AND NOT STORMBYTE_INCLUDE_DIR)
 	get_filename_component(_libdir "${STORMBYTE_LIBRARY}" DIRECTORY)
 	foreach(_cand IN ITEMS
@@ -120,8 +138,9 @@ if(STORMBYTE_LIBRARY)
 				INTERFACE_INCLUDE_DIRECTORIES "${STORMBYTE_INCLUDE_DIR}"
 			)
 		endif()
-		if(MSVC)
-			target_compile_definitions(StormByte INTERFACE UNICODE NOMINMAX)
+		_stormbyte_library_is_shared("${STORMBYTE_LIBRARY}" _sb_core_shared)
+		if(_sb_core_shared)
+			target_compile_definitions(StormByte INTERFACE STORMBYTE_SHARED)
 		endif()
 	endif()
 endif()
@@ -135,11 +154,11 @@ set(_missing_components)
 
 foreach(component IN LISTS _requested_components)
 	string(TOLOWER "${component}" _comp_lower)
+	string(TOUPPER "${component}" _comp_upper)
 
 	set(StormByte_${component}_FOUND FALSE)
 	unset(STORMBYTE_${component}_LIBRARY CACHE)
 
-	# 1. Header-based detection (robust)
 	if(STORMBYTE_INCLUDE_DIR)
 		set(_possible_headers
 			"${STORMBYTE_INCLUDE_DIR}/StormByte/${_comp_lower}/visibility.h"
@@ -155,7 +174,6 @@ foreach(component IN LISTS _requested_components)
 		endforeach()
 	endif()
 
-	# 2. Library detection
 	find_library(STORMBYTE_${component}_LIBRARY
 		NAMES
 			StormByte-${component}
@@ -189,6 +207,13 @@ foreach(component IN LISTS _requested_components)
 					INTERFACE_INCLUDE_DIRECTORIES "${STORMBYTE_INCLUDE_DIR}"
 				)
 			endif()
+
+			_stormbyte_library_is_shared("${STORMBYTE_${component}_LIBRARY}" _sb_comp_shared)
+			if(_sb_comp_shared)
+				target_compile_definitions(StormByte-${component} INTERFACE
+					STORMBYTE_${_comp_upper}_SHARED
+				)
+			endif()
 		endif()
 
 		list(APPEND _found_components ${component})
@@ -220,7 +245,7 @@ foreach(component IN LISTS _found_components)
 endforeach()
 
 # ----------------------------------------------------------------------
-# Final result handling (standard way)
+# Final result handling
 # ----------------------------------------------------------------------
 
 set(STORMBYTE_FOUND TRUE)
@@ -228,7 +253,6 @@ if(NOT STORMBYTE_LIBRARY)
 	set(STORMBYTE_FOUND FALSE)
 endif()
 
-# HANDLE_COMPONENTS se encarga de fallar si falta algún componente requerido
 find_package_handle_standard_args(StormByte
 	REQUIRED_VARS STORMBYTE_LIBRARY STORMBYTE_INCLUDE_DIR
 	HANDLE_COMPONENTS
