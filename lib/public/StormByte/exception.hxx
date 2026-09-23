@@ -74,7 +74,7 @@ namespace StormByte {
 	 * @class Exception
 	 * @brief Base exception type for the suite.
 	 *
-	 * The message is a @ref CString so the text does not cross a DLL
+	 * The message is a @ref StormByte::CString so the text does not cross a DLL
 	 * boundary as `std::string`.
 	 */
 	class STORMBYTE_PUBLIC Exception {
@@ -123,10 +123,35 @@ namespace StormByte {
 			m_what.Reset(full.c_str());
 		}
 
+		/**
+		 * @brief Copy constructor.
+		 * @param e Exception to copy.
+		 */
 		Exception(const Exception& e) = default;
+
+		/**
+		 * @brief Move constructor.
+		 * @param e Exception to take.
+		 */
 		Exception(Exception&& e) noexcept = default;
+
+		/**
+		 * @brief Destructor.
+		 */
 		virtual ~Exception() noexcept = default;
+
+		/**
+		 * @brief Copy assignment.
+		 * @param e Exception to copy.
+		 * @return *this.
+		 */
 		Exception& operator=(const Exception& e) = default;
+
+		/**
+		 * @brief Move assignment.
+		 * @param e Exception to take.
+		 * @return *this.
+		 */
 		Exception& operator=(Exception&& e) noexcept = default;
 
 		/**
@@ -162,24 +187,6 @@ namespace StormByte {
 	 * @brief Thrown when Base64 encode or decode fails.
 	 */
 	class STORMBYTE_PUBLIC Base64Error: public Exception {
-		public:
-			using Exception::Exception;
-	};
-
-	/**
-	 * @class UTF8Error
-	 * @brief Thrown when UTF-8 or wide-string input contains invalid Unicode.
-	 */
-	class STORMBYTE_PUBLIC UTF8Error: public Exception {
-		public:
-			using Exception::Exception;
-	};
-
-	/**
-	 * @class SystemError
-	 * @brief Thrown when a System helper cannot obtain a path or create a temporary file.
-	 */
-	class STORMBYTE_PUBLIC SystemError: public Exception {
 		public:
 			using Exception::Exception;
 	};

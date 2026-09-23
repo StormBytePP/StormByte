@@ -39,6 +39,7 @@ If you landed here from a release link and have not read the tree:
 
 - **String** (`StormByte::String` helpers, `string.hxx` / `string.cxx`) — leaves Base. Helpers move to a new StormByte-String library.
 - **System** (`StormByte::System` in Base: `TempFileName`, `CurrentPath`, `ExecutablePath`, `Sleep`) — leaves Base. Absorbed by the existing StormByte-System module.
+- **UTF8Error** / **SystemError** — leave Base with String and System. Derived exceptions that remain are `DeserializeError`, `OutOfBoundsError` and `Base64Error`.
 - **CoreApiTests** — coverage lives in `ClonableTests` and `ErrorTests`.
 
 [2.0.0]: https://github.com/StormBytePP/StormByte/compare/1.2.0...2.0.0

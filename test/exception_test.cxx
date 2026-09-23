@@ -137,16 +137,6 @@ int test_derived_are_exceptions() {
 	} catch (const Exception& e) {
 		ASSERT_EQUAL("test_derived_are_exceptions", std::string("wire"), std::string(e.what()));
 	}
-	try {
-		throw UTF8Error("bad utf8");
-	} catch (const Exception& e) {
-		ASSERT_EQUAL("test_derived_are_exceptions", std::string("bad utf8"), std::string(e.what()));
-	}
-	try {
-		throw SystemError("path");
-	} catch (const Exception& e) {
-		ASSERT_EQUAL("test_derived_are_exceptions", std::string("path"), std::string(e.what()));
-	}
 	RETURN_TEST("test_derived_are_exceptions", result);
 }
 
