@@ -9,17 +9,17 @@
 
 This repository is **StormByte Base**: the C++26 foundation of the StormByte suite.
 
-It is the module every other StormByte library links. Public headers live under `StormByte/` and cover exceptions, `Expected`, little-endian serialization, strings, paths, UUID v4, bitmasks, clonable types, a reentrant `ThreadLock`, and the `StormByte::Type` concepts.
+It is the module every other StormByte library links. Public headers live under `StormByte/` and cover exceptions, `Expected`, little-endian serialization, `CString` / `WCString`, UUID v4, bitmasks, clonable types, a reentrant `ThreadLock`, and the `StormByte::Type` concepts.
 
-The suite is split on purpose. Buffer, Config, Crypto, Database, Logger, Multimedia, Network and System are **other repositories**. They depend on this one; this one does not implement them.
+The suite is split on purpose. Buffer, Config, Crypto, Database, Logger, Multimedia, Network, String and System are **other repositories**. They depend on this one; this one does not implement them.
 
 ## What this module does
 
-- **Exceptions** — `StormByte::Exception` with `std::format` messages and `const char*` storage (DLL-safe on Windows).
+- **Exceptions** — `StormByte::Exception` with `std::format` messages stored in `CString` (`what()` is a `const char*` owned by the exception).
+- **Error** — `Domain`, `Category`, `Code` and `Fault` for `std::error_code`. `Fault` is not thrown; its text is a `CString`.
 - **Expected** — `Expected<T, E>` on top of `std::expected`, references via `reference_wrapper`, errors as `shared_ptr<E>`, plus `Unexpected`.
 - **Serialization** — `Serializable<T>` to `vector<byte>`, always little-endian, no BOM and no version tag. Optional / pair / container / trivial / `Detail::Codec<T>`.
-- **Strings** — case, split, UTF-8 ↔ wide, human-readable numbers and byte sizes, newline sanitizing.
-- **System** — temp files, cwd, executable directory, `Sleep` for `chrono` durations.
+- **CString / WCString** — owned NUL-terminated narrow and wide buffers, safe to use across a DLL boundary. Not `std::string` / `std::wstring`. Content equality, `<=>`, `swap` and `std::hash`.
 - **UUID** — RFC 4122 version 4 (`GenerateUUIDv4`).
 - **Bitmask** — CRTP flags over `Type::UnsignedEnum`.
 - **Clonable** — virtual `Clone` / `Move` into `shared_ptr` or `unique_ptr`.
@@ -39,6 +39,7 @@ The suite is split on purpose. Buffer, Config, Crypto, Database, Logger, Multime
 | [Logger](https://github.com/StormBytePP/StormByte-Logger) | Stream logger with levels, headers, human-readable sizes and redaction (`ThreadedLog`) | [/StormByte-Logger](https://dev.stormbyte.org/StormByte-Logger) |
 | [Multimedia](https://github.com/StormBytePP/StormByte-Multimedia) | Decode, encode and containers without raw FFmpeg types; codecs enabled only if present | [/StormByte-Multimedia](https://dev.stormbyte.org/StormByte-Multimedia) |
 | [Network](https://github.com/StormBytePP/StormByte-Network) | Framed packets, Client/Server, IPv4/IPv6 TCP and Buffer pipelines (compress/encrypt) | [/StormByte-Network](https://dev.stormbyte.org/StormByte-Network) |
+| [String](https://github.com/StormBytePP/StormByte-String) | Suite text type and helpers (case, split, UTF-8, human-readable numbers and byte sizes) | [/StormByte-String](https://dev.stormbyte.org/StormByte-String) |
 | [System](https://github.com/StormBytePP/StormByte-System) | Processes, pipes and environment variables across Linux, Windows and macOS | [/StormByte-System](https://dev.stormbyte.org/StormByte-System) |
 
 ## Table of Contents
@@ -47,16 +48,16 @@ The suite is split on purpose. Buffer, Config, Crypto, Database, Logger, Multime
 - [The rest of the suite](#the-rest-of-the-suite)
 - [Installation](#installation)
 - [Usage](#usage)
-  - [Exceptions](#exceptions)
-  - [Expected](#expected)
-  - [Serialization](#serialization)
-  - [Strings](#strings)
-  - [System](#system)
-  - [UUID](#uuid)
-  - [ThreadLock](#threadlock)
-  - [Clonable](#clonable)
-  - [Type concepts](#type-concepts)
-  - [Bitmask](#bitmask)
+- [Exceptions](#exceptions)
+- [Expected](#expected)
+- [Error](#error)
+- [CString / WCString](#cstring--wcstring)
+- [Serialization](#serialization)
+- [UUID](#uuid)
+- [ThreadLock](#threadlock)
+- [Clonable](#clonable)
+- [Type concepts](#type-concepts)
+- [Bitmask](#bitmask)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -115,7 +116,66 @@ Expected<int, Exception> divide(int a, int b) {
 }
 ```
 
-`Error::Code` exists for `std::error_code` integration. The enum has no enumerators yet.
+### Error
+
+`Fault` wraps a `std::error_code`. Across a DLL use `Fault::what()` (`CString`), not `error_code::message()`.
+
+```cpp
+#include <StormByte/error.hxx>
+#include <iostream>
+#include <system_error>
+
+using namespace StormByte;
+
+int main() {
+	const std::error_code code = Error::Code::Unknown;
+	const Error::Fault fault{code};
+	if (fault)
+		std::cerr << fault.what() << std::endl;
+}
+```
+
+A module adds its own enum, specializes `Error::Domain`, and puts `make_error_code` next to the enum so ADL fills `std::error_code`. The category singleton lives in that module’s `.cxx`.
+
+### CString / WCString
+
+Owned buffers. `operator bool` is true when the pointer is not null: `""` / `L""` are valid empty text; a default-constructed object is null.
+
+`==` / `!=` / `<=>` compare text, not addresses. Two nulls are equal; null is not equal to `""` / `L""` and orders before any text. `swap` exchanges buffers. `std::hash` hashes the text (`0` when null), so the types work in `std::set` and `std::unordered_set`.
+
+`explicit operator const char*` / `const wchar_t*` has the same lifetime as `std::string::c_str()` / `std::wstring::c_str()`. Implicit `std::string` / `std::wstring` and `operator<<` are inline (caller CRT).
+
+```cpp
+#include <StormByte/cstring.hxx>
+#include <StormByte/wcstring.hxx>
+#include <iostream>
+#include <set>
+
+using namespace StormByte;
+
+int main() {
+	CString text("hello");
+	if (text)
+		std::cout << text << " " << text.Length() << std::endl;
+
+	CString other("hello");
+	if (text == other && text == "hello")
+		std::cout << "same text" << std::endl;
+
+	text.Reset();
+	if (!text)
+		std::cout << "null" << std::endl;
+
+	CString empty("");
+	if (empty && empty.Length() == 0 && text < empty)
+		std::cout << "empty but valid" << std::endl;
+
+	std::set<CString> ordered{CString("b"), CString("a")};
+
+	WCString wide(L"wide");
+	std::wcout << wide << std::endl;
+}
+```
 
 ### Serialization
 
@@ -148,44 +208,6 @@ int main() {
 ```
 
 `wstring` / `u16string` / `u32string` travel as `uint64` UTF-8 length + UTF-8 bytes. Host `wchar_t` width never appears on the wire.
-
-### Strings
-
-```cpp
-#include <StormByte/string.hxx>
-#include <iostream>
-#include <queue>
-
-using namespace StormByte::String;
-
-int main() {
-	auto parts = Explode("path/to/file.txt", '/');
-	auto words = Split("Hello World from StormByte");
-	auto n = HumanReadable(1234567890ull, Format::HumanReadableNumber);
-	auto sz = HumanReadable(1536000ull, Format::HumanReadableBytes);
-	auto utf8 = UTF8Encode(L"Hello, 世界!");
-	auto wide = UTF8Decode(utf8);
-}
-```
-
-### System
-
-`CurrentPath()` is the process cwd. `ExecutablePath()` is the directory of the running binary (`NOPATH` if it cannot be resolved).
-
-```cpp
-#include <StormByte/system.hxx>
-#include <chrono>
-
-using namespace StormByte::System;
-using namespace std::chrono_literals;
-
-int main() {
-	auto tmp = TempFileName("myapp");
-	auto cwd = CurrentPath();
-	auto exe = ExecutablePath();
-	Sleep(500ms);
-}
-```
 
 ### UUID
 

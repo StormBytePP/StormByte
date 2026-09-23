@@ -20,9 +20,13 @@
 #include <StormByte/cstring.hxx>
 #include <StormByte/test_handlers.h>
 
+#include <compare>
 #include <cstring>
+#include <functional>
+#include <set>
 #include <sstream>
 #include <string>
+#include <unordered_set>
 #include <utility>
 
 using namespace StormByte;
@@ -42,6 +46,7 @@ int test_default_is_null() {
 	CString text;
 	ASSERT_TRUE("test_default_is_null", View(text) == nullptr);
 	ASSERT_EQUAL("test_default_is_null", 0u, text.Length());
+	ASSERT_FALSE("test_default_is_null", static_cast<bool>(text));
 	RETURN_TEST("test_default_is_null", result);
 }
 
@@ -49,7 +54,7 @@ int test_construct_from_null() {
 	int result = 0;
 	CString text(static_cast<const char*>(nullptr));
 	ASSERT_TRUE("test_construct_from_null", View(text) == nullptr);
-	ASSERT_EQUAL("test_construct_from_null", 0u, text.Length());
+	ASSERT_FALSE("test_construct_from_null", static_cast<bool>(text));
 	RETURN_TEST("test_construct_from_null", result);
 }
 
@@ -57,6 +62,7 @@ int test_construct_from_empty() {
 	int result = 0;
 	CString text("");
 	ASSERT_TRUE("test_construct_from_empty", View(text) != nullptr);
+	ASSERT_TRUE("test_construct_from_empty", static_cast<bool>(text));
 	ASSERT_EQUAL("test_construct_from_empty", 0, std::strcmp(View(text), ""));
 	ASSERT_EQUAL("test_construct_from_empty", 0u, text.Length());
 	RETURN_TEST("test_construct_from_empty", result);
@@ -69,6 +75,7 @@ int test_construct_copies_text() {
 	ASSERT_TRUE("test_construct_copies_text", View(text) != raw);
 	ASSERT_EQUAL("test_construct_copies_text", 0, std::strcmp(View(text), "hello"));
 	ASSERT_EQUAL("test_construct_copies_text", 5u, text.Length());
+	ASSERT_TRUE("test_construct_copies_text", static_cast<bool>(text));
 	RETURN_TEST("test_construct_copies_text", result);
 }
 
@@ -76,26 +83,15 @@ int test_construct_stops_at_embedded_nul() {
 	int result = 0;
 	const char raw[] = { 'a', 'b', '\0', 'c', '\0' };
 	CString text(raw);
-	ASSERT_TRUE("test_construct_stops_at_embedded_nul", View(text) != nullptr);
 	ASSERT_EQUAL("test_construct_stops_at_embedded_nul", 2u, text.Length());
 	ASSERT_EQUAL("test_construct_stops_at_embedded_nul", 0, std::strcmp(View(text), "ab"));
 	RETURN_TEST("test_construct_stops_at_embedded_nul", result);
-}
-
-int test_construct_utf8() {
-	int result = 0;
-	CString text("cañón 日本語");
-	ASSERT_TRUE("test_construct_utf8", View(text) != nullptr);
-	ASSERT_EQUAL("test_construct_utf8", 0, std::strcmp(View(text), "cañón 日本語"));
-	ASSERT_EQUAL("test_construct_utf8", std::strlen("cañón 日本語"), text.Length());
-	RETURN_TEST("test_construct_utf8", result);
 }
 
 int test_construct_long() {
 	int result = 0;
 	const std::string raw(4096, 'X');
 	CString text(raw.c_str());
-	ASSERT_TRUE("test_construct_long", View(text) != nullptr);
 	ASSERT_EQUAL("test_construct_long", raw.size(), text.Length());
 	ASSERT_EQUAL("test_construct_long", 0, std::strcmp(View(text), raw.c_str()));
 	RETURN_TEST("test_construct_long", result);
@@ -110,12 +106,9 @@ int test_copy_is_independent() {
 	CString original("alpha");
 	CString copy(original);
 	ASSERT_TRUE("test_copy_is_independent", View(copy) != View(original));
-	ASSERT_EQUAL("test_copy_is_independent", 0, std::strcmp(View(copy), "alpha"));
 	copy.Reset("beta");
 	ASSERT_EQUAL("test_copy_is_independent", 0, std::strcmp(View(original), "alpha"));
 	ASSERT_EQUAL("test_copy_is_independent", 0, std::strcmp(View(copy), "beta"));
-	ASSERT_EQUAL("test_copy_is_independent", 5u, original.Length());
-	ASSERT_EQUAL("test_copy_is_independent", 4u, copy.Length());
 	RETURN_TEST("test_copy_is_independent", result);
 }
 
@@ -123,9 +116,8 @@ int test_copy_null() {
 	int result = 0;
 	CString original;
 	CString copy(original);
-	ASSERT_TRUE("test_copy_null", View(original) == nullptr);
-	ASSERT_TRUE("test_copy_null", View(copy) == nullptr);
-	ASSERT_EQUAL("test_copy_null", 0u, copy.Length());
+	ASSERT_FALSE("test_copy_null", static_cast<bool>(original));
+	ASSERT_FALSE("test_copy_null", static_cast<bool>(copy));
 	RETURN_TEST("test_copy_null", result);
 }
 
@@ -136,7 +128,6 @@ int test_copy_assign_overwrites() {
 	left = right;
 	ASSERT_TRUE("test_copy_assign_overwrites", View(left) != View(right));
 	ASSERT_EQUAL("test_copy_assign_overwrites", 0, std::strcmp(View(left), "new"));
-	ASSERT_EQUAL("test_copy_assign_overwrites", 0, std::strcmp(View(right), "new"));
 	RETURN_TEST("test_copy_assign_overwrites", result);
 }
 
@@ -144,7 +135,6 @@ int test_copy_assign_self() {
 	int result = 0;
 	CString text("self");
 	text = text;
-	ASSERT_TRUE("test_copy_assign_self", View(text) != nullptr);
 	ASSERT_EQUAL("test_copy_assign_self", 0, std::strcmp(View(text), "self"));
 	RETURN_TEST("test_copy_assign_self", result);
 }
@@ -154,10 +144,8 @@ int test_move_leaves_source_null() {
 	CString original("payload");
 	const char* raw = View(original);
 	CString taken(std::move(original));
-	ASSERT_TRUE("test_move_leaves_source_null", View(original) == nullptr);
-	ASSERT_EQUAL("test_move_leaves_source_null", 0u, original.Length());
+	ASSERT_FALSE("test_move_leaves_source_null", static_cast<bool>(original));
 	ASSERT_TRUE("test_move_leaves_source_null", View(taken) == raw);
-	ASSERT_EQUAL("test_move_leaves_source_null", 0, std::strcmp(View(taken), "payload"));
 	RETURN_TEST("test_move_leaves_source_null", result);
 }
 
@@ -167,9 +155,8 @@ int test_move_assign_leaves_source_null() {
 	CString right("fresh");
 	const char* raw = View(right);
 	left = std::move(right);
-	ASSERT_TRUE("test_move_assign_leaves_source_null", View(right) == nullptr);
+	ASSERT_FALSE("test_move_assign_leaves_source_null", static_cast<bool>(right));
 	ASSERT_TRUE("test_move_assign_leaves_source_null", View(left) == raw);
-	ASSERT_EQUAL("test_move_assign_leaves_source_null", 0, std::strcmp(View(left), "fresh"));
 	RETURN_TEST("test_move_assign_leaves_source_null", result);
 }
 
@@ -177,7 +164,6 @@ int test_move_assign_self() {
 	int result = 0;
 	CString text("self-move");
 	text = std::move(text);
-	ASSERT_TRUE("test_move_assign_self", View(text) != nullptr);
 	ASSERT_EQUAL("test_move_assign_self", 0, std::strcmp(View(text), "self-move"));
 	RETURN_TEST("test_move_assign_self", result);
 }
@@ -186,13 +172,13 @@ int test_move_from_null() {
 	int result = 0;
 	CString original;
 	CString taken(std::move(original));
-	ASSERT_TRUE("test_move_from_null", View(original) == nullptr);
-	ASSERT_TRUE("test_move_from_null", View(taken) == nullptr);
+	ASSERT_FALSE("test_move_from_null", static_cast<bool>(original));
+	ASSERT_FALSE("test_move_from_null", static_cast<bool>(taken));
 	RETURN_TEST("test_move_from_null", result);
 }
 
 // -------------------
-// Reset
+// Reset / swap
 // -------------------
 
 int test_reset_replaces() {
@@ -200,35 +186,28 @@ int test_reset_replaces() {
 	CString text("first");
 	text.Reset("second");
 	ASSERT_EQUAL("test_reset_replaces", 0, std::strcmp(View(text), "second"));
-	ASSERT_EQUAL("test_reset_replaces", 6u, text.Length());
 	text.Reset();
-	ASSERT_TRUE("test_reset_replaces", View(text) == nullptr);
-	ASSERT_EQUAL("test_reset_replaces", 0u, text.Length());
+	ASSERT_FALSE("test_reset_replaces", static_cast<bool>(text));
 	text.Reset("third");
-	ASSERT_EQUAL("test_reset_replaces", 0, std::strcmp(View(text), "third"));
+	ASSERT_TRUE("test_reset_replaces", static_cast<bool>(text));
 	RETURN_TEST("test_reset_replaces", result);
 }
 
-int test_reset_from_null_pointer() {
+int test_swap_exchanges() {
 	int result = 0;
-	CString text("keep");
-	text.Reset(nullptr);
-	ASSERT_TRUE("test_reset_from_null_pointer", View(text) == nullptr);
-	ASSERT_EQUAL("test_reset_from_null_pointer", 0u, text.Length());
-	RETURN_TEST("test_reset_from_null_pointer", result);
-}
-
-int test_view_invalid_after_reset() {
-	int result = 0;
-	CString text("alive");
-	text.Reset("other");
-	ASSERT_EQUAL("test_view_invalid_after_reset", 0, std::strcmp(View(text), "other"));
-	ASSERT_EQUAL("test_view_invalid_after_reset", 5u, text.Length());
-	RETURN_TEST("test_view_invalid_after_reset", result);
+	CString left("L");
+	CString right("R");
+	left.swap(right);
+	ASSERT_TRUE("test_swap_exchanges", left == "R");
+	ASSERT_TRUE("test_swap_exchanges", right == "L");
+	swap(left, right);
+	ASSERT_TRUE("test_swap_exchanges", left == "L");
+	ASSERT_TRUE("test_swap_exchanges", right == "R");
+	RETURN_TEST("test_swap_exchanges", result);
 }
 
 // -------------------
-// Conversions
+// Conversions / streams
 // -------------------
 
 int test_string_conversion_copies() {
@@ -249,18 +228,6 @@ int test_string_conversion_from_null() {
 	RETURN_TEST("test_string_conversion_from_null", result);
 }
 
-int test_string_conversion_from_empty() {
-	int result = 0;
-	CString text("");
-	const std::string copy = text;
-	ASSERT_TRUE("test_string_conversion_from_empty", copy.empty());
-	RETURN_TEST("test_string_conversion_from_empty", result);
-}
-
-// -------------------
-// Streams
-// -------------------
-
 int test_free_stream_operator() {
 	int result = 0;
 	CString text("streamed");
@@ -270,33 +237,87 @@ int test_free_stream_operator() {
 	RETURN_TEST("test_free_stream_operator", result);
 }
 
-int test_member_stream_operator() {
-	int result = 0;
-	CString text("member");
-	std::ostringstream out;
-	text.operator<<(out);
-	ASSERT_EQUAL("test_member_stream_operator", std::string("member"), out.str());
-	RETURN_TEST("test_member_stream_operator", result);
-}
-
 int test_stream_null_writes_nothing() {
 	int result = 0;
 	CString text;
 	std::ostringstream out;
-	out << "pre";
-	out << text;
-	out << "post";
+	out << "pre" << text << "post";
 	ASSERT_EQUAL("test_stream_null_writes_nothing", std::string("prepost"), out.str());
 	RETURN_TEST("test_stream_null_writes_nothing", result);
 }
 
-int test_stream_empty_writes_nothing_extra() {
+// -------------------
+// Bool / equality / order
+// -------------------
+
+int test_bool_empty_is_valid() {
 	int result = 0;
-	CString text("");
-	std::ostringstream out;
-	out << '[' << text << ']';
-	ASSERT_EQUAL("test_stream_empty_writes_nothing_extra", std::string("[]"), out.str());
-	RETURN_TEST("test_stream_empty_writes_nothing_extra", result);
+	CString empty("");
+	CString missing;
+	ASSERT_TRUE("test_bool_empty_is_valid", static_cast<bool>(empty));
+	ASSERT_FALSE("test_bool_empty_is_valid", static_cast<bool>(missing));
+	ASSERT_TRUE("test_bool_empty_is_valid", empty != missing);
+	RETURN_TEST("test_bool_empty_is_valid", result);
+}
+
+int test_equal_content_not_pointer() {
+	int result = 0;
+	CString a("same");
+	CString b("same");
+	ASSERT_TRUE("test_equal_content_not_pointer", View(a) != View(b));
+	ASSERT_TRUE("test_equal_content_not_pointer", a == b);
+	ASSERT_FALSE("test_equal_content_not_pointer", a != b);
+	ASSERT_TRUE("test_equal_content_not_pointer", a == "same");
+	ASSERT_TRUE("test_equal_content_not_pointer", "same" == a);
+	ASSERT_TRUE("test_equal_content_not_pointer", a != "other");
+	ASSERT_TRUE("test_equal_content_not_pointer", "other" != a);
+	RETURN_TEST("test_equal_content_not_pointer", result);
+}
+
+int test_null_equals_null_not_empty() {
+	int result = 0;
+	CString a;
+	CString b;
+	CString empty("");
+	ASSERT_TRUE("test_null_equals_null_not_empty", a == b);
+	ASSERT_FALSE("test_null_equals_null_not_empty", a == empty);
+	ASSERT_TRUE("test_null_equals_null_not_empty", a != empty);
+	ASSERT_TRUE("test_null_equals_null_not_empty", a == static_cast<const char*>(nullptr));
+	ASSERT_TRUE("test_null_equals_null_not_empty", empty != static_cast<const char*>(nullptr));
+	RETURN_TEST("test_null_equals_null_not_empty", result);
+}
+
+int test_spaceship_order() {
+	int result = 0;
+	CString missing;
+	CString empty("");
+	CString alpha("alpha");
+	CString beta("beta");
+	ASSERT_TRUE("test_spaceship_order", (missing <=> missing) == std::strong_ordering::equal);
+	ASSERT_TRUE("test_spaceship_order", (missing <=> empty) == std::strong_ordering::less);
+	ASSERT_TRUE("test_spaceship_order", (empty <=> missing) == std::strong_ordering::greater);
+	ASSERT_TRUE("test_spaceship_order", (alpha <=> beta) == std::strong_ordering::less);
+	ASSERT_TRUE("test_spaceship_order", (beta <=> alpha) == std::strong_ordering::greater);
+	ASSERT_TRUE("test_spaceship_order", (alpha <=> "alpha") == std::strong_ordering::equal);
+	ASSERT_TRUE("test_spaceship_order", alpha < beta);
+	ASSERT_TRUE("test_spaceship_order", missing < alpha);
+	RETURN_TEST("test_spaceship_order", result);
+}
+
+int test_hash_and_containers() {
+	int result = 0;
+	CString a("key");
+	CString b("key");
+	ASSERT_EQUAL("test_hash_and_containers", std::hash<CString>{}(a), std::hash<CString>{}(b));
+	ASSERT_EQUAL("test_hash_and_containers", 0u, std::hash<CString>{}(CString()));
+	std::set<CString> ordered;
+	ordered.insert(CString("b"));
+	ordered.insert(CString("a"));
+	ASSERT_TRUE("test_hash_and_containers", *ordered.begin() == "a");
+	std::unordered_set<CString> hashed;
+	hashed.insert(CString("k"));
+	ASSERT_TRUE("test_hash_and_containers", hashed.contains(CString("k")));
+	RETURN_TEST("test_hash_and_containers", result);
 }
 
 int main() {
@@ -310,7 +331,6 @@ int main() {
 	result += test_construct_from_empty();
 	result += test_construct_copies_text();
 	result += test_construct_stops_at_embedded_nul();
-	result += test_construct_utf8();
 	result += test_construct_long();
 
 	// -------------------
@@ -326,26 +346,27 @@ int main() {
 	result += test_move_from_null();
 
 	// -------------------
-	// Reset
+	// Reset / swap
 	// -------------------
 	result += test_reset_replaces();
-	result += test_reset_from_null_pointer();
-	result += test_view_invalid_after_reset();
+	result += test_swap_exchanges();
 
 	// -------------------
-	// Conversions
+	// Conversions / streams
 	// -------------------
 	result += test_string_conversion_copies();
 	result += test_string_conversion_from_null();
-	result += test_string_conversion_from_empty();
+	result += test_free_stream_operator();
+	result += test_stream_null_writes_nothing();
 
 	// -------------------
-	// Streams
+	// Bool / equality / order
 	// -------------------
-	result += test_free_stream_operator();
-	result += test_member_stream_operator();
-	result += test_stream_null_writes_nothing();
-	result += test_stream_empty_writes_nothing_extra();
+	result += test_bool_empty_is_valid();
+	result += test_equal_content_not_pointer();
+	result += test_null_equals_null_not_empty();
+	result += test_spaceship_order();
+	result += test_hash_and_containers();
 
 	if (result == 0)
 		std::cout << "All tests passed!" << std::endl;

@@ -77,6 +77,58 @@ std::size_t WCString::Length() const noexcept {
 	return m_data ? std::wcslen(m_data) : 0;
 }
 
+void WCString::swap(WCString& other) noexcept {
+	const wchar_t* tmp = m_data;
+	m_data = other.m_data;
+	other.m_data = tmp;
+}
+
 WCString::operator const wchar_t*() const noexcept {
 	return m_data;
+}
+
+bool WCString::operator==(const WCString& other) const noexcept {
+	if (m_data == other.m_data)
+		return true;
+	if (!m_data || !other.m_data)
+		return false;
+	return std::wcscmp(m_data, other.m_data) == 0;
+}
+
+bool WCString::operator==(const wchar_t* str) const noexcept {
+	if (m_data == str)
+		return true;
+	if (!m_data || !str)
+		return false;
+	return std::wcscmp(m_data, str) == 0;
+}
+
+std::strong_ordering WCString::operator<=>(const WCString& other) const noexcept {
+	if (!m_data && !other.m_data)
+		return std::strong_ordering::equal;
+	if (!m_data)
+		return std::strong_ordering::less;
+	if (!other.m_data)
+		return std::strong_ordering::greater;
+	const int cmp = std::wcscmp(m_data, other.m_data);
+	if (cmp < 0)
+		return std::strong_ordering::less;
+	if (cmp > 0)
+		return std::strong_ordering::greater;
+	return std::strong_ordering::equal;
+}
+
+std::strong_ordering WCString::operator<=>(const wchar_t* str) const noexcept {
+	if (!m_data && !str)
+		return std::strong_ordering::equal;
+	if (!m_data)
+		return std::strong_ordering::less;
+	if (!str)
+		return std::strong_ordering::greater;
+	const int cmp = std::wcscmp(m_data, str);
+	if (cmp < 0)
+		return std::strong_ordering::less;
+	if (cmp > 0)
+		return std::strong_ordering::greater;
+	return std::strong_ordering::equal;
 }

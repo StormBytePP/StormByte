@@ -34,6 +34,8 @@ If you landed here from a release link and have not read the tree:
 
 ### Removed
 
+- **String** (`StormByte::String`, `string.hxx` / `string.cxx`) — leaves Base. Helpers move to a new StormByte-String library.
+- **System** (`StormByte::System` in Base: `TempFileName`, `CurrentPath`, `ExecutablePath`, `Sleep`) — leaves Base. Absorbed by the existing StormByte-System module.
 - **CoreApiTests** — coverage lives in `ClonableTests` and `ErrorTests`.
 
 ### Fixed

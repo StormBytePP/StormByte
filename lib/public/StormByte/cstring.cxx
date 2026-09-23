@@ -77,6 +77,58 @@ std::size_t CString::Length() const noexcept {
 	return m_data ? std::strlen(m_data) : 0;
 }
 
+void CString::swap(CString& other) noexcept {
+	const char* tmp = m_data;
+	m_data = other.m_data;
+	other.m_data = tmp;
+}
+
 CString::operator const char*() const noexcept {
 	return m_data;
+}
+
+bool CString::operator==(const CString& other) const noexcept {
+	if (m_data == other.m_data)
+		return true;
+	if (!m_data || !other.m_data)
+		return false;
+	return std::strcmp(m_data, other.m_data) == 0;
+}
+
+bool CString::operator==(const char* str) const noexcept {
+	if (m_data == str)
+		return true;
+	if (!m_data || !str)
+		return false;
+	return std::strcmp(m_data, str) == 0;
+}
+
+std::strong_ordering CString::operator<=>(const CString& other) const noexcept {
+	if (!m_data && !other.m_data)
+		return std::strong_ordering::equal;
+	if (!m_data)
+		return std::strong_ordering::less;
+	if (!other.m_data)
+		return std::strong_ordering::greater;
+	const int cmp = std::strcmp(m_data, other.m_data);
+	if (cmp < 0)
+		return std::strong_ordering::less;
+	if (cmp > 0)
+		return std::strong_ordering::greater;
+	return std::strong_ordering::equal;
+}
+
+std::strong_ordering CString::operator<=>(const char* str) const noexcept {
+	if (!m_data && !str)
+		return std::strong_ordering::equal;
+	if (!m_data)
+		return std::strong_ordering::less;
+	if (!str)
+		return std::strong_ordering::greater;
+	const int cmp = std::strcmp(m_data, str);
+	if (cmp < 0)
+		return std::strong_ordering::less;
+	if (cmp > 0)
+		return std::strong_ordering::greater;
+	return std::strong_ordering::equal;
 }

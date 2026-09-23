@@ -21,8 +21,12 @@
 
 #include <StormByte/visibility.h>
 
+#include <compare>
+#include <cstddef>
+#include <functional>
 #include <ostream>
 #include <string>
+#include <string_view>
 
 /**
  * @namespace StormByte
@@ -31,32 +35,36 @@
 namespace StormByte {
 	/**
 	 * @class CString
-	 * @brief Owned NUL-terminated buffer that may cross a DLL boundary.
+	 * @brief Owned NUL-terminated buffer, safe to use across a DLL boundary.
 	 *
 	 * This is not a replacement or reimplementation of `std::string`.
 	 * The class is minimal on purpose: copy, move, reset, a C-string
-	 * view, `Length`, and conversions. There is no append, find,
-	 * iterator or allocator API.
-	 *
-	 * On Windows a `std::string` created in one DLL and consumed in
-	 * another can use a different CRT heap. Destroying that string
-	 * on the wrong side of the boundary is undefined. @ref CString
-	 * allocates and frees the buffer inside the StormByte DLL, so
-	 * the object itself is safe to return or hold across modules.
+	 * view, `Length`, equality, ordering, swap and conversions.
 	 *
 	 * `operator const char*` is the analogue of `std::string::c_str()`.
 	 * The pointer is valid only until this object is destroyed, moved
 	 * from, assigned or @ref Reset. Using it afterwards is use-after-free.
 	 *
+	 * `operator bool` is true when the pointer is not null. A buffer
+	 * constructed from `""` is empty (`Length() == 0`) and valid.
+	 * A default-constructed object is null.
+	 *
+	 * Equality and `<=>` compare text, not addresses. Two nulls are
+	 * equal. Null is not equal to `""`. Null orders before any text.
+	 *
 	 * `operator std::string` and `operator<<` are inline so the
-	 * `std::string` / stream write run in the caller’s translation
-	 * unit and do not return a Base-allocated `std::string`.
+	 * `std::string` / stream write run in the caller’s translation unit.
 	 *
 	 * If the text never leaves the module that created it, or the
 	 * program is not built for Windows, use `std::string`.
 	 */
 	class STORMBYTE_PUBLIC CString {
 		public:
+			/**
+			 * @name Life
+			 * @{
+			 */
+
 			/**
 			 * @brief Empty (null) buffer.
 			 */
@@ -76,7 +84,7 @@ namespace StormByte {
 
 			/**
 			 * @brief Move constructor.
-			 * @param other Buffer to take.
+			 * @param other Buffer to take. @p other becomes null.
 			 */
 			CString(CString&& other) noexcept;
 
@@ -94,10 +102,17 @@ namespace StormByte {
 
 			/**
 			 * @brief Move assignment.
-			 * @param other Buffer to take.
+			 * @param other Buffer to take. @p other becomes null.
 			 * @return *this.
 			 */
 			CString& operator=(CString&& other) noexcept;
+
+			/** @} */
+
+			/**
+			 * @name Modifiers
+			 * @{
+			 */
 
 			/**
 			 * @brief Replaces the buffer with a copy of @p str.
@@ -106,10 +121,39 @@ namespace StormByte {
 			void Reset(const char* str = nullptr) noexcept;
 
 			/**
-			 * @brief Character count (`strlen`), or `0` when empty.
+			 * @brief Swaps buffers with @p other.
+			 * @param other Other buffer.
+			 */
+			void swap(CString& other) noexcept;
+
+			/** @} */
+
+			/**
+			 * @name Observers
+			 * @{
+			 */
+
+			/**
+			 * @brief Character count (`strlen`), or `0` when empty or null.
 			 * @return Length.
 			 */
 			std::size_t Length() const noexcept;
+
+			/**
+			 * @brief `true` when the buffer pointer is not null.
+			 * @note `""` is valid and empty. A default object is null.
+			 * @return Whether a buffer is held.
+			 */
+			inline explicit operator bool() const noexcept {
+				return static_cast<const char*>(*this) != nullptr;
+			}
+
+			/** @} */
+
+			/**
+			 * @name Conversions
+			 * @{
+			 */
 
 			/**
 			 * @brief View of the owned buffer.
@@ -139,6 +183,61 @@ namespace StormByte {
 				return stream;
 			}
 
+			/** @} */
+
+			/**
+			 * @name Comparison
+			 * @{
+			 */
+
+			/**
+			 * @brief Content equality.
+			 * @param other Other buffer.
+			 * @return Whether the texts are equal.
+			 */
+			bool operator==(const CString& other) const noexcept;
+
+			/**
+			 * @brief Content inequality.
+			 * @param other Other buffer.
+			 * @return Whether the texts differ.
+			 */
+			bool operator!=(const CString& other) const noexcept {
+				return !(*this == other);
+			}
+
+			/**
+			 * @brief Content equality with a C string.
+			 * @param str May be null (treated as a null @ref CString).
+			 * @return Whether the texts are equal.
+			 */
+			bool operator==(const char* str) const noexcept;
+
+			/**
+			 * @brief Content inequality with a C string.
+			 * @param str May be null.
+			 * @return Whether the texts differ.
+			 */
+			bool operator!=(const char* str) const noexcept {
+				return !(*this == str);
+			}
+
+			/**
+			 * @brief Content order. Null is less than any text.
+			 * @param other Other buffer.
+			 * @return Ordering.
+			 */
+			std::strong_ordering operator<=>(const CString& other) const noexcept;
+
+			/**
+			 * @brief Content order against a C string.
+			 * @param str May be null.
+			 * @return Ordering.
+			 */
+			std::strong_ordering operator<=>(const char* str) const noexcept;
+
+			/** @} */
+
 		private:
 			const char* m_data;	///< Owned buffer
 
@@ -159,4 +258,51 @@ namespace StormByte {
 	inline std::ostream& operator<<(std::ostream& stream, const CString& text) {
 		return text.operator<<(stream);
 	}
+
+	/**
+	 * @brief Content equality.
+	 * @param str C string; may be null.
+	 * @param text Buffer.
+	 * @return Whether the texts are equal.
+	 */
+	inline bool operator==(const char* str, const CString& text) noexcept {
+		return text == str;
+	}
+
+	/**
+	 * @brief Content inequality.
+	 * @param str C string; may be null.
+	 * @param text Buffer.
+	 * @return Whether the texts differ.
+	 */
+	inline bool operator!=(const char* str, const CString& text) noexcept {
+		return text != str;
+	}
+
+	/**
+	 * @brief Swaps two buffers.
+	 * @param left First buffer.
+	 * @param right Second buffer.
+	 */
+	inline void swap(CString& left, CString& right) noexcept {
+		left.swap(right);
+	}
 }
+
+/**
+ * @brief Hash of the text (`0` when the buffer is null).
+ */
+template<>
+struct std::hash<StormByte::CString> {
+	/**
+	 * @brief Hashes @p text.
+	 * @param text Buffer.
+	 * @return Hash.
+	 */
+	std::size_t operator()(const StormByte::CString& text) const noexcept {
+		const char* raw = static_cast<const char*>(text);
+		if (!raw)
+			return 0;
+		return std::hash<std::string_view>{}(raw);
+	}
+};

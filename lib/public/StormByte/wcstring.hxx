@@ -21,8 +21,12 @@
 
 #include <StormByte/visibility.h>
 
+#include <compare>
+#include <cstddef>
+#include <functional>
 #include <ostream>
 #include <string>
+#include <string_view>
 
 /**
  * @namespace StormByte
@@ -31,24 +35,33 @@
 namespace StormByte {
 	/**
 	 * @class WCString
-	 * @brief Owned NUL-terminated wide buffer that may cross a DLL boundary.
+	 * @brief Owned NUL-terminated wide buffer, safe to use across a DLL boundary.
 	 *
 	 * Wide counterpart of @ref CString. Not a replacement of `std::wstring`.
 	 * The class is minimal: copy, move, reset, a C wide-string view,
-	 * `Length`, and conversions. There is no append, find, iterator or
-	 * allocator API.
-	 *
-	 * Allocation and free run inside the StormByte DLL.
+	 * `Length`, equality, ordering, swap and conversions.
 	 *
 	 * `operator const wchar_t*` is the analogue of `std::wstring::c_str()`.
 	 * The pointer is valid only until this object is destroyed, moved
 	 * from, assigned or @ref Reset. Using it afterwards is use-after-free.
+	 *
+	 * `operator bool` is true when the pointer is not null. A buffer
+	 * constructed from `L""` is empty (`Length() == 0`) and valid.
+	 * A default-constructed object is null.
+	 *
+	 * Equality and `<=>` compare text, not addresses. Two nulls are
+	 * equal. Null is not equal to `L""`. Null orders before any text.
 	 *
 	 * `operator std::wstring` and `operator<<` are inline so the
 	 * `std::wstring` / stream write run in the caller’s translation unit.
 	 */
 	class STORMBYTE_PUBLIC WCString {
 		public:
+			/**
+			 * @name Life
+			 * @{
+			 */
+
 			/**
 			 * @brief Empty (null) buffer.
 			 */
@@ -68,7 +81,7 @@ namespace StormByte {
 
 			/**
 			 * @brief Move constructor.
-			 * @param other Buffer to take.
+			 * @param other Buffer to take. @p other becomes null.
 			 */
 			WCString(WCString&& other) noexcept;
 
@@ -86,10 +99,17 @@ namespace StormByte {
 
 			/**
 			 * @brief Move assignment.
-			 * @param other Buffer to take.
+			 * @param other Buffer to take. @p other becomes null.
 			 * @return *this.
 			 */
 			WCString& operator=(WCString&& other) noexcept;
+
+			/** @} */
+
+			/**
+			 * @name Modifiers
+			 * @{
+			 */
 
 			/**
 			 * @brief Replaces the buffer with a copy of @p str.
@@ -98,10 +118,39 @@ namespace StormByte {
 			void Reset(const wchar_t* str = nullptr) noexcept;
 
 			/**
-			 * @brief Character count (`wcslen`), or `0` when empty.
+			 * @brief Swaps buffers with @p other.
+			 * @param other Other buffer.
+			 */
+			void swap(WCString& other) noexcept;
+
+			/** @} */
+
+			/**
+			 * @name Observers
+			 * @{
+			 */
+
+			/**
+			 * @brief Character count (`wcslen`), or `0` when empty or null.
 			 * @return Length.
 			 */
 			std::size_t Length() const noexcept;
+
+			/**
+			 * @brief `true` when the buffer pointer is not null.
+			 * @note `L""` is valid and empty. A default object is null.
+			 * @return Whether a buffer is held.
+			 */
+			inline explicit operator bool() const noexcept {
+				return static_cast<const wchar_t*>(*this) != nullptr;
+			}
+
+			/** @} */
+
+			/**
+			 * @name Conversions
+			 * @{
+			 */
 
 			/**
 			 * @brief View of the owned buffer.
@@ -131,6 +180,61 @@ namespace StormByte {
 				return stream;
 			}
 
+			/** @} */
+
+			/**
+			 * @name Comparison
+			 * @{
+			 */
+
+			/**
+			 * @brief Content equality.
+			 * @param other Other buffer.
+			 * @return Whether the texts are equal.
+			 */
+			bool operator==(const WCString& other) const noexcept;
+
+			/**
+			 * @brief Content inequality.
+			 * @param other Other buffer.
+			 * @return Whether the texts differ.
+			 */
+			bool operator!=(const WCString& other) const noexcept {
+				return !(*this == other);
+			}
+
+			/**
+			 * @brief Content equality with a C wide string.
+			 * @param str May be null (treated as a null @ref WCString).
+			 * @return Whether the texts are equal.
+			 */
+			bool operator==(const wchar_t* str) const noexcept;
+
+			/**
+			 * @brief Content inequality with a C wide string.
+			 * @param str May be null.
+			 * @return Whether the texts differ.
+			 */
+			bool operator!=(const wchar_t* str) const noexcept {
+				return !(*this == str);
+			}
+
+			/**
+			 * @brief Content order. Null is less than any text.
+			 * @param other Other buffer.
+			 * @return Ordering.
+			 */
+			std::strong_ordering operator<=>(const WCString& other) const noexcept;
+
+			/**
+			 * @brief Content order against a C wide string.
+			 * @param str May be null.
+			 * @return Ordering.
+			 */
+			std::strong_ordering operator<=>(const wchar_t* str) const noexcept;
+
+			/** @} */
+
 		private:
 			const wchar_t* m_data;	///< Owned buffer
 
@@ -151,4 +255,51 @@ namespace StormByte {
 	inline std::wostream& operator<<(std::wostream& stream, const WCString& text) {
 		return text.operator<<(stream);
 	}
+
+	/**
+	 * @brief Content equality.
+	 * @param str C wide string; may be null.
+	 * @param text Buffer.
+	 * @return Whether the texts are equal.
+	 */
+	inline bool operator==(const wchar_t* str, const WCString& text) noexcept {
+		return text == str;
+	}
+
+	/**
+	 * @brief Content inequality.
+	 * @param str C wide string; may be null.
+	 * @param text Buffer.
+	 * @return Whether the texts differ.
+	 */
+	inline bool operator!=(const wchar_t* str, const WCString& text) noexcept {
+		return text != str;
+	}
+
+	/**
+	 * @brief Swaps two buffers.
+	 * @param left First buffer.
+	 * @param right Second buffer.
+	 */
+	inline void swap(WCString& left, WCString& right) noexcept {
+		left.swap(right);
+	}
 }
+
+/**
+ * @brief Hash of the text (`0` when the buffer is null).
+ */
+template<>
+struct std::hash<StormByte::WCString> {
+	/**
+	 * @brief Hashes @p text.
+	 * @param text Buffer.
+	 * @return Hash.
+	 */
+	std::size_t operator()(const StormByte::WCString& text) const noexcept {
+		const wchar_t* raw = static_cast<const wchar_t*>(text);
+		if (!raw)
+			return 0;
+		return std::hash<std::wstring_view>{}(raw);
+	}
+};
