@@ -23,7 +23,17 @@ If you landed here from a release link and have not read the tree:
 
 ### Added
 
+- **CString** — owned NUL-terminated buffer for text that must cross a
+  DLL boundary. Not a `std::string`. Copy, move, `Get`, `Reset`,
+  `Release`. Allocation lives in the StormByte DLL. Use `std::string`
+  when the text never leaves the module or the build is not Windows.
+  Covered by `CStringTests`.
+
 ### Changed
+
+- **Exception** — the message is a `CString`. Copy, move, assign and
+  the destructor are defaulted. `what()` still returns a NUL-terminated
+  pointer owned by the exception. Public constructors are unchanged.
 
 ### Fixed
 

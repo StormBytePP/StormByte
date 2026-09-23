@@ -19,10 +19,11 @@
 
 #pragma once
 
-#include <StormByte/visibility.h>
+#include <StormByte/cstring.hxx>
+
+#include <format>
 #include <string>
 #include <string_view>
-#include <format>
 
 /**
  * @namespace StormByte
@@ -52,7 +53,8 @@ namespace StormByte {
 	 * @class Exception
 	 * @brief Base exception type for the suite.
 	 *
-	 * Stores the message as `const char*` so a `std::string` does not cross a DLL boundary on Windows.
+	 * The message is a @ref CString so the text does not cross a DLL
+	 * boundary as `std::string`.
 	 */
 	class STORMBYTE_PUBLIC Exception {
 	public:
@@ -78,10 +80,10 @@ namespace StormByte {
 		template <typename... Args>
 		Exception(std::format_string<Args...> fmt, Args&&... args) {
 			if constexpr (sizeof...(Args) == 0) {
-				m_what = copy_str(std::string(fmt.get()).c_str());
+				m_what.Reset(std::string(fmt.get()).c_str());
 			} else {
-				std::string formatted_message = std::format(fmt, std::forward<Args>(args)...);
-				m_what = copy_str(formatted_message.c_str());
+				const std::string formatted = std::format(fmt, std::forward<Args>(args)...);
+				m_what.Reset(formatted.c_str());
 			}
 		}
 
@@ -95,62 +97,50 @@ namespace StormByte {
 		 */
 		template <typename... Args>
 		Exception(Component component, std::format_string<Args...> fmt, Args&&... args) {
-			std::string formatted_message = std::format(fmt, std::forward<Args>(args)...);
-			std::string full_message = "StormByte::" + std::string(component.name) + ": " + formatted_message;
-			m_what = copy_str(full_message.c_str());
+			const std::string formatted = std::format(fmt, std::forward<Args>(args)...);
+			const std::string full = "StormByte::" + std::string(component.name) + ": " + formatted;
+			m_what.Reset(full.c_str());
 		}
 
 		/**
 		 * @brief Copy constructor.
 		 * @param e Exception to copy.
 		 */
-		Exception(const Exception& e);
+		Exception(const Exception& e) = default;
 
 		/**
 		 * @brief Move constructor.
 		 * @param e Exception to move.
 		 */
-		Exception(Exception&& e) noexcept;
+		Exception(Exception&& e) noexcept = default;
 
 		/**
 		 * @brief Destructor.
 		 */
-		virtual ~Exception() noexcept;
+		virtual ~Exception() noexcept = default;
 
 		/**
 		 * @brief Copy assignment.
 		 * @param e Exception to copy.
 		 * @return Reference to this exception.
 		 */
-		Exception& operator=(const Exception& e);
+		Exception& operator=(const Exception& e) = default;
 
 		/**
 		 * @brief Move assignment.
 		 * @param e Exception to move.
 		 * @return Reference to this exception.
 		 */
-		Exception& operator=(Exception&& e) noexcept;
+		Exception& operator=(Exception&& e) noexcept = default;
 
 		/**
 		 * @brief Message pointer.
-		 * @return NUL-terminated message; owned by this object.
+		 * @return NUL-terminated message owned by this object.
 		 */
-		virtual const char* 									what() const noexcept;
+		virtual const char* what() const noexcept;
 
 	private:
-		const char* m_what; 									///< Owned message buffer.
-
-		/**
-		 * @brief Copies a C string into the owned buffer.
-		 * @param str Source string.
-		 * @return Pointer to the owned copy.
-		 */
-		const char* 											copy_str(const char* str) noexcept;
-
-		/**
-		 * @brief Releases the owned buffer.
-		 */
-		void 													free_str() noexcept;
+		CString m_what;	///< Owned message
 	};
 
 	/**
