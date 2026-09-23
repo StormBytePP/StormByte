@@ -385,20 +385,16 @@ namespace StormByte {
 			requires Type::Optional<U>;
 	};
 
-
-	// Explicit-instantiation declarations: suppress implicit instantiation of
-	// Serializable<T> for these T in every consumer TU. The matching
-	// `template class` definitions live in serializable.cxx, so the generated
-	// code ships once inside the shared library instead of being duplicated
-	// (and re-emitted as weak symbols) by each consumer.
+	// Explicit-instantiation declarations: suppress implicit instantiation
+	// of Serializable<T> for these T in every consumer TU. Definitions are
+	// in serializable.cxx. STORMBYTE_PUBLIC here is the export/import of
+	// those instantiations; the class template itself has no visibility
+	// so other modules can instantiate Serializable<TheirType> in their DLL.
 	//
 	// This block MUST come before `#include <StormByte/serializable.txx>`:
-	// `SerializeContainer`/`SerializeOptional`/etc. name `Serializable<bool>`
-	// and `Serializable<std::uint64_t>` as non-dependent types, so GCC
-	// implicitly instantiates those two specializations the moment the
-	// member bodies are parsed. If that happens before these `extern
-	// template` declarations, the visibility attribute below is silently
-	// discarded (see `-Wattributes`) and those two symbols stay hidden.
+	// those bodies name Serializable<bool> and Serializable<std::uint64_t>
+	// as non-dependent types. If the .txx is parsed first, those two are
+	// instantiated in this header before the extern declarations.
 	extern template class STORMBYTE_PUBLIC Serializable<bool>;
 	extern template class STORMBYTE_PUBLIC Serializable<char>;
 	extern template class STORMBYTE_PUBLIC Serializable<signed char>;
@@ -425,4 +421,3 @@ namespace StormByte {
 }
 
 #include <StormByte/serializable.txx>
-
