@@ -19,7 +19,6 @@
 
 #pragma once
 
-
 #include <StormByte/exception.hxx>
 #include <StormByte/expected.hxx>
 #include <StormByte/helpers.hxx>
@@ -49,8 +48,8 @@ namespace StormByte {
 	 * @namespace StormByte::Detail
 	 * @brief Private specialization point for non-trivial types.
 	 *
-	 * Other StormByte modules (and only those) specialize @ref Codec
-	 * for their own types. Do not specialize @ref Serializable itself.
+	 * Other StormByte modules (and only those) specialize @ref StormByte::Detail::Codec
+	 * for their own types. Do not specialize @ref StormByte::Serializable itself.
 	 */
 	namespace Detail {
 		/**
@@ -60,6 +59,11 @@ namespace StormByte {
 		template<typename T>
 		constexpr bool is_std_array_v = false;
 
+		/**
+		 * @brief Specialization for `std::array<U, N>`.
+		 * @tparam U Element type.
+		 * @tparam N Extent.
+		 */
 		template<typename U, std::size_t N>
 		constexpr bool is_std_array_v<std::array<U, N>> = true;
 
@@ -121,7 +125,7 @@ namespace StormByte {
 			/**
 			 * @brief Decodes @p T from the start of @p data.
 			 * @param[in] data Input span; may be longer than one value.
-			 * @return Value, or @ref DeserializeError.
+			 * @return Value, or @ref StormByte::DeserializeError.
 			 */
 			static Expected<T, DeserializeError> Read(std::span<const std::byte> data) noexcept {
 				static_assert(codec_always_false_v<T>,
@@ -132,52 +136,120 @@ namespace StormByte {
 		};
 
 		/**
-		 * @brief @ref Codec specialization for `std::string`.
+		 * @brief @ref StormByte::Detail::Codec specialization for `std::string`.
 		 *
 		 * Wire: `uint64` byte count (LE) + raw bytes. No encoding transform.
 		 */
 		template<>
 		struct Codec<std::string> {
-			static STORMBYTE_PUBLIC std::size_t Size(const std::string& data) noexcept;
-			static STORMBYTE_PUBLIC std::vector<std::byte> Write(const std::string& data) noexcept;
-			static STORMBYTE_PUBLIC Expected<std::string, DeserializeError> Read(std::span<const std::byte> data) noexcept;
+			/**
+			 * @brief Serialized size of @p data.
+			 * @param data Value to measure.
+			 * @return Size in bytes.
+			 */
+			static std::size_t STORMBYTE_PUBLIC Size(const std::string& data) noexcept;
+
+			/**
+			 * @brief Encodes @p data.
+			 * @param data Value to encode.
+			 * @return Blob.
+			 */
+			static std::vector<std::byte> STORMBYTE_PUBLIC Write(const std::string& data) noexcept;
+
+			/**
+			 * @brief Decodes a string from the start of @p data.
+			 * @param data Input span.
+			 * @return Value, or @ref StormByte::DeserializeError.
+			 */
+			static Expected<std::string, DeserializeError> STORMBYTE_PUBLIC Read(std::span<const std::byte> data) noexcept;
 		};
 
 		/**
-		 * @brief @ref Codec specialization for `std::wstring`.
+		 * @brief @ref StormByte::Detail::Codec specialization for `std::wstring`.
 		 *
 		 * Wire: `uint64` UTF-8 byte count (LE) + UTF-8 payload. Host `wchar_t`
 		 * width (2 on Windows, 4 on POSIX) never appears on the wire.
 		 */
 		template<>
 		struct Codec<std::wstring> {
-			static STORMBYTE_PUBLIC std::size_t Size(const std::wstring& data) noexcept;
-			static STORMBYTE_PUBLIC std::vector<std::byte> Write(const std::wstring& data) noexcept;
-			static STORMBYTE_PUBLIC Expected<std::wstring, DeserializeError> Read(std::span<const std::byte> data) noexcept;
+			/**
+			 * @brief Serialized size of @p data.
+			 * @param data Value to measure.
+			 * @return Size in bytes.
+			 */
+			static std::size_t STORMBYTE_PUBLIC Size(const std::wstring& data) noexcept;
+
+			/**
+			 * @brief Encodes @p data.
+			 * @param data Value to encode.
+			 * @return Blob.
+			 */
+			static std::vector<std::byte> STORMBYTE_PUBLIC Write(const std::wstring& data) noexcept;
+
+			/**
+			 * @brief Decodes a wide string from the start of @p data.
+			 * @param data Input span.
+			 * @return Value, or @ref StormByte::DeserializeError.
+			 */
+			static Expected<std::wstring, DeserializeError> STORMBYTE_PUBLIC Read(std::span<const std::byte> data) noexcept;
 		};
 
 		/**
-		 * @brief @ref Codec specialization for `std::u16string`.
+		 * @brief @ref StormByte::Detail::Codec specialization for `std::u16string`.
 		 *
-		 * Same UTF-8 wire as @ref Codec<std::wstring>.
+		 * Same UTF-8 wire as @ref StormByte::Detail::Codec<std::wstring>.
 		 */
 		template<>
 		struct Codec<std::u16string> {
-			static STORMBYTE_PUBLIC std::size_t Size(const std::u16string& data) noexcept;
-			static STORMBYTE_PUBLIC std::vector<std::byte> Write(const std::u16string& data) noexcept;
-			static STORMBYTE_PUBLIC Expected<std::u16string, DeserializeError> Read(std::span<const std::byte> data) noexcept;
+			/**
+			 * @brief Serialized size of @p data.
+			 * @param data Value to measure.
+			 * @return Size in bytes.
+			 */
+			static std::size_t STORMBYTE_PUBLIC Size(const std::u16string& data) noexcept;
+
+			/**
+			 * @brief Encodes @p data.
+			 * @param data Value to encode.
+			 * @return Blob.
+			 */
+			static std::vector<std::byte> STORMBYTE_PUBLIC Write(const std::u16string& data) noexcept;
+
+			/**
+			 * @brief Decodes a UTF-16 string from the start of @p data.
+			 * @param data Input span.
+			 * @return Value, or @ref StormByte::DeserializeError.
+			 */
+			static Expected<std::u16string, DeserializeError> STORMBYTE_PUBLIC Read(std::span<const std::byte> data) noexcept;
 		};
 
 		/**
-		 * @brief @ref Codec specialization for `std::u32string`.
+		 * @brief @ref StormByte::Detail::Codec specialization for `std::u32string`.
 		 *
-		 * Same UTF-8 wire as @ref Codec<std::wstring>.
+		 * Same UTF-8 wire as @ref StormByte::Detail::Codec<std::wstring>.
 		 */
 		template<>
 		struct Codec<std::u32string> {
-			static STORMBYTE_PUBLIC std::size_t Size(const std::u32string& data) noexcept;
-			static STORMBYTE_PUBLIC std::vector<std::byte> Write(const std::u32string& data) noexcept;
-			static STORMBYTE_PUBLIC Expected<std::u32string, DeserializeError> Read(std::span<const std::byte> data) noexcept;
+			/**
+			 * @brief Serialized size of @p data.
+			 * @param data Value to measure.
+			 * @return Size in bytes.
+			 */
+			static std::size_t STORMBYTE_PUBLIC Size(const std::u32string& data) noexcept;
+
+			/**
+			 * @brief Encodes @p data.
+			 * @param data Value to encode.
+			 * @return Blob.
+			 */
+			static std::vector<std::byte> STORMBYTE_PUBLIC Write(const std::u32string& data) noexcept;
+
+			/**
+			 * @brief Decodes a UTF-32 string from the start of @p data.
+			 * @param data Input span.
+			 * @return Value, or @ref StormByte::DeserializeError.
+			 */
+			static Expected<std::u32string, DeserializeError> STORMBYTE_PUBLIC Read(std::span<const std::byte> data) noexcept;
 		};
 	}
 
@@ -191,11 +263,11 @@ namespace StormByte {
 	 * report `is_trivially_copyable` and copying its object representation
 	 * includes padding (observed on MSVC).
 	 *
-	 * Custom types: specialize @ref Detail::Codec, then this class routes
+	 * Custom types: specialize @ref StormByte::Detail::Codec, then this class routes
 	 * them through the “complex” path automatically.
 	 *
 	 * @note `Type::String` (`string` / `wstring` / `u16string` / `u32string`)
-	 *       is excluded from @ref Type::Container so those types hit Codec
+	 *       is excluded from @ref StormByte::Type::Container so those types hit Codec
 	 *       instead of being encoded as a sequence of code units.
 	 */
 	template<typename T>
@@ -204,7 +276,7 @@ namespace StormByte {
 
 		public:
 			/**
-			 * @brief Binds @p data for a later @ref Serialize.
+			 * @brief Binds @p data for a later @ref StormByte::Serializable::Serialize.
 			 * @param[in] data Value to encode. Must outlive this object.
 			 */
 			Serializable(const DecayedT& data) noexcept : m_data(data) {}
@@ -235,7 +307,7 @@ namespace StormByte {
 			Serializable& operator=(Serializable&& other) noexcept = delete;
 
 			/**
-			 * @brief Encodes @ref m_data to a little-endian blob.
+			 * @brief Encodes the bound value to a little-endian blob.
 			 * @return Blob for this one value. No outer framing.
 			 */
 			std::vector<std::byte> Serialize() const noexcept;
@@ -243,21 +315,21 @@ namespace StormByte {
 			/**
 			 * @brief Decodes one @p T from the start of @p data.
 			 * @param[in] data Input span; may be longer than one value.
-			 * @return Value, or @ref DeserializeError.
+			 * @return Value, or @ref StormByte::DeserializeError.
 			 */
 			static Expected<T, DeserializeError> Deserialize(std::span<const std::byte> data) noexcept;
 
 			/**
 			 * @brief Decodes one @p T from a vector.
 			 * @param[in] data Input blob.
-			 * @return Value, or @ref DeserializeError.
+			 * @return Value, or @ref StormByte::DeserializeError.
 			 */
 			static Expected<T, DeserializeError> Deserialize(const std::vector<std::byte>& data) noexcept;
 
 			/**
 			 * @brief Serialized size of @p data.
 			 * @param[in] data Value to measure.
-			 * @return Size in bytes of @ref Serialize for the same value.
+			 * @return Size in bytes of @ref StormByte::Serializable::Serialize for the same value.
 			 */
 			static std::size_t Size(const DecayedT& data) noexcept;
 
@@ -282,7 +354,7 @@ namespace StormByte {
 
 			/**
 			 * @brief Encodes a container: `uint64` count (LE) then each element.
-			 * @tparam U Defaulted to @p T; see @ref SerializeTrivial.
+			 * @tparam U Defaulted to @p T; see @ref StormByte::Serializable::SerializeTrivial.
 			 * @return Blob.
 			 */
 			template<typename U = T>
@@ -291,7 +363,7 @@ namespace StormByte {
 
 			/**
 			 * @brief Encodes a pair: first, then second. No separator.
-			 * @tparam U Defaulted to @p T; see @ref SerializeTrivial.
+			 * @tparam U Defaulted to @p T; see @ref StormByte::Serializable::SerializeTrivial.
 			 * @return Blob.
 			 */
 			template<typename U = T>
@@ -303,7 +375,7 @@ namespace StormByte {
 			 *
 			 * Never copies the `optional` object representation (padding).
 			 *
-			 * @tparam U Defaulted to @p T; see @ref SerializeTrivial.
+			 * @tparam U Defaulted to @p T; see @ref StormByte::Serializable::SerializeTrivial.
 			 * @return Blob.
 			 */
 			template<typename U = T>
@@ -312,7 +384,7 @@ namespace StormByte {
 
 			/**
 			 * @brief Serialized size of a container.
-			 * @tparam U Defaulted to @p T; see @ref SerializeTrivial.
+			 * @tparam U Defaulted to @p T; see @ref StormByte::Serializable::SerializeTrivial.
 			 * @param[in] data Container to measure.
 			 * @return `8` plus the sum of element sizes.
 			 */
@@ -322,7 +394,7 @@ namespace StormByte {
 
 			/**
 			 * @brief Serialized size of a pair.
-			 * @tparam U Defaulted to @p T; see @ref SerializeTrivial.
+			 * @tparam U Defaulted to @p T; see @ref StormByte::Serializable::SerializeTrivial.
 			 * @param[in] data Pair to measure.
 			 * @return Sum of member sizes.
 			 */
@@ -332,7 +404,7 @@ namespace StormByte {
 
 			/**
 			 * @brief Serialized size of an optional.
-			 * @tparam U Defaulted to @p T; see @ref SerializeTrivial.
+			 * @tparam U Defaulted to @p T; see @ref StormByte::Serializable::SerializeTrivial.
 			 * @param[in] data Optional to measure.
 			 * @return `sizeof(bool)` plus the value size when engaged.
 			 */
@@ -346,9 +418,9 @@ namespace StormByte {
 			 * `bool` only accepts the bytes `0` and `1`. Any other value is
 			 * rejected (loading it into a `bool` is undefined).
 			 *
-			 * @tparam U Defaulted to @p T; see @ref SerializeTrivial.
+			 * @tparam U Defaulted to @p T; see @ref StormByte::Serializable::SerializeTrivial.
 			 * @param[in] data Input span.
-			 * @return Value, or @ref DeserializeError.
+			 * @return Value, or @ref StormByte::DeserializeError.
 			 */
 			template<typename U = T>
 			static Expected<T, DeserializeError> DeserializeTrivial(std::span<const std::byte> data) noexcept
@@ -356,9 +428,9 @@ namespace StormByte {
 
 			/**
 			 * @brief Decodes a container: count, then that many elements.
-			 * @tparam U Defaulted to @p T; see @ref SerializeTrivial.
+			 * @tparam U Defaulted to @p T; see @ref StormByte::Serializable::SerializeTrivial.
 			 * @param[in] data Input span.
-			 * @return Container, or @ref DeserializeError.
+			 * @return Container, or @ref StormByte::DeserializeError.
 			 */
 			template<typename U = T>
 			static Expected<T, DeserializeError> DeserializeContainer(std::span<const std::byte> data) noexcept
@@ -366,9 +438,9 @@ namespace StormByte {
 
 			/**
 			 * @brief Decodes a pair: first, then second.
-			 * @tparam U Defaulted to @p T; see @ref SerializeTrivial.
+			 * @tparam U Defaulted to @p T; see @ref StormByte::Serializable::SerializeTrivial.
 			 * @param[in] data Input span.
-			 * @return Pair, or @ref DeserializeError.
+			 * @return Pair, or @ref StormByte::DeserializeError.
 			 */
 			template<typename U = T>
 			static Expected<T, DeserializeError> DeserializePair(std::span<const std::byte> data) noexcept
@@ -376,9 +448,9 @@ namespace StormByte {
 
 			/**
 			 * @brief Decodes an optional: `bool`, then the value if set.
-			 * @tparam U Defaulted to @p T; see @ref SerializeTrivial.
+			 * @tparam U Defaulted to @p T; see @ref StormByte::Serializable::SerializeTrivial.
 			 * @param[in] data Input span.
-			 * @return Optional, or @ref DeserializeError.
+			 * @return Optional, or @ref StormByte::DeserializeError.
 			 */
 			template<typename U = T>
 			static Expected<T, DeserializeError> DeserializeOptional(std::span<const std::byte> data) noexcept
@@ -395,6 +467,7 @@ namespace StormByte {
 	// those bodies name Serializable<bool> and Serializable<std::uint64_t>
 	// as non-dependent types. If the .txx is parsed first, those two are
 	// instantiated in this header before the extern declarations.
+	/// @cond
 	extern template class STORMBYTE_PUBLIC Serializable<bool>;
 	extern template class STORMBYTE_PUBLIC Serializable<char>;
 	extern template class STORMBYTE_PUBLIC Serializable<signed char>;
@@ -418,6 +491,7 @@ namespace StormByte {
 	extern template class STORMBYTE_PUBLIC Serializable<std::wstring>;
 	extern template class STORMBYTE_PUBLIC Serializable<std::u16string>;
 	extern template class STORMBYTE_PUBLIC Serializable<std::u32string>;
+	/// @endcond
 }
 
 #include <StormByte/serializable.txx>

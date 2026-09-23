@@ -61,8 +61,8 @@ namespace StormByte {
 		 * Includes `std::string`, `std::wstring`, `std::u16string`,
 		 * `std::u32string`, `StormByte::String::String` and
 		 * `StormByte::String::WString`. They must stay out of
-		 * @ref Container so @ref Serializable routes them through
-		 * @ref Detail::Codec.
+		 * @ref StormByte::Type::Container so @ref StormByte::Serializable routes them through
+		 * @ref StormByte::Detail::Codec.
 		 *
 		 * The suite types are forward-declared only. Completing them
 		 * is StormByte-String’s job.
@@ -89,7 +89,7 @@ namespace StormByte {
 		 */
 
 		/**
-		 * @brief Has `begin()`, `end()` and `value_type`, and is not a @ref String.
+		 * @brief Has `begin()`, `end()` and `value_type`, and is not a @ref StormByte::Type::String.
 		 * @tparam T Type to test (cv/ref as written; strings use `std::decay_t`).
 		 *
 		 * Strings are excluded so serialization / pretty-print do not treat
@@ -109,7 +109,7 @@ namespace StormByte {
 			} && !String<std::decay_t<T>>;
 
 		/**
-		 * @brief @ref Container that publishes a nested `key_type`.
+		 * @brief @ref StormByte::Type::Container that publishes a nested `key_type`.
 		 * @tparam C Container type (cv/ref ignored for the nested lookup).
 		 *
 		 * Typical matches: `std::map`, `std::set`, `std::unordered_map`,
@@ -126,7 +126,7 @@ namespace StormByte {
 			requires { typename std::remove_cvref_t<C>::key_type; };
 
 		/**
-		 * @brief @ref Container that publishes a nested `mapped_type`.
+		 * @brief @ref StormByte::Type::Container that publishes a nested `mapped_type`.
 		 * @tparam C Container type (cv/ref ignored for the nested lookup).
 		 *
 		 * Typical matches: `std::map`, `std::unordered_map`.
@@ -142,7 +142,7 @@ namespace StormByte {
 			requires { typename std::remove_cvref_t<C>::mapped_type; };
 
 		/**
-		 * @brief @ref Container that publishes `size()` convertible to `std::size_t`.
+		 * @brief @ref StormByte::Type::Container that publishes `size()` convertible to `std::size_t`.
 		 * @tparam C Container type (cv/ref ignored).
 		 *
 		 * @code
@@ -164,7 +164,7 @@ namespace StormByte {
 		 */
 
 		/**
-		 * @brief @ref Container that accepts `push_back` of a `value_type`.
+		 * @brief @ref StormByte::Type::Container that accepts `push_back` of a `value_type`.
 		 * @tparam C Container type (cv/ref ignored).
 		 *
 		 * True if either `push_back(const value_type&)` or
@@ -193,10 +193,10 @@ namespace StormByte {
 			);
 
 		/**
-		 * @brief @ref Container that accepts `push_front` of a `value_type`.
+		 * @brief @ref StormByte::Type::Container that accepts `push_front` of a `value_type`.
 		 * @tparam C Container type (cv/ref ignored).
 		 *
-		 * Same const-ref / rvalue split as @ref HasPushBack.
+		 * Same const-ref / rvalue split as @ref StormByte::Type::HasPushBack.
 		 * Typical matches: `std::deque`, `std::list`. `std::vector` does
 		 * **not** match.
 		 *
@@ -220,10 +220,10 @@ namespace StormByte {
 			);
 
 		/**
-		 * @brief Associative @ref Container that accepts `insert` of a `value_type`.
+		 * @brief Associative @ref StormByte::Type::Container that accepts `insert` of a `value_type`.
 		 * @tparam C Container type (cv/ref ignored).
 		 *
-		 * Requires @ref HasKeyType or @ref HasMappedType so positional
+		 * Requires @ref StormByte::Type::HasKeyType or @ref StormByte::Type::HasMappedType so positional
 		 * `insert(iterator, value)` on `std::vector` does not satisfy this
 		 * on any standard library. Accepts const-ref or rvalue `insert`.
 		 *
@@ -252,7 +252,7 @@ namespace StormByte {
 			);
 
 		/**
-		 * @brief @ref Container that supports `operator[]` with key/index @p U.
+		 * @brief @ref StormByte::Type::Container that supports `operator[]` with key/index @p U.
 		 * @tparam C Container type as written (no cv/ref strip — historical).
 		 * @tparam U Key or index type passed to `operator[]`.
 		 *

@@ -59,7 +59,7 @@ namespace StormByte {
 		 * @tparam To Destination type.
 		 *
 		 * Accepts both implicit and explicit conversions. Unlike
-		 * @ref ConvertibleTo, this matches types with an explicit conversion
+		 * @ref StormByte::Type::ConvertibleTo, this matches types with an explicit conversion
 		 * operator or constructor.
 		 */
 		template<typename From, typename To>

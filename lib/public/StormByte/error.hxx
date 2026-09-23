@@ -34,11 +34,11 @@
 namespace StormByte {
 	/**
 	 * @namespace StormByte::Error
-	 * @brief Error-code domains and the @ref Fault value type.
+	 * @brief Error-code domains and the @ref StormByte::Error::Fault value type.
 	 *
-	 * Modules specialize @ref Domain for their enums. The category
+	 * Modules specialize @ref StormByte::Error::Domain for their enums. The category
 	 * singleton for each enum lives in that module's `.cxx`.
-	 * @ref Exception is unrelated: throw / Expected stay there.
+	 * @ref StormByte::Exception is unrelated: throw / Expected stay there.
 	 */
 	namespace Error {
 		/**
@@ -52,7 +52,7 @@ namespace StormByte {
 		struct Domain;
 
 		/**
-		 * @brief Enum that has a @ref Domain specialization.
+		 * @brief Enum that has a @ref StormByte::Error::Domain specialization.
 		 * @tparam Enum Candidate enum.
 		 */
 		template<typename Enum>
@@ -64,8 +64,8 @@ namespace StormByte {
 
 		/**
 		 * @class Category
-		 * @brief `std::error_category` backed by @ref Domain.
-		 * @tparam Enum Enum described by @ref Domain.
+		 * @brief `std::error_category` backed by @ref StormByte::Error::Domain.
+		 * @tparam Enum Enum described by @ref StormByte::Error::Domain.
 		 *
 		 * Method bodies are in `error.txx`. Include that file only
 		 * from a `.cxx` and keep the singleton there.
@@ -97,12 +97,17 @@ namespace StormByte {
 		};
 
 		/**
-		 * @brief Domain for @ref Code.
+		 * @brief Domain for @ref StormByte::Error::Code.
 		 */
 		template<>
 		struct Domain<Code> {
-			static constexpr const char* Name = "StormByte";
+			static constexpr const char* Name = "StormByte";	///< Stable category tag
 
+			/**
+			 * @brief Text for one suite enumerator.
+			 * @param e Enumerator.
+			 * @return Human-readable message.
+			 */
 			static std::string Message(Code e) {
 				switch (e) {
 					case Code::Success:
@@ -115,29 +120,34 @@ namespace StormByte {
 		};
 
 		/**
-		 * @brief Process-wide category for @ref Code.
+		 * @brief Process-wide category for @ref StormByte::Error::Code.
 		 * @return Category singleton (defined in error.cxx).
 		 */
-		STORMBYTE_PUBLIC const Category<Code>& category() noexcept;
+		const Category<Code>& STORMBYTE_PUBLIC category() noexcept;
 
 		/**
-		 * @brief Builds an `std::error_code` from @ref Code.
+		 * @brief Builds an `std::error_code` from @ref StormByte::Error::Code.
 		 * @param e Suite enumerator.
 		 * @return Code in the suite category.
 		 *
 		 * Lives in this namespace so ADL finds it for `std::error_code{Code}`.
 		 */
-		STORMBYTE_PUBLIC std::error_code make_error_code(Code e) noexcept;
+		std::error_code STORMBYTE_PUBLIC make_error_code(Code e) noexcept;
 
 		/**
 		 * @class Fault
-		 * @brief Held error: an `std::error_code` and a @ref CString message.
+		 * @brief Held error: an `std::error_code` and a @ref StormByte::CString message.
 		 *
 		 * Used as object state (`File`, tube `Fail`). Not thrown.
 		 * `operator bool` is true when the code is an error.
 		 */
 		class STORMBYTE_PUBLIC Fault {
 			public:
+				/**
+				 * @name Life
+				 * @{
+				 */
+
 				/**
 				 * @brief Success.
 				 */
@@ -151,7 +161,7 @@ namespace StormByte {
 
 				/**
 				 * @brief From a described enumerator.
-				 * @tparam Enum Enum described by @ref Domain.
+				 * @tparam Enum Enum described by @ref StormByte::Error::Domain.
 				 * @param e Enumerator.
 				 *
 				 * Uses ADL `make_error_code(e)` so the module singleton
@@ -160,11 +170,43 @@ namespace StormByte {
 				template<Described Enum>
 				explicit Fault(Enum e): Fault(make_error_code(e)) {}
 
+				/**
+				 * @brief Copy constructor.
+				 * @param other Fault to copy.
+				 */
 				Fault(const Fault& other) = default;
+
+				/**
+				 * @brief Move constructor.
+				 * @param other Fault to take.
+				 */
 				Fault(Fault&& other) noexcept = default;
+
+				/**
+				 * @brief Destructor.
+				 */
 				~Fault() noexcept = default;
+
+				/**
+				 * @brief Copy assignment.
+				 * @param other Fault to copy.
+				 * @return *this.
+				 */
 				Fault& operator=(const Fault& other) = default;
+
+				/**
+				 * @brief Move assignment.
+				 * @param other Fault to take.
+				 * @return *this.
+				 */
 				Fault& operator=(Fault&& other) noexcept = default;
+
+				/** @} */
+
+				/**
+				 * @name Observers
+				 * @{
+				 */
 
 				/**
 				 * @brief Held code.
@@ -180,9 +222,11 @@ namespace StormByte {
 
 				/**
 				 * @brief Whether this is an error.
-				 * @return true if @ref code is non-zero.
+				 * @return true if the held code is non-zero.
 				 */
 				explicit operator bool() const noexcept;
+
+				/** @} */
 
 			private:
 				std::error_code m_code;	///< Held code

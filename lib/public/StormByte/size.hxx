@@ -59,7 +59,7 @@ namespace StormByte {
 	 *
 	 * Scale an existing @ref Size with a positive integer:
 	 * `4 * s`, `s * 4`. `s / 4` and `s % 4` return a count
-	 * (`uint64_t`), not a @ref Size: how many pieces fit, and the
+	 * (`uint64_t`), not a Size: how many pieces fit, and the
 	 * leftover bytes. Zero or a negative divisor/factor, or
 	 * overflow, is undefined and `assert`s when assertions are on.
 	 * There is no `Size * Size` and no floating-point scale of a
@@ -372,6 +372,7 @@ namespace StormByte {
 		return stream << static_cast<std::string>(size);
 	}
 
+	/// @cond
 	extern template STORMBYTE_PUBLIC Size::Size(bool) noexcept;
 	extern template STORMBYTE_PUBLIC Size::Size(char) noexcept;
 	extern template STORMBYTE_PUBLIC Size::Size(signed char) noexcept;
@@ -419,7 +420,7 @@ namespace StormByte {
 	extern template Size STORMBYTE_PUBLIC operator*<int>(Unit, int) noexcept;
 	extern template Size STORMBYTE_PUBLIC operator*<unsigned>(Unit, unsigned) noexcept;
 	extern template Size STORMBYTE_PUBLIC operator*<long>(Unit, long) noexcept;
-	extern template Size STORMBYTE_PUBLIC operator*<unsigned long>(unsigned long, Unit) noexcept;
+	extern template Size STORMBYTE_PUBLIC operator*<unsigned long>(Unit, unsigned long) noexcept;
 	extern template Size STORMBYTE_PUBLIC operator*<long long>(Unit, long long) noexcept;
 	extern template Size STORMBYTE_PUBLIC operator*<unsigned long long>(Unit, unsigned long long) noexcept;
 
@@ -497,4 +498,5 @@ namespace StormByte {
 	extern template std::uint64_t STORMBYTE_PUBLIC operator%<unsigned long>(const Size&, unsigned long) noexcept;
 	extern template std::uint64_t STORMBYTE_PUBLIC operator%<long long>(const Size&, long long) noexcept;
 	extern template std::uint64_t STORMBYTE_PUBLIC operator%<unsigned long long>(const Size&, unsigned long long) noexcept;
+	/// @endcond
 }

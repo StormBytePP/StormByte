@@ -42,7 +42,7 @@ namespace StormByte {
 		 */
 		namespace Detail {
 			/**
-			 * @brief `true` when @p T is exactly `std::variant<Ts...>` after cv/ref strip.
+			 * @brief `true` when @p T is exactly `std::variant` after stripping cv and references.
 			 * @tparam T Type to test.
 			 *
 			 * Partial specialization of a variable template — not SFINAE.
@@ -59,8 +59,8 @@ namespace StormByte {
 			constexpr bool is_variant_v<std::variant<Ts...>> = true;
 
 			/**
-			 * @brief Fold: is cv/ref-stripped @p U one of @p VariantT's alternatives?
-			 * @tparam VariantT A `std::variant<…>` (already stripped by the caller).
+			 * @brief Fold: is stripped @p U one of @p VariantT's alternatives?
+			 * @tparam VariantT A `std::variant` (already stripped by the caller).
 			 * @tparam U Candidate alternative.
 			 * @tparam I Index pack over `std::variant_size_v<VariantT>`.
 			 * @param[in] seq Index sequence; unused except to expand @p I.
@@ -76,8 +76,8 @@ namespace StormByte {
 			}
 
 			/**
-			 * @brief Convenience wrapper around @ref variant_has_type_impl.
-			 * @tparam VariantT A `std::variant<…>`.
+			 * @brief Convenience wrapper around @ref StormByte::Type::Detail::variant_has_type_impl.
+			 * @tparam VariantT A `std::variant`.
 			 * @tparam U Candidate alternative.
 			 */
 			template<typename VariantT, typename U>
@@ -115,7 +115,7 @@ namespace StormByte {
 			std::same_as<T, std::optional<typename T::value_type>>;
 
 		/**
-		 * @brief Instantiation of `std::variant`, after stripping cv/ref.
+		 * @brief Instantiation of `std::variant`, after stripping cv and references.
 		 * @tparam T Type to test.
 		 *
 		 * @code
@@ -127,9 +127,9 @@ namespace StormByte {
 		concept Variant = Detail::is_variant_v<std::remove_cvref_t<T>>;
 
 		/**
-		 * @brief @ref Variant @p T that lists @p U among its alternatives.
-		 * @tparam T Variant type (cv/ref stripped before the lookup).
-		 * @tparam U Alternative to look for (cv/ref stripped).
+		 * @brief @ref StormByte::Type::Variant @p T that lists @p U among its alternatives.
+		 * @tparam T Variant type (cv and references stripped before the lookup).
+		 * @tparam U Alternative to look for (cv and references stripped).
 		 *
 		 * @code
 		 * template<typename T, typename U>

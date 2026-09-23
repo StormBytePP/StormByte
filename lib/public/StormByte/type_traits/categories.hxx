@@ -111,7 +111,7 @@ namespace StormByte {
 		 * @tparam T Type to test (cv/ref ignored).
 		 *
 		 * Matches `std::unique_ptr`, `std::shared_ptr` and similar RAII
-		 * wrappers without naming them directly. A raw @ref Pointer does
+		 * wrappers without naming them directly. A raw @ref StormByte::Type::Pointer does
 		 * not match: it has no `get()`.
 		 *
 		 * @code
@@ -133,7 +133,7 @@ namespace StormByte {
 		 * @tparam T Type to test (cv/ref ignored).
 		 *
 		 * Requires dereference, member access, `get()`, and an implicit or explicit
-		 * conversion to `bool`. Unlike @ref SmartPointer, this is suitable for APIs
+		 * conversion to `bool`. Unlike @ref StormByte::Type::SmartPointer, this is suitable for APIs
 		 * that evaluate `!pointer` before dereferencing it.
 		 */
 		template<typename T>

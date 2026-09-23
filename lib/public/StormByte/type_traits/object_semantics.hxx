@@ -51,7 +51,7 @@ namespace StormByte {
 
 			/**
 			 * @brief Owning containers also require a copyable `value_type`.
-			 * @tparam T Container that is not a @ref View.
+			 * @tparam T Container that is not a @ref StormByte::Type::View.
 			 */
 			template<typename T>
 			inline constexpr bool ReallyCopyConstructible<
@@ -73,7 +73,7 @@ namespace StormByte {
 
 			/**
 			 * @brief Owning containers also require an assignable `value_type`.
-			 * @tparam T Container that is not a @ref View.
+			 * @tparam T Container that is not a @ref StormByte::Type::View.
 			 */
 			template<typename T>
 			inline constexpr bool ReallyCopyAssignable<
@@ -135,7 +135,7 @@ namespace StormByte {
 		concept DefaultConstructible = std::is_default_constructible_v<T>;
 
 		/**
-		 * @brief @ref DefaultConstructible with a trivial default constructor.
+		 * @brief @ref StormByte::Type::DefaultConstructible with a trivial default constructor.
 		 * @tparam T Type to test.
 		 *
 		 * @code
@@ -153,8 +153,8 @@ namespace StormByte {
 		 * Not `std::is_copy_constructible_v`: that trait is true for
 		 * `std::vector<std::unique_ptr<U>>` because `vector` declares a
 		 * copy constructor even when instantiating it is ill-formed.
-		 * Recurses into `value_type` only when @p T is a @ref Container
-		 * and not a @ref View. `std::span<std::unique_ptr<U>>` is a
+		 * Recurses into `value_type` only when @p T is a @ref StormByte::Type::Container
+		 * and not a @ref StormByte::Type::View. `std::span<std::unique_ptr<U>>` is a
 		 * container *and* a view, so it stays copyable; an owning
 		 * `std::vector<std::unique_ptr<U>>` does not.
 		 *
@@ -168,7 +168,7 @@ namespace StormByte {
 		concept CopyConstructible = ReallyCopyConstructible<T>;
 
 		/**
-		 * @brief @ref CopyConstructible with a trivial copy constructor.
+		 * @brief @ref StormByte::Type::CopyConstructible with a trivial copy constructor.
 		 * @tparam T Type to test.
 		 *
 		 * @code
@@ -192,7 +192,7 @@ namespace StormByte {
 		concept MoveConstructible = std::is_move_constructible_v<T>;
 
 		/**
-		 * @brief @ref MoveConstructible with a trivial move constructor.
+		 * @brief @ref StormByte::Type::MoveConstructible with a trivial move constructor.
 		 * @tparam T Type to test.
 		 *
 		 * @code
@@ -215,9 +215,9 @@ namespace StormByte {
 		 * @tparam T Type to test.
 		 *
 		 * Not `std::is_copy_assignable_v`: same caveat as
-		 * @ref CopyConstructible for containers of move-only values.
-		 * Recurses into `value_type` only when @p T is a @ref Container
-		 * and not a @ref View.
+		 * @ref StormByte::Type::CopyConstructible for containers of move-only values.
+		 * Recurses into `value_type` only when @p T is a @ref StormByte::Type::Container
+		 * and not a @ref StormByte::Type::View.
 		 *
 		 * @code
 		 * template<Type::CopyAssignable T>
@@ -228,7 +228,7 @@ namespace StormByte {
 		concept CopyAssignable = ReallyCopyAssignable<T>;
 
 		/**
-		 * @brief @ref CopyAssignable with a trivial copy-assignment operator.
+		 * @brief @ref StormByte::Type::CopyAssignable with a trivial copy-assignment operator.
 		 * @tparam T Type to test.
 		 *
 		 * @code
@@ -252,7 +252,7 @@ namespace StormByte {
 		concept MoveAssignable = std::is_move_assignable_v<T>;
 
 		/**
-		 * @brief @ref MoveAssignable with a trivial move-assignment operator.
+		 * @brief @ref StormByte::Type::MoveAssignable with a trivial move-assignment operator.
 		 * @tparam T Type to test.
 		 *
 		 * @code
@@ -271,7 +271,7 @@ namespace StormByte {
 		 */
 
 		/**
-		 * @brief Both @ref CopyConstructible and @ref CopyAssignable.
+		 * @brief Both @ref StormByte::Type::CopyConstructible and @ref StormByte::Type::CopyAssignable.
 		 * @tparam T Type to test.
 		 *
 		 * @code
@@ -283,7 +283,7 @@ namespace StormByte {
 		concept Copyable = CopyConstructible<T> && CopyAssignable<T>;
 
 		/**
-		 * @brief Both @ref MoveConstructible and @ref MoveAssignable.
+		 * @brief Both @ref StormByte::Type::MoveConstructible and @ref StormByte::Type::MoveAssignable.
 		 * @tparam T Type to test.
 		 *
 		 * @code

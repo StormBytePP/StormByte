@@ -57,7 +57,7 @@ namespace StormByte {
 		concept Enum = std::is_enum_v<std::remove_cv_t<E>>;
 
 		/**
-		 * @brief @ref Enum whose underlying type is unsigned.
+		 * @brief @ref StormByte::Type::Enum whose underlying type is unsigned.
 		 * @tparam E Type to test.
 		 *
 		 * @code
@@ -91,7 +91,7 @@ namespace StormByte {
 
 		/**
 		 * @brief Underlying integer type of enumeration @p E.
-		 * @tparam E Enumeration type satisfying @ref Enum.
+		 * @tparam E Enumeration type satisfying @ref StormByte::Type::Enum.
 		 *
 		 * @code
 		 * enum class Foo : uint16_t { A };
@@ -104,7 +104,7 @@ namespace StormByte {
 
 		/**
 		 * @brief Converts an enumeration value to its underlying integer.
-		 * @tparam E Enumeration type satisfying @ref Enum.
+		 * @tparam E Enumeration type satisfying @ref StormByte::Type::Enum.
 		 * @param[in] e Value to convert.
 		 * @return Underlying integer representation of @p e.
 		 *

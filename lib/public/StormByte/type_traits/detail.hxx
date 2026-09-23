@@ -40,7 +40,7 @@ namespace StormByte {
 		 * @namespace Detail
 		 * @brief Private helpers. Not a supported API.
 		 *
-		 * Other modules may call @ref swap_endian. Do not depend on
+		 * Other modules may call @ref StormByte::Type::Detail::swap_endian. Do not depend on
 		 * any other name in this namespace.
 		 */
 		namespace Detail {
