@@ -42,29 +42,29 @@
 #include <string>
 
 namespace StormByte {
-	template class Serializable<bool>;
-	template class Serializable<char>;
-	template class Serializable<signed char>;
-	template class Serializable<unsigned char>;
-	template class Serializable<wchar_t>;
-	template class Serializable<char8_t>;
-	template class Serializable<char16_t>;
-	template class Serializable<char32_t>;
-	template class Serializable<short>;
-	template class Serializable<unsigned short>;
-	template class Serializable<int>;
-	template class Serializable<unsigned int>;
-	template class Serializable<long>;
-	template class Serializable<unsigned long>;
-	template class Serializable<long long>;
-	template class Serializable<unsigned long long>;
-	template class Serializable<float>;
-	template class Serializable<double>;
-	template class Serializable<long double>;
-	template class Serializable<std::string>;
-	template class Serializable<std::wstring>;
-	template class Serializable<std::u16string>;
-	template class Serializable<std::u32string>;
+	template class STORMBYTE_INSTANTIATE Serializable<bool>;
+	template class STORMBYTE_INSTANTIATE Serializable<char>;
+	template class STORMBYTE_INSTANTIATE Serializable<signed char>;
+	template class STORMBYTE_INSTANTIATE Serializable<unsigned char>;
+	template class STORMBYTE_INSTANTIATE Serializable<wchar_t>;
+	template class STORMBYTE_INSTANTIATE Serializable<char8_t>;
+	template class STORMBYTE_INSTANTIATE Serializable<char16_t>;
+	template class STORMBYTE_INSTANTIATE Serializable<char32_t>;
+	template class STORMBYTE_INSTANTIATE Serializable<short>;
+	template class STORMBYTE_INSTANTIATE Serializable<unsigned short>;
+	template class STORMBYTE_INSTANTIATE Serializable<int>;
+	template class STORMBYTE_INSTANTIATE Serializable<unsigned int>;
+	template class STORMBYTE_INSTANTIATE Serializable<long>;
+	template class STORMBYTE_INSTANTIATE Serializable<unsigned long>;
+	template class STORMBYTE_INSTANTIATE Serializable<long long>;
+	template class STORMBYTE_INSTANTIATE Serializable<unsigned long long>;
+	template class STORMBYTE_INSTANTIATE Serializable<float>;
+	template class STORMBYTE_INSTANTIATE Serializable<double>;
+	template class STORMBYTE_INSTANTIATE Serializable<long double>;
+	template class STORMBYTE_INSTANTIATE Serializable<std::string>;
+	template class STORMBYTE_INSTANTIATE Serializable<std::wstring>;
+	template class STORMBYTE_INSTANTIATE Serializable<std::u16string>;
+	template class STORMBYTE_INSTANTIATE Serializable<std::u32string>;
 
 	namespace {
 		void append_utf8(std::string& out, char32_t cp) {

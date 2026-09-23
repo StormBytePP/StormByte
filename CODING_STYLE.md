@@ -50,20 +50,29 @@ No anonymous namespace in a public header.
 STORMBYTE_PUBLIC CString GenerateUUIDv4() noexcept;
 STORMBYTE_PUBLIC const Category<Code>& category() noexcept;
 static STORMBYTE_PUBLIC std::size_t Size(const std::string& data) noexcept;
+```
+
+Do not write `CString STORMBYTE_PUBLIC Foo();`.
+
+A class keeps the attribute on the type: `class STORMBYTE_PUBLIC Fault`.
+
+Exported templates are split:
+
+```
+// header — ELF export + MSVC import/export of the declaration
+extern template class STORMBYTE_PUBLIC Serializable<int>;
 extern template STORMBYTE_PUBLIC Size operator*<int>(int, Unit) noexcept;
 extern template STORMBYTE_PUBLIC Size::Size(int) noexcept;
+
+// .cxx — the body lives only here; consumers must not instantiate
+template class STORMBYTE_INSTANTIATE Serializable<int>;
+template STORMBYTE_INSTANTIATE Size operator*<int>(int, Unit) noexcept;
+template STORMBYTE_INSTANTIATE Size::Size(int) noexcept;
 ```
 
-Do not write `CString STORMBYTE_PUBLIC Foo();` and do not write `STORMBYTE_PUBLIC extern template`.
+`STORMBYTE_INSTANTIATE` is `dllexport` on Windows and empty on ELF (so GCC does not warn `-Wattributes`). Never put it on the `extern` line. Never write `STORMBYTE_PUBLIC extern template`.
 
-Exceptions (the attribute applies to the type, not to a return value):
-
-```
-class STORMBYTE_PUBLIC Fault;
-extern template class STORMBYTE_PUBLIC Serializable<int>;
-```
-
-Do not repeat the macro on the definition in the `.cxx`.
+Do not repeat `STORMBYTE_PUBLIC` on an ordinary `.cxx` definition.
 
 Values that leave the shared library are `CString`, `WCString`, `Size`, `Fault`, or a `const char*` owned by this library. Do not return `std::string` or `std::size_t` as the object that crosses the boundary.
 

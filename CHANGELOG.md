@@ -29,6 +29,7 @@ If you landed here from a release link and have not read the tree:
 ### Changed
 
 - **License change** — original source in this repository is dual-licensed: GNU LGPL v3 or later, or a commercial license from the copyright holder. The grant applies only to original StormByte source in this repository. It does not cover other StormByte modules or third-party material (including `thirdparty/`). No patent rights are granted.
+- **Visibility** — `STORMBYTE_PUBLIC` comes first on a function declaration (`STORMBYTE_PUBLIC CString Foo();`). clang-cl rejects `__declspec` after a reference return. `class STORMBYTE_PUBLIC` stays on the type. Exported templates are declared `extern template STORMBYTE_PUBLIC` / `extern template class STORMBYTE_PUBLIC` in the header and instantiated in the `.cxx` with `STORMBYTE_INSTANTIATE` (`dllexport` on Windows, empty on ELF so GCC does not warn `-Wattributes`). The `extern` line in the header is what ELF uses to export; do not put `STORMBYTE_INSTANTIATE` on that line.
 - **Exception** — the message is stored in a `CString`. Copy, move, assign and the destructor are defaulted. The change is transparent: `what()` and the constructors are unchanged, consumers do not rebuild against a new layout contract, and the DLL boundary is the same (`const char*` owned by the exception).
 - **Type::String** — also matches `StormByte::String::String` and `StormByte::String::WString` (forward-declared in Base). They stay out of `Type::Container`.
 - **GenerateUUIDv4** — returns `CString` instead of `std::string`.

@@ -48,7 +48,9 @@
 		#define STORMBYTE_PUBLIC	__declspec(dllimport)
 	#endif
 	#define STORMBYTE_PRIVATE
+	#define STORMBYTE_INSTANTIATE	STORMBYTE_PUBLIC
 #else
 	#define STORMBYTE_PUBLIC		__attribute__((visibility("default")))
 	#define STORMBYTE_PRIVATE		__attribute__((visibility("hidden")))
+	#define STORMBYTE_INSTANTIATE
 #endif
