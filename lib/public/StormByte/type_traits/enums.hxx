@@ -19,7 +19,6 @@
 
 #pragma once
 
-// UnsignedEnum reuses Unsigned on the enum's underlying type.
 #include <StormByte/type_traits/categories.hxx>
 
 #include <type_traits>
@@ -29,10 +28,19 @@
  * @brief Root namespace of the StormByte suite.
  */
 namespace StormByte {
+	/**
+	 * @namespace Type
+	 * @brief Named concepts and small type utilities used across the suite.
+	 */
 	namespace Type {
 		/**
 		 * @defgroup TypeEnums Enumeration concepts
 		 * @brief Concepts and helpers for `enum` / `enum class` types.
+		 * @{
+		 */
+
+		/**
+		 * @name Concepts
 		 * @{
 		 */
 
@@ -74,6 +82,13 @@ namespace StormByte {
 		template<typename E>
 		concept ScopedEnum = std::is_scoped_enum_v<E>;
 
+		/** @} */
+
+		/**
+		 * @name Helpers
+		 * @{
+		 */
+
 		/**
 		 * @brief Underlying integer type of enumeration @p E.
 		 * @tparam E Enumeration type satisfying @ref Enum.
@@ -103,6 +118,8 @@ namespace StormByte {
 		constexpr UnderlyingType<E> ToUnderlying(E e) noexcept {
 			return static_cast<UnderlyingType<E>>(e);
 		}
+
+		/** @} */
 		/** @} */
 	}
 }

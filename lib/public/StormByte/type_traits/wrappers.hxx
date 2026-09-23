@@ -31,7 +31,15 @@
  * @brief Root namespace of the StormByte suite.
  */
 namespace StormByte {
+	/**
+	 * @namespace Type
+	 * @brief Named concepts and small type utilities used across the suite.
+	 */
 	namespace Type {
+		/**
+		 * @namespace Detail
+		 * @brief Private helpers. Not a supported API.
+		 */
 		namespace Detail {
 			/**
 			 * @brief `true` when @p T is exactly `std::variant<Ts...>` after cv/ref strip.
@@ -86,6 +94,11 @@ namespace StormByte {
 		 */
 
 		/**
+		 * @name Wrappers
+		 * @{
+		 */
+
+		/**
 		 * @brief Exactly `std::optional<U>` for some `U`.
 		 * @tparam T Type to test (no decay).
 		 *
@@ -100,24 +113,6 @@ namespace StormByte {
 		concept Optional =
 			requires { typename T::value_type; } &&
 			std::same_as<T, std::optional<typename T::value_type>>;
-
-		/**
-		 * @brief Type with accessible `first` and `second` members.
-		 * @tparam T Type to test.
-		 *
-		 * Broader than `std::pair`: any struct with those members matches.
-		 * That is intentional and must stay that way.
-		 *
-		 * @code
-		 * template<Type::Pair T>
-		 * void process(T pair);
-		 * @endcode
-		 */
-		template<typename T>
-		concept Pair = requires(T t) {
-			t.first;
-			t.second;
-		};
 
 		/**
 		 * @brief Instantiation of `std::variant`, after stripping cv/ref.
@@ -146,6 +141,33 @@ namespace StormByte {
 		concept VariantHasType =
 			Variant<T> &&
 			Detail::variant_has_type_v<std::remove_cvref_t<T>, U>;
+
+		/** @} */
+
+		/**
+		 * @name Aggregates
+		 * @{
+		 */
+
+		/**
+		 * @brief Type with accessible `first` and `second` members.
+		 * @tparam T Type to test.
+		 *
+		 * Broader than `std::pair`: any struct with those members matches.
+		 * That is intentional and must stay that way.
+		 *
+		 * @code
+		 * template<Type::Pair T>
+		 * void process(T pair);
+		 * @endcode
+		 */
+		template<typename T>
+		concept Pair = requires(T t) {
+			t.first;
+			t.second;
+		};
+
+		/** @} */
 		/** @} */
 	}
 }

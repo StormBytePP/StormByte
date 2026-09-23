@@ -29,6 +29,19 @@
  * @brief Root namespace of the StormByte suite.
  */
 namespace StormByte {
+	/**
+	 * @namespace String
+	 * @brief Suite text types. Defined by StormByte-String.
+	 */
+	namespace String {
+		class String;
+		class WString;
+	}
+
+	/**
+	 * @namespace Type
+	 * @brief Named concepts and small type utilities used across the suite.
+	 */
 	namespace Type {
 		/**
 		 * @defgroup TypeContainers Container concepts
@@ -37,12 +50,22 @@ namespace StormByte {
 		 */
 
 		/**
+		 * @name Text
+		 * @{
+		 */
+
+		/**
 		 * @brief Text string types that are not generic containers.
 		 * @tparam T Type to test.
 		 *
-		 * Includes `std::string`, `std::wstring`, `std::u16string` and
-		 * `std::u32string`. They must stay out of @ref Container so
-		 * @ref Serializable routes them through @ref Detail::Codec.
+		 * Includes `std::string`, `std::wstring`, `std::u16string`,
+		 * `std::u32string`, `StormByte::String::String` and
+		 * `StormByte::String::WString`. They must stay out of
+		 * @ref Container so @ref Serializable routes them through
+		 * @ref Detail::Codec.
+		 *
+		 * The suite types are forward-declared only. Completing them
+		 * is StormByte-String’s job.
 		 *
 		 * @code
 		 * template<Type::String T>
@@ -54,7 +77,16 @@ namespace StormByte {
 			std::same_as<T, std::string> ||
 			std::same_as<T, std::wstring> ||
 			std::same_as<T, std::u16string> ||
-			std::same_as<T, std::u32string>;
+			std::same_as<T, std::u32string> ||
+			std::same_as<T, StormByte::String::String> ||
+			std::same_as<T, StormByte::String::WString>;
+
+		/** @} */
+
+		/**
+		 * @name Shape
+		 * @{
+		 */
 
 		/**
 		 * @brief Has `begin()`, `end()` and `value_type`, and is not a @ref String.
@@ -108,6 +140,28 @@ namespace StormByte {
 		concept HasMappedType =
 			Container<std::remove_cvref_t<C>> &&
 			requires { typename std::remove_cvref_t<C>::mapped_type; };
+
+		/**
+		 * @brief @ref Container that publishes `size()` convertible to `std::size_t`.
+		 * @tparam C Container type (cv/ref ignored).
+		 *
+		 * @code
+		 * static_assert(Type::Sized<std::vector<int>>);
+		 * @endcode
+		 */
+		template<typename C>
+		concept Sized =
+			Container<std::remove_cvref_t<C>> &&
+			requires(std::remove_cvref_t<C> const& c) {
+				{ c.size() } -> std::convertible_to<std::size_t>;
+			};
+
+		/** @} */
+
+		/**
+		 * @name Mutation
+		 * @{
+		 */
 
 		/**
 		 * @brief @ref Container that accepts `push_back` of a `value_type`.
@@ -212,20 +266,7 @@ namespace StormByte {
 			{ c[u] };
 		};
 
-		/**
-		 * @brief @ref Container that publishes `size()` convertible to `std::size_t`.
-		 * @tparam C Container type (cv/ref ignored).
-		 *
-		 * @code
-		 * static_assert(Type::Sized<std::vector<int>>);
-		 * @endcode
-		 */
-		template<typename C>
-		concept Sized =
-			Container<std::remove_cvref_t<C>> &&
-			requires(std::remove_cvref_t<C> const& c) {
-				{ c.size() } -> std::convertible_to<std::size_t>;
-			};
+		/** @} */
 		/** @} */
 	}
 }

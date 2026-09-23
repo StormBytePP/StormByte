@@ -19,7 +19,6 @@
 
 #pragma once
 
-// NullablePointer uses ExplicitlyConvertibleTo: must come after conversions.hxx.
 #include <StormByte/type_traits/conversions.hxx>
 
 #include <type_traits>
@@ -29,10 +28,19 @@
  * @brief Root namespace of the StormByte suite.
  */
 namespace StormByte {
+	/**
+	 * @namespace Type
+	 * @brief Named concepts and small type utilities used across the suite.
+	 */
 	namespace Type {
 		/**
 		 * @defgroup TypeCategories Fundamental type category concepts
 		 * @brief Thin wrappers around the basic `std::is_*` type category predicates.
+		 * @{
+		 */
+
+		/**
+		 * @name References
 		 * @{
 		 */
 
@@ -78,6 +86,13 @@ namespace StormByte {
 		 */
 		template<typename T>
 		concept RvalueReference = std::is_rvalue_reference_v<T>;
+
+		/** @} */
+
+		/**
+		 * @name Pointers
+		 * @{
+		 */
 
 		/**
 		 * @brief Raw (possibly cv-qualified) pointer type. Not a smart pointer.
@@ -126,6 +141,13 @@ namespace StormByte {
 			SmartPointer<T> &&
 			ExplicitlyConvertibleTo<std::remove_cvref_t<T>, bool>;
 
+		/** @} */
+
+		/**
+		 * @name Arithmetic
+		 * @{
+		 */
+
 		/**
 		 * @brief Integral type (`bool`, `char`, `int`, `long`, …), including cv.
 		 * @tparam T Type to test.
@@ -166,7 +188,7 @@ namespace StormByte {
 		 * @brief Signed arithmetic type (`std::is_signed`).
 		 * @tparam T Type to test.
 		 *
-		 * @note Floating-point types are signed. `bool` is not.
+		 * Floating-point types are signed. `bool` is not.
 		 *
 		 * @code
 		 * template<Type::Signed T>
@@ -187,6 +209,13 @@ namespace StormByte {
 		 */
 		template<typename T>
 		concept Unsigned = std::is_unsigned_v<T>;
+
+		/** @} */
+
+		/**
+		 * @name Qualifiers
+		 * @{
+		 */
 
 		/**
 		 * @brief Top-level `const` qualifier (`std::is_const_v`).
@@ -214,6 +243,8 @@ namespace StormByte {
 		 */
 		template<typename T>
 		concept Class = std::is_class_v<T>;
+
+		/** @} */
 		/** @} */
 	}
 }

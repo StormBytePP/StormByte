@@ -29,6 +29,10 @@
  * @brief Root namespace of the StormByte suite.
  */
 namespace StormByte {
+	/**
+	 * @namespace Type
+	 * @brief Named concepts and small type utilities used across the suite.
+	 */
 	namespace Type {
 		/**
 		 * @defgroup TypeComparison Comparison and hashing concepts
@@ -37,11 +41,16 @@ namespace StormByte {
 		 */
 
 		/**
+		 * @name Comparison
+		 * @{
+		 */
+
+		/**
 		 * @brief Type whose `==` and `!=` both yield something convertible to `bool`.
 		 * @tparam T Type to test.
 		 *
-		 * @note Not `std::equality_comparable`: this only checks same-type
-		 *       comparison, not the mixed-type / common-reference machinery.
+		 * Not `std::equality_comparable`: this only checks same-type
+		 * comparison, not the mixed-type / common-reference machinery.
 		 *
 		 * @code
 		 * template<Type::EqualityComparable T>
@@ -84,6 +93,8 @@ namespace StormByte {
 			requires(std::remove_cvref_t<T> const& t) {
 				{ std::hash<std::remove_cvref_t<T>>{}(t) } -> std::convertible_to<std::size_t>;
 			};
+
+		/** @} */
 		/** @} */
 	}
 }

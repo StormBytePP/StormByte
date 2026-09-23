@@ -26,10 +26,19 @@
  * @brief Root namespace of the StormByte suite.
  */
 namespace StormByte {
+	/**
+	 * @namespace Type
+	 * @brief Named concepts and small type utilities used across the suite.
+	 */
 	namespace Type {
 		/**
 		 * @defgroup TypeRelations Type relation concepts
 		 * @brief Relationships between two (or more) types: invocability, equivalence, convertibility.
+		 * @{
+		 */
+
+		/**
+		 * @name Relations
 		 * @{
 		 */
 
@@ -52,8 +61,8 @@ namespace StormByte {
 		 * @tparam T First type.
 		 * @tparam U Second type.
 		 *
-		 * @note Not `std::same_as`: that does not strip. `int` and `const int&`
-		 *       match here.
+		 * Not `std::same_as`: that does not strip. `int` and `const int&`
+		 * match here.
 		 *
 		 * @code
 		 * template<typename T, typename U>
@@ -70,9 +79,9 @@ namespace StormByte {
 		 * @tparam Derived Candidate derived type.
 		 * @tparam Base Candidate base type.
 		 *
-		 * @note Not `std::derived_from`: that also requires an unambiguous,
-		 *       public base-to-derived conversion. This only checks the
-		 *       inheritance relationship itself.
+		 * Not `std::derived_from`: that also requires an unambiguous,
+		 * public base-to-derived conversion. This only checks the
+		 * inheritance relationship itself.
 		 *
 		 * @code
 		 * struct Base {};
@@ -82,6 +91,8 @@ namespace StormByte {
 		 */
 		template<typename Derived, typename Base>
 		concept DerivedFrom = std::is_base_of_v<Base, Derived>;
+
+		/** @} */
 		/** @} */
 	}
 }

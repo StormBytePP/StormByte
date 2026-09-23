@@ -29,6 +29,10 @@
  * @brief Root namespace of the StormByte suite.
  */
 namespace StormByte {
+	/**
+	 * @namespace Type
+	 * @brief Named concepts and small type utilities used across the suite.
+	 */
 	namespace Type {
 		/**
 		 * @defgroup TypeObjectSemantics Object semantics concepts
@@ -37,10 +41,18 @@ namespace StormByte {
 		 */
 
 		namespace {
+			/**
+			 * @brief `T{src}` is well-formed for a const lvalue @p src.
+			 * @tparam T Type to test.
+			 */
 			template<typename T, typename = void>
 			inline constexpr bool ReallyCopyConstructible =
 				requires(const T& src) { T{src}; };
 
+			/**
+			 * @brief Owning containers also require a copyable `value_type`.
+			 * @tparam T Container that is not a @ref View.
+			 */
 			template<typename T>
 			inline constexpr bool ReallyCopyConstructible<
 				T, std::enable_if_t<
@@ -51,10 +63,18 @@ namespace StormByte {
 				requires(const T& src) { T{src}; } &&
 				ReallyCopyConstructible<typename std::remove_cvref_t<T>::value_type>;
 
+			/**
+			 * @brief `dest = src` is well-formed for const lvalue @p src.
+			 * @tparam T Type to test.
+			 */
 			template<typename T, typename = void>
 			inline constexpr bool ReallyCopyAssignable =
 				requires(T& dest, const T& src) { dest = src; };
 
+			/**
+			 * @brief Owning containers also require an assignable `value_type`.
+			 * @tparam T Container that is not a @ref View.
+			 */
 			template<typename T>
 			inline constexpr bool ReallyCopyAssignable<
 				T, std::enable_if_t<
@@ -65,6 +85,11 @@ namespace StormByte {
 				requires(T& dest, const T& src) { dest = src; } &&
 				ReallyCopyAssignable<typename std::remove_cvref_t<T>::value_type>;
 		}
+
+		/**
+		 * @name Trivial
+		 * @{
+		 */
 
 		/**
 		 * @brief Type that may be copied with `memcpy` / as-if `memcpy`.
@@ -89,6 +114,13 @@ namespace StormByte {
 		 */
 		template<typename T>
 		concept TriviallyDestructible = std::is_trivially_destructible_v<T>;
+
+		/** @} */
+
+		/**
+		 * @name Construction
+		 * @{
+		 */
 
 		/**
 		 * @brief Type constructible from an empty initializer (`T{}` / `T()`).
@@ -148,6 +180,37 @@ namespace StormByte {
 		concept TriviallyCopyConstructible = std::is_trivially_copy_constructible_v<T>;
 
 		/**
+		 * @brief Type that can be move-constructed.
+		 * @tparam T Type to test.
+		 *
+		 * @code
+		 * template<Type::MoveConstructible T>
+		 * T transfer(T&& source) { return T{std::move(source)}; }
+		 * @endcode
+		 */
+		template<typename T>
+		concept MoveConstructible = std::is_move_constructible_v<T>;
+
+		/**
+		 * @brief @ref MoveConstructible with a trivial move constructor.
+		 * @tparam T Type to test.
+		 *
+		 * @code
+		 * template<Type::TriviallyMoveConstructible T>
+		 * void fast_construct(T* dest, T&& src);
+		 * @endcode
+		 */
+		template<typename T>
+		concept TriviallyMoveConstructible = std::is_trivially_move_constructible_v<T>;
+
+		/** @} */
+
+		/**
+		 * @name Assignment
+		 * @{
+		 */
+
+		/**
 		 * @brief Type that can actually be copy-assigned.
 		 * @tparam T Type to test.
 		 *
@@ -177,30 +240,6 @@ namespace StormByte {
 		concept TriviallyCopyAssignable = std::is_trivially_copy_assignable_v<T>;
 
 		/**
-		 * @brief Type that can be move-constructed.
-		 * @tparam T Type to test.
-		 *
-		 * @code
-		 * template<Type::MoveConstructible T>
-		 * T transfer(T&& source) { return T{std::move(source)}; }
-		 * @endcode
-		 */
-		template<typename T>
-		concept MoveConstructible = std::is_move_constructible_v<T>;
-
-		/**
-		 * @brief @ref MoveConstructible with a trivial move constructor.
-		 * @tparam T Type to test.
-		 *
-		 * @code
-		 * template<Type::TriviallyMoveConstructible T>
-		 * void fast_construct(T* dest, T&& src);
-		 * @endcode
-		 */
-		template<typename T>
-		concept TriviallyMoveConstructible = std::is_trivially_move_constructible_v<T>;
-
-		/**
 		 * @brief Type that can be move-assigned (`operator=(T&&)`).
 		 * @tparam T Type to test.
 		 *
@@ -223,6 +262,13 @@ namespace StormByte {
 		 */
 		template<typename T>
 		concept TriviallyMoveAssignable = std::is_trivially_move_assignable_v<T>;
+
+		/** @} */
+
+		/**
+		 * @name Combined
+		 * @{
+		 */
 
 		/**
 		 * @brief Both @ref CopyConstructible and @ref CopyAssignable.
@@ -259,6 +305,8 @@ namespace StormByte {
 		 */
 		template<typename T>
 		concept Swappable = std::is_swappable_v<T>;
+
+		/** @} */
 		/** @} */
 	}
 }

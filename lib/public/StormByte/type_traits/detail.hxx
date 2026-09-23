@@ -19,7 +19,6 @@
 
 #pragma once
 
-// TriviallyCopyable / Integral: swap_endian's requires-clause and dispatch.
 #include <StormByte/type_traits/categories.hxx>
 #include <StormByte/type_traits/object_semantics.hxx>
 
@@ -32,26 +31,35 @@
  * @brief Root namespace of the StormByte suite.
  */
 namespace StormByte {
+	/**
+	 * @namespace Type
+	 * @brief Named concepts and small type utilities used across the suite.
+	 */
 	namespace Type {
 		/**
-		 * @namespace StormByte::Type::Detail
+		 * @namespace Detail
 		 * @brief Private helpers. Not a supported API.
 		 *
-		 * @note Other modules may call @ref swap_endian. Do not depend on
-		 *       any other name in this namespace.
+		 * Other modules may call @ref swap_endian. Do not depend on
+		 * any other name in this namespace.
 		 */
 		namespace Detail {
+			/**
+			 * @name Endian
+			 * @{
+			 */
+
 			/**
 			 * @brief Reverses the object-representation byte order of @p val.
 			 * @tparam U Trivially copyable value type.
 			 * @param[in] val Value whose bytes are reversed.
 			 * @return @p val with endianness swapped.
 			 *
-			 * @note This **always** reverses bytes. Whether the caller should
-			 *       invoke it (host ≠ little-endian) is Serializable's job.
-			 *       Integrals go through `std::byteswap`; every other trivial
-			 *       type goes through `std::bit_cast` + reverse so `float`,
-			 *       `enum` and small POD structs stay defined.
+			 * This **always** reverses bytes. Whether the caller should
+			 * invoke it (host ≠ little-endian) is Serializable's job.
+			 * Integrals go through `std::byteswap`; every other trivial
+			 * type goes through `std::bit_cast` + reverse so `float`,
+			 * `enum` and small POD structs stay defined.
 			 *
 			 * @warning Not a format detector. No BOM, no `std::endian` test.
 			 */
@@ -73,6 +81,8 @@ namespace StormByte {
 					return std::bit_cast<U>(bytes);
 				}
 			}
+
+			/** @} */
 		}
 	}
 }

@@ -26,6 +26,10 @@
  * @brief Root namespace of the StormByte suite.
  */
 namespace StormByte {
+	/**
+	 * @namespace Type
+	 * @brief Named concepts and small type utilities used across the suite.
+	 */
 	namespace Type {
 		/**
 		 * @defgroup TypeConversions Type conversion concepts
@@ -34,12 +38,17 @@ namespace StormByte {
 		 */
 
 		/**
+		 * @name Conversion
+		 * @{
+		 */
+
+		/**
 		 * @brief @p From is implicitly convertible to @p To (`std::is_convertible`).
 		 * @tparam From Source type.
 		 * @tparam To Destination type.
 		 *
-		 * @note Not `std::convertible_to`: that also requires an explicit
-		 *       `To` construct from `From` and would tighten the contract.
+		 * Not `std::convertible_to`: that also requires an explicit
+		 * `To` construct from `From` and would tighten the contract.
 		 */
 		template<typename From, typename To>
 		concept ConvertibleTo = std::is_convertible_v<From, To>;
@@ -49,14 +58,16 @@ namespace StormByte {
 		 * @tparam From Source type.
 		 * @tparam To Destination type.
 		 *
-		 * @note Accepts both implicit and explicit conversions. Unlike
-		 *       @ref ConvertibleTo, this matches types with an explicit conversion
-		 *       operator or constructor.
+		 * Accepts both implicit and explicit conversions. Unlike
+		 * @ref ConvertibleTo, this matches types with an explicit conversion
+		 * operator or constructor.
 		 */
 		template<typename From, typename To>
 		concept ExplicitlyConvertibleTo = requires(From value) {
 			static_cast<To>(value);
 		};
+
+		/** @} */
 		/** @} */
 	}
 }

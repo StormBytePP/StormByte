@@ -20,6 +20,10 @@
 #pragma once
 
 /**
+ * @namespace StormByte
+ * @brief Root namespace of the StormByte suite.
+ */
+/**
  * @namespace StormByte::Type
  * @brief Named concepts and small type utilities used across the suite.
  *
