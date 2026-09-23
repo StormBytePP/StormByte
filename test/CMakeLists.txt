@@ -38,6 +38,10 @@ if(ENABLE_TEST)
 	target_link_libraries(SerializationTests StormByte)
 	add_test(NAME SerializationTests COMMAND SerializationTests)
 
+	add_executable(SizeTests size_test.cxx)
+	target_link_libraries(SizeTests StormByte)
+	add_test(NAME SizeTests COMMAND SizeTests)
+
 	add_executable(TestHandlersTests test_handlers_test.cxx)
 	target_link_libraries(TestHandlersTests StormByte)
 	add_test(NAME TestHandlersTests COMMAND TestHandlersTests)

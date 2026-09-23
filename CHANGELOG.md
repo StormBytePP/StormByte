@@ -27,6 +27,7 @@ If you landed here from a release link and have not read the tree:
 - **WCString** — wide counterpart of `CString` (`wchar_t` / `std::wstring` / `std::wstring_view` / `std::wostream`). Same comparison, hash, subscript and lifetime rules as `std::wstring::c_str()`. Covered by `WCStringTests`.
 - **Error** — `Domain`, `Category`, `Code` (`Success`, `Unknown`) and `Fault`. Modules specialize `Domain` for their enums; `make_error_code` lives next to the enum so ADL feeds `std::error_code`. Category singletons stay in the module `.cxx`. `Fault` holds the code and a `CString`. Not thrown. Covered by `ErrorTests`.
 - **ClonableTests** — clone / move coverage for `shared_ptr` and `unique_ptr`.
+- **Size** — `uint64_t` byte count, same width on every host and safe across a DLL. `Size{100}` is valid; a negative integer is undefined and `assert`s when assertions are on. `Value()` and explicit `operator uint64_t` only (no `size_t` conversion). `+` / `-` / `+=` / `-=` with `assert` on wrap or underflow. IEC (`B`, `KiB`, `MiB`, `GiB`, `TiB`, `PiB`, `EiB`) and SI (`KB`, `MB`, `GB`, `TB`, `PB`, `EB`) units. `4 * MiB`, `4.2 * KiB` (nearest byte) and `GiB * 2` yield `Size`. `4 * s` / `s * 4` scale an existing `Size` by a positive integer. `s / 4` and `s % 4` return `uint64_t` (how many pieces fit, leftover bytes). No `Size * Size`. Explicit instantiations of the templates live in the StormByte DLL. `operator CString` (IEC text, built in the DLL) and inline `operator std::string` (caller heap via that `CString`). Covered by `SizeTests`.
 
 ### Changed
 
@@ -34,7 +35,7 @@ If you landed here from a release link and have not read the tree:
 - **Type::String** — also matches `StormByte::String::String` and `StormByte::String::WString` (forward-declared in Base). They stay out of `Type::Container`.
 - **GenerateUUIDv4** — returns `CString` instead of `std::string`.
 - **Base64Encode** — both overloads return `CString` instead of `std::string`. `Base64Decode` still returns `std::vector<std::byte>` and still takes `std::string_view`.
-- **Tests** — suite section headers (`// -------------------`) match in the body and in `main`. UUID, Base64, Bitmask, Clonable, Exception, Expected, ThreadLock, TestHandlers, Iterable, Serialization and TypeTraits cover the public surface (format, padding, invalid input, clone independence, non-owner unlock, bounds, wire, corruption). `Base64Decode` of an encode result uses an explicit `std::string_view`.
+- **Tests** — suite section headers (`// -------------------`) match in the body and in `main`. UUID, Base64, Bitmask, Clonable, Exception, Expected, ThreadLock, TestHandlers, Iterable, Serialization, TypeTraits and Size cover the public surface (format, padding, invalid input, clone independence, non-owner unlock, bounds, wire, corruption, units, `*` / `/` / `%`). `Base64Decode` of an encode result uses an explicit `std::string_view`.
 
 ### Removed
 

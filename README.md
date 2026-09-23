@@ -9,7 +9,7 @@
 
 This repository is **StormByte Base**: the C++26 foundation of the StormByte suite.
 
-It is the module every other StormByte library links. Public headers live under `StormByte/` and cover exceptions, `Expected`, little-endian serialization, `CString` / `WCString`, UUID v4, bitmasks, clonable types, a reentrant `ThreadLock`, and the `StormByte::Type` concepts.
+It is the module every other StormByte library links. Public headers live under `StormByte/` and cover exceptions, `Expected`, little-endian serialization, `CString` / `WCString`, `Size`, UUID v4, bitmasks, clonable types, a reentrant `ThreadLock`, and the `StormByte::Type` concepts.
 
 The suite is split on purpose. Buffer, Config, Crypto, Database, Logger, Multimedia, Network, String and System are **other repositories**. They depend on this one; this one does not implement them.
 
@@ -20,6 +20,7 @@ The suite is split on purpose. Buffer, Config, Crypto, Database, Logger, Multime
 - **Expected** — `Expected<T, E>` on top of `std::expected`, references via `reference_wrapper`, errors as `shared_ptr<E>`, plus `Unexpected`.
 - **Serialization** — `Serializable<T>` to `vector<byte>`, always little-endian, no BOM and no version tag. Optional / pair / container / trivial / `Detail::Codec<T>`.
 - **CString / WCString** — owned NUL-terminated narrow and wide buffers, safe to use across a DLL boundary. Not `std::string` / `std::wstring`. Content equality, `<=>`, `swap` and `std::hash`.
+- **Size** — `uint64_t` byte count, same width on every host and safe across a DLL. IEC and SI units, `*` / `/` / `%`, IEC text as `CString`.
 - **UUID** — RFC 4122 version 4 (`GenerateUUIDv4`).
 - **Bitmask** — CRTP flags over `Type::UnsignedEnum`.
 - **Clonable** — virtual `Clone` / `Move` into `shared_ptr` or `unique_ptr`.
@@ -52,6 +53,7 @@ The suite is split on purpose. Buffer, Config, Crypto, Database, Logger, Multime
 - [Expected](#expected)
 - [Error](#error)
 - [CString / WCString](#cstring--wcstring)
+- [Size](#size)
 - [Serialization](#serialization)
 - [UUID](#uuid)
 - [ThreadLock](#threadlock)
@@ -174,6 +176,33 @@ int main() {
 
 	WCString wide(L"wide");
 	std::wcout << wide << std::endl;
+}
+```
+
+### Size
+
+`Size` is a `uint64_t` byte count. It is the same width on 32-bit and 64-bit hosts and safe to return across a DLL. It is not a `std::size_t`.
+
+`Size{100}` is valid. A negative integer is undefined and `assert`s when assertions are on. Read the count with `Value()` or `explicit operator uint64_t`. There is no `size_t` conversion; cast `Value()` yourself if a host `size_t` is required.
+
+IEC units (`B`, `KiB`, `MiB`, `GiB`, `TiB`, `PiB`, `EiB`) and SI units (`KB`, `MB`, `GB`, `TB`, `PB`, `EB`) are `constexpr` objects. Scale a unit with `*`: `4 * MiB`, `4.2 * KiB` (nearest byte), `GiB * 2`. Scale an existing `Size` with a positive integer: `4 * s`, `s * 4`. `s / 4` and `s % 4` return `uint64_t` (how many pieces fit, leftover bytes). There is no `Size * Size` and no floating-point scale of a `Size`.
+
+`operator CString` builds IEC text (`B`, `KiB`, …) in the StormByte DLL. `operator std::string` and `operator<<` are inline and copy that text into the caller’s heap.
+
+```cpp
+#include <StormByte/size.hxx>
+#include <iostream>
+
+using namespace StormByte;
+
+int main() {
+	const Size chunk{4 * MiB + 512 * KiB};
+	const Size twice = 2 * chunk;
+	const auto pieces = twice / 1024;
+	const auto leftover = twice % 1024;
+
+	std::cout << chunk << std::endl;
+	std::cout << twice.Value() << " " << pieces << " " << leftover << std::endl;
 }
 ```
 
