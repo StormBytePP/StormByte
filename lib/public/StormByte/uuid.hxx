@@ -51,5 +51,5 @@ namespace StormByte {
 	 * @return 36-character `CString` `xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx` where `y` is `8`, `9`, `a` or `b`.
 	 * @note Prefers the OS CSPRNG; falls back to a PRNG. Details in `uuid.cxx`.
 	 */
-	CString STORMBYTE_PUBLIC GenerateUUIDv4() noexcept;
+	STORMBYTE_PUBLIC CString GenerateUUIDv4() noexcept;
 }

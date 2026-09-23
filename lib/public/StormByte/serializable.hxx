@@ -167,21 +167,21 @@ namespace StormByte {
 			 * @param data Value to measure.
 			 * @return Size in bytes.
 			 */
-			static std::size_t STORMBYTE_PUBLIC Size(const std::string& data) noexcept;
+			static STORMBYTE_PUBLIC std::size_t Size(const std::string& data) noexcept;
 
 			/**
 			 * @brief Encodes @p data.
 			 * @param data Value to encode.
 			 * @return Blob.
 			 */
-			static std::vector<std::byte> STORMBYTE_PUBLIC Write(const std::string& data) noexcept;
+			static STORMBYTE_PUBLIC std::vector<std::byte> Write(const std::string& data) noexcept;
 
 			/**
 			 * @brief Decodes a string from the start of @p data.
 			 * @param data Input span.
 			 * @return Value, or @ref StormByte::DeserializeError.
 			 */
-			static Expected<std::string, DeserializeError> STORMBYTE_PUBLIC Read(std::span<const std::byte> data) noexcept;
+			static STORMBYTE_PUBLIC Expected<std::string, DeserializeError> Read(std::span<const std::byte> data) noexcept;
 		};
 
 		/**
@@ -197,21 +197,21 @@ namespace StormByte {
 			 * @param data Value to measure.
 			 * @return Size in bytes.
 			 */
-			static std::size_t STORMBYTE_PUBLIC Size(const std::wstring& data) noexcept;
+			static STORMBYTE_PUBLIC std::size_t Size(const std::wstring& data) noexcept;
 
 			/**
 			 * @brief Encodes @p data.
 			 * @param data Value to encode.
 			 * @return Blob.
 			 */
-			static std::vector<std::byte> STORMBYTE_PUBLIC Write(const std::wstring& data) noexcept;
+			static STORMBYTE_PUBLIC std::vector<std::byte> Write(const std::wstring& data) noexcept;
 
 			/**
 			 * @brief Decodes a wide string from the start of @p data.
 			 * @param data Input span.
 			 * @return Value, or @ref StormByte::DeserializeError.
 			 */
-			static Expected<std::wstring, DeserializeError> STORMBYTE_PUBLIC Read(std::span<const std::byte> data) noexcept;
+			static STORMBYTE_PUBLIC Expected<std::wstring, DeserializeError> Read(std::span<const std::byte> data) noexcept;
 		};
 
 		/**
@@ -226,21 +226,21 @@ namespace StormByte {
 			 * @param data Value to measure.
 			 * @return Size in bytes.
 			 */
-			static std::size_t STORMBYTE_PUBLIC Size(const std::u16string& data) noexcept;
+			static STORMBYTE_PUBLIC std::size_t Size(const std::u16string& data) noexcept;
 
 			/**
 			 * @brief Encodes @p data.
 			 * @param data Value to encode.
 			 * @return Blob.
 			 */
-			static std::vector<std::byte> STORMBYTE_PUBLIC Write(const std::u16string& data) noexcept;
+			static STORMBYTE_PUBLIC std::vector<std::byte> Write(const std::u16string& data) noexcept;
 
 			/**
 			 * @brief Decodes a UTF-16 string from the start of @p data.
 			 * @param data Input span.
 			 * @return Value, or @ref StormByte::DeserializeError.
 			 */
-			static Expected<std::u16string, DeserializeError> STORMBYTE_PUBLIC Read(std::span<const std::byte> data) noexcept;
+			static STORMBYTE_PUBLIC Expected<std::u16string, DeserializeError> Read(std::span<const std::byte> data) noexcept;
 		};
 
 		/**
@@ -255,21 +255,21 @@ namespace StormByte {
 			 * @param data Value to measure.
 			 * @return Size in bytes.
 			 */
-			static std::size_t STORMBYTE_PUBLIC Size(const std::u32string& data) noexcept;
+			static STORMBYTE_PUBLIC std::size_t Size(const std::u32string& data) noexcept;
 
 			/**
 			 * @brief Encodes @p data.
 			 * @param data Value to encode.
 			 * @return Blob.
 			 */
-			static std::vector<std::byte> STORMBYTE_PUBLIC Write(const std::u32string& data) noexcept;
+			static STORMBYTE_PUBLIC std::vector<std::byte> Write(const std::u32string& data) noexcept;
 
 			/**
 			 * @brief Decodes a UTF-32 string from the start of @p data.
 			 * @param data Input span.
 			 * @return Value, or @ref StormByte::DeserializeError.
 			 */
-			static Expected<std::u32string, DeserializeError> STORMBYTE_PUBLIC Read(std::span<const std::byte> data) noexcept;
+			static STORMBYTE_PUBLIC Expected<std::u32string, DeserializeError> Read(std::span<const std::byte> data) noexcept;
 		};
 	}
 
@@ -479,7 +479,7 @@ namespace StormByte {
 
 	// Explicit-instantiation declarations: suppress implicit instantiation
 	// of Serializable<T> for these T in every consumer TU. Definitions are
-	// in serializable.cxx. STORMBYTE_PUBLIC here is the export/import of
+        // in serializable.cxx. STORMBYTE_PUBLIC here is the export/import of
 	// those instantiations; the class template itself has no visibility
 	// so other modules can instantiate Serializable<TheirType> in their DLL.
 	//

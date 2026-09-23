@@ -143,7 +143,7 @@ namespace StormByte {
 		 * @brief Process-wide category for @ref StormByte::Error::Code.
 		 * @return Category singleton (defined in error.cxx).
 		 */
-		const Category<Code>& STORMBYTE_PUBLIC category() noexcept;
+		STORMBYTE_PUBLIC const Category<Code>& category() noexcept;
 
 		/**
 		 * @brief Builds an `std::error_code` from @ref StormByte::Error::Code.
@@ -152,7 +152,7 @@ namespace StormByte {
 		 *
 		 * Lives in this namespace so ADL finds it for `std::error_code{Code}`.
 		 */
-		std::error_code STORMBYTE_PUBLIC make_error_code(Code e) noexcept;
+		STORMBYTE_PUBLIC std::error_code make_error_code(Code e) noexcept;
 
 		/**
 		 * @class Fault

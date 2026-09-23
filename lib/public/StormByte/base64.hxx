@@ -63,19 +63,19 @@ namespace StormByte {
 	 * @return Decoded bytes.
 	 * @throws StormByte::Base64Error If a character is outside the alphabet.
 	 */
-	std::vector<std::byte> STORMBYTE_PUBLIC Base64Decode(std::string_view input);
+	STORMBYTE_PUBLIC std::vector<std::byte> Base64Decode(std::string_view input);
 
 	/**
 	 * @brief Encodes bytes as Base64 with `=` padding.
 	 * @param input Bytes to encode.
 	 * @return Base64 text as a `CString`.
 	 */
-	CString STORMBYTE_PUBLIC Base64Encode(const std::vector<std::byte>& input);
+	STORMBYTE_PUBLIC CString Base64Encode(const std::vector<std::byte>& input);
 
 	/**
 	 * @brief Encodes a contiguous byte span as Base64 with `=` padding.
 	 * @param input Bytes to encode.
 	 * @return Base64 text as a `CString`.
 	 */
-	CString STORMBYTE_PUBLIC Base64Encode(std::span<const std::byte> input);
+	STORMBYTE_PUBLIC CString Base64Encode(std::span<const std::byte> input);
 }

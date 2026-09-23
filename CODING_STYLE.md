@@ -44,15 +44,26 @@ No anonymous namespace in a public header.
 
 ## DLL boundary
 
-`STORMBYTE_PUBLIC` is on the **function**, not on the return type:
+`STORMBYTE_PUBLIC` comes **first** on a function declaration. clang-cl rejects `__declspec` after a reference return type.
 
 ```
-CString STORMBYTE_PUBLIC GenerateUUIDv4() noexcept;
+STORMBYTE_PUBLIC CString GenerateUUIDv4() noexcept;
+STORMBYTE_PUBLIC const Category<Code>& category() noexcept;
+static STORMBYTE_PUBLIC std::size_t Size(const std::string& data) noexcept;
+extern template STORMBYTE_PUBLIC Size operator*<int>(int, Unit) noexcept;
+extern template STORMBYTE_PUBLIC Size::Size(int) noexcept;
 ```
 
-A class is `class STORMBYTE_PUBLIC Fault`. Do not repeat the macro on the definition in the `.cxx`.
+Do not write `CString STORMBYTE_PUBLIC Foo();` and do not write `STORMBYTE_PUBLIC extern template`.
 
-Exported templates are declared `extern template … STORMBYTE_PUBLIC` in the header and instantiated inside `namespace StormByte` in the `.cxx`.
+Exceptions (the attribute applies to the type, not to a return value):
+
+```
+class STORMBYTE_PUBLIC Fault;
+extern template class STORMBYTE_PUBLIC Serializable<int>;
+```
+
+Do not repeat the macro on the definition in the `.cxx`.
 
 Values that leave the shared library are `CString`, `WCString`, `Size`, `Fault`, or a `const char*` owned by this library. Do not return `std::string` or `std::size_t` as the object that crosses the boundary.
 
