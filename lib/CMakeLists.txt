@@ -1,8 +1,16 @@
 include(GNUInstallDirs)
 
+option(STORMBYTE_SHARED "Build StormByte as a shared library" ON)
+
 file(GLOB_RECURSE STORMBYTE_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_LIST_DIR}/*.cxx")
 
-add_library(StormByte SHARED ${STORMBYTE_SOURCES})
+if(STORMBYTE_SHARED)
+    add_library(StormByte SHARED ${STORMBYTE_SOURCES})
+    target_compile_definitions(StormByte PUBLIC STORMBYTE_SHARED)
+else()
+    add_library(StormByte STATIC ${STORMBYTE_SOURCES})
+endif()
+
 set_target_properties(StormByte PROPERTIES
 	LINKER_LANGUAGE CXX
 	SOVERSION ${CMAKE_PROJECT_VERSION}
