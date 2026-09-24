@@ -45,6 +45,7 @@
 
 #include <cassert>
 #include <compare>
+#include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <ostream>
@@ -63,12 +64,19 @@ namespace StormByte {
 	 * and between 32-bit and 64-bit modules. Not a replacement for
 	 * `std::size_t` inside a single translation unit.
 	 *
-	 * `Size{100}` is valid. A negative integer is undefined and
-	 * `assert`s when assertions are on.
+	 * Construction from a non-negative integer is implicit:
+	 * `Size s = 0`, `s = 16`, `{ Status::Ok, 0 }`. The constructor
+	 * itself stays in the StormByte DLL. A negative integer is
+	 * undefined and `assert`s when assertions are on.
 	 *
-	 * The numeric conversions are `Value()` and `explicit operator
-	 * std::uint64_t`. There is no `size_t` conversion; the caller
-	 * casts `Value()` if a host `size_t` is required.
+	 * Mixed comparisons and addition/subtraction with integers work
+	 * on both sides (`5 == s`, `s == 5`, `16 + s`, `s + 16`) via
+	 * hidden friends. There is no implicit conversion *to* an
+	 * integer. `Value()`, `explicit operator uint64_t`,
+	 * `explicit operator size_t` (only when `size_t` is not
+	 * `uint64_t`) and `explicit operator ptrdiff_t` are the numeric
+	 * exits. A value that does not fit the target type is undefined
+	 * and `assert`s when assertions are on.
 	 *
 	 * Addition and subtraction that would wrap `uint64_t` are
 	 * undefined and `assert` when assertions are on.
@@ -106,10 +114,11 @@ namespace StormByte {
 			 * @brief From an integer count.
 			 * @tparam T Integral type.
 			 * @param value Byte count.
-			 * @note A negative @p value is undefined. Checked with `assert` when assertions are on.
+			 * @note Defined in the StormByte DLL. A negative @p value is undefined.
+			 *       Checked with `assert` when assertions are on.
 			 */
 			template<Type::Integral T>
-			explicit Size(T value) noexcept;
+			Size(T value) noexcept;
 
 			/**
 			 * @brief Copy constructor.
@@ -142,6 +151,19 @@ namespace StormByte {
 			 */
 			constexpr Size& operator=(Size&& other) noexcept = default;
 
+			/**
+			 * @brief Assign an integer count.
+			 * @tparam T Integral type.
+			 * @param value Byte count.
+			 * @return *this.
+			 * @note A negative @p value is undefined. Checked with `assert` when assertions are on.
+			 */
+			template<Type::Integral T>
+			Size& operator=(T value) noexcept {
+				*this = Size(value);
+				return *this;
+			}
+
 			/** @} */
 
 			/**
@@ -173,6 +195,31 @@ namespace StormByte {
 			}
 
 			/**
+			 * @brief Stored count as host `size_t`.
+			 * @tparam T Must be `std::size_t` and a different type from `uint64_t`.
+			 * @return Value as `std::size_t`.
+			 * @note Ill-formed when `size_t` and `uint64_t` are the same type;
+			 *       `static_cast<std::size_t>` then uses `operator uint64_t`.
+			 *       A count above `size_t` is undefined. Checked with `assert` when assertions are on.
+			 */
+			template<typename T>
+			requires Type::SameAs<T, std::size_t> && (!Type::SameAs<std::size_t, std::uint64_t>)
+			constexpr explicit operator T() const noexcept {
+				assert(m_value <= static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max()));
+				return static_cast<std::size_t>(m_value);
+			}
+
+			/**
+			 * @brief Stored count as `ptrdiff_t` (non-negative offsets).
+			 * @return Value as `std::ptrdiff_t`.
+			 * @note A count above `ptrdiff_t` is undefined. Checked with `assert` when assertions are on.
+			 */
+			constexpr explicit operator std::ptrdiff_t() const noexcept {
+				assert(m_value <= static_cast<std::uint64_t>(std::numeric_limits<std::ptrdiff_t>::max()));
+				return static_cast<std::ptrdiff_t>(m_value);
+			}
+
+			/**
 			 * @brief IEC text owned by StormByte.
 			 * @return Human-readable size (`B`, `KiB`, `MiB`, `GiB`, `TiB`, `PiB`, `EiB`).
 			 */
@@ -195,17 +242,23 @@ namespace StormByte {
 
 			/**
 			 * @brief Numeric equality.
-			 * @param other Other size.
+			 * @param lhs Left count.
+			 * @param rhs Right count.
 			 * @return Whether the counts are equal.
 			 */
-			constexpr bool operator==(const Size& other) const noexcept = default;
+			friend constexpr bool operator==(Size lhs, Size rhs) noexcept {
+				return lhs.m_value == rhs.m_value;
+			}
 
 			/**
 			 * @brief Numeric order.
-			 * @param other Other size.
+			 * @param lhs Left count.
+			 * @param rhs Right count.
 			 * @return Ordering.
 			 */
-			constexpr std::strong_ordering operator<=>(const Size& other) const noexcept = default;
+			friend constexpr std::strong_ordering operator<=>(Size lhs, Size rhs) noexcept {
+				return lhs.m_value <=> rhs.m_value;
+			}
 
 			/** @} */
 
@@ -216,24 +269,26 @@ namespace StormByte {
 
 			/**
 			 * @brief Sum.
-			 * @param other Addend.
+			 * @param lhs Left addend.
+			 * @param rhs Right addend.
 			 * @return Sum.
 			 * @note Overflow of `uint64_t` is undefined. Checked with `assert` when assertions are on.
 			 */
-			constexpr Size operator+(const Size& other) const noexcept {
-				assert(m_value <= std::numeric_limits<std::uint64_t>::max() - other.m_value);
-				return Size(static_cast<std::uint64_t>(m_value + other.m_value));
+			friend constexpr Size operator+(Size lhs, Size rhs) noexcept {
+				assert(lhs.m_value <= std::numeric_limits<std::uint64_t>::max() - rhs.m_value);
+				return Size(static_cast<std::uint64_t>(lhs.m_value + rhs.m_value));
 			}
 
 			/**
 			 * @brief Difference.
-			 * @param other Subtrahend.
+			 * @param lhs Minuend.
+			 * @param rhs Subtrahend.
 			 * @return Difference.
-			 * @note `*this < other` is undefined. Checked with `assert` when assertions are on.
+			 * @note `lhs < rhs` is undefined. Checked with `assert` when assertions are on.
 			 */
-			constexpr Size operator-(const Size& other) const noexcept {
-				assert(m_value >= other.m_value);
-				return Size(static_cast<std::uint64_t>(m_value - other.m_value));
+			friend constexpr Size operator-(Size lhs, Size rhs) noexcept {
+				assert(lhs.m_value >= rhs.m_value);
+				return Size(static_cast<std::uint64_t>(lhs.m_value - rhs.m_value));
 			}
 
 			/**
@@ -242,7 +297,7 @@ namespace StormByte {
 			 * @return *this.
 			 * @note Overflow of `uint64_t` is undefined. Checked with `assert` when assertions are on.
 			 */
-			constexpr Size& operator+=(const Size& other) noexcept {
+			constexpr Size& operator+=(Size other) noexcept {
 				*this = *this + other;
 				return *this;
 			}
@@ -253,7 +308,7 @@ namespace StormByte {
 			 * @return *this.
 			 * @note `*this < other` is undefined. Checked with `assert` when assertions are on.
 			 */
-			constexpr Size& operator-=(const Size& other) noexcept {
+			constexpr Size& operator-=(Size other) noexcept {
 				*this = *this - other;
 				return *this;
 			}

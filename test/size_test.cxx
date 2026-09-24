@@ -45,30 +45,125 @@
 using namespace StormByte;
 
 // -------------------
+// Add
+// -------------------
+
+int test_add_and_sub() {
+	int result = 0;
+	const Size left{100};
+	const Size right{40};
+	ASSERT_EQUAL("test_add_and_sub", 140ull, (left + right).Value());
+	ASSERT_EQUAL("test_add_and_sub", 60ull, (left - right).Value());
+	Size acc{10};
+	acc += Size{5};
+	ASSERT_EQUAL("test_add_and_sub", 15ull, acc.Value());
+	acc -= Size{3};
+	ASSERT_EQUAL("test_add_and_sub", 12ull, acc.Value());
+	RETURN_TEST("test_add_and_sub", result);
+}
+
+int test_add_mixed_integer() {
+	int result = 0;
+	const Size size{10};
+	ASSERT_EQUAL("test_add_mixed_integer", 26ull, (size + 16).Value());
+	ASSERT_EQUAL("test_add_mixed_integer", 26ull, (16 + size).Value());
+	ASSERT_EQUAL("test_add_mixed_integer", 26ull, (size + 16u).Value());
+	ASSERT_EQUAL("test_add_mixed_integer", 26ull, (16u + size).Value());
+	ASSERT_EQUAL("test_add_mixed_integer", 26ull, (size + 16ull).Value());
+	ASSERT_EQUAL("test_add_mixed_integer", 26ull, (16ull + size).Value());
+	ASSERT_EQUAL("test_add_mixed_integer", 6ull, (size - 4).Value());
+	ASSERT_EQUAL("test_add_mixed_integer", 6ull, (size - 4u).Value());
+	ASSERT_EQUAL("test_add_mixed_integer", 0ull, (size - 10).Value());
+	Size acc = 10;
+	acc += 5;
+	ASSERT_EQUAL("test_add_mixed_integer", 15ull, acc.Value());
+	acc += 5u;
+	ASSERT_EQUAL("test_add_mixed_integer", 20ull, acc.Value());
+	acc -= 3;
+	ASSERT_EQUAL("test_add_mixed_integer", 17ull, acc.Value());
+	acc -= 1ull;
+	ASSERT_EQUAL("test_add_mixed_integer", 16ull, acc.Value());
+	RETURN_TEST("test_add_mixed_integer", result);
+}
+
+// -------------------
+// Compare
+// -------------------
+
+int test_compare_equal_and_order() {
+	int result = 0;
+	const Size a{10};
+	const Size b{10};
+	const Size c{11};
+	ASSERT_TRUE("test_compare_equal_and_order", a == b);
+	ASSERT_TRUE("test_compare_equal_and_order", a != c);
+	ASSERT_TRUE("test_compare_equal_and_order", a < c);
+	ASSERT_TRUE("test_compare_equal_and_order", c > a);
+	ASSERT_TRUE("test_compare_equal_and_order", a <= b);
+	ASSERT_TRUE("test_compare_equal_and_order", c >= a);
+	RETURN_TEST("test_compare_equal_and_order", result);
+}
+
+int test_compare_mixed_integer() {
+	int result = 0;
+	const Size size{5};
+	ASSERT_TRUE("test_compare_mixed_integer", size == 5);
+	ASSERT_TRUE("test_compare_mixed_integer", 5 == size);
+	ASSERT_TRUE("test_compare_mixed_integer", size == 5u);
+	ASSERT_TRUE("test_compare_mixed_integer", 5u == size);
+	ASSERT_TRUE("test_compare_mixed_integer", size == 5ull);
+	ASSERT_TRUE("test_compare_mixed_integer", 5ull == size);
+	ASSERT_TRUE("test_compare_mixed_integer", size != 6);
+	ASSERT_TRUE("test_compare_mixed_integer", 6 != size);
+	ASSERT_TRUE("test_compare_mixed_integer", size != 6u);
+	ASSERT_TRUE("test_compare_mixed_integer", 6u != size);
+	ASSERT_TRUE("test_compare_mixed_integer", size < 6);
+	ASSERT_TRUE("test_compare_mixed_integer", 4 < size);
+	ASSERT_TRUE("test_compare_mixed_integer", size < 6u);
+	ASSERT_TRUE("test_compare_mixed_integer", 4u < size);
+	ASSERT_TRUE("test_compare_mixed_integer", size > 0);
+	ASSERT_TRUE("test_compare_mixed_integer", 10 > size);
+	ASSERT_TRUE("test_compare_mixed_integer", size > 0u);
+	ASSERT_TRUE("test_compare_mixed_integer", 10u > size);
+	ASSERT_TRUE("test_compare_mixed_integer", 7 > size);
+	ASSERT_TRUE("test_compare_mixed_integer", size < 7);
+	ASSERT_TRUE("test_compare_mixed_integer", size <= 5);
+	ASSERT_TRUE("test_compare_mixed_integer", 5 <= size);
+	ASSERT_TRUE("test_compare_mixed_integer", size <= 6);
+	ASSERT_TRUE("test_compare_mixed_integer", 4 <= size);
+	ASSERT_TRUE("test_compare_mixed_integer", size >= 5);
+	ASSERT_TRUE("test_compare_mixed_integer", 5 >= size);
+	ASSERT_TRUE("test_compare_mixed_integer", size >= 0);
+	ASSERT_TRUE("test_compare_mixed_integer", 9 >= size);
+	ASSERT_TRUE("test_compare_mixed_integer", size == 0 || size != 0);
+	const Size empty;
+	ASSERT_TRUE("test_compare_mixed_integer", empty == 0);
+	ASSERT_TRUE("test_compare_mixed_integer", 0 == empty);
+	ASSERT_TRUE("test_compare_mixed_integer", empty != 1);
+	ASSERT_TRUE("test_compare_mixed_integer", 1 != empty);
+	ASSERT_TRUE("test_compare_mixed_integer", empty < 1);
+	ASSERT_TRUE("test_compare_mixed_integer", 1 > empty);
+	RETURN_TEST("test_compare_mixed_integer", result);
+}
+
+// -------------------
 // Construct
 // -------------------
 
-int test_construct_zero() {
+int test_construct_assign_integer() {
 	int result = 0;
-	const Size empty;
-	ASSERT_EQUAL("test_construct_zero", 0ull, empty.Value());
-	RETURN_TEST("test_construct_zero", result);
-}
-
-int test_construct_int_literal() {
-	int result = 0;
-	const Size size{100};
-	ASSERT_EQUAL("test_construct_int_literal", 100ull, size.Value());
-	RETURN_TEST("test_construct_int_literal", result);
-}
-
-int test_construct_unsigned_and_ull() {
-	int result = 0;
-	const Size from_unsigned{100u};
-	const Size from_ull{100ull};
-	ASSERT_EQUAL("test_construct_unsigned_and_ull", 100ull, from_unsigned.Value());
-	ASSERT_EQUAL("test_construct_unsigned_and_ull", 100ull, from_ull.Value());
-	RETURN_TEST("test_construct_unsigned_and_ull", result);
+	Size size;
+	size = 0;
+	ASSERT_EQUAL("test_construct_assign_integer", 0ull, size.Value());
+	size = 16;
+	ASSERT_EQUAL("test_construct_assign_integer", 16ull, size.Value());
+	size = 32u;
+	ASSERT_EQUAL("test_construct_assign_integer", 32ull, size.Value());
+	size = 64ull;
+	ASSERT_EQUAL("test_construct_assign_integer", 64ull, size.Value());
+	size = 0u;
+	ASSERT_EQUAL("test_construct_assign_integer", 0ull, size.Value());
+	RETURN_TEST("test_construct_assign_integer", result);
 }
 
 int test_construct_copy_move() {
@@ -89,17 +184,47 @@ int test_construct_from_unit_expression() {
 	RETURN_TEST("test_construct_from_unit_expression", result);
 }
 
+int test_construct_implicit_from_int() {
+	int result = 0;
+	const Size from_zero = 0;
+	ASSERT_EQUAL("test_construct_implicit_from_int", 0ull, from_zero.Value());
+	const Size from_int = 100;
+	ASSERT_EQUAL("test_construct_implicit_from_int", 100ull, from_int.Value());
+	const Size from_unsigned = 100u;
+	ASSERT_EQUAL("test_construct_implicit_from_int", 100ull, from_unsigned.Value());
+	const Size from_ull = 100ull;
+	ASSERT_EQUAL("test_construct_implicit_from_int", 100ull, from_ull.Value());
+	const Size from_long = 100L;
+	ASSERT_EQUAL("test_construct_implicit_from_int", 100ull, from_long.Value());
+	RETURN_TEST("test_construct_implicit_from_int", result);
+}
+
+int test_construct_int_literal() {
+	int result = 0;
+	const Size size{100};
+	ASSERT_EQUAL("test_construct_int_literal", 100ull, size.Value());
+	RETURN_TEST("test_construct_int_literal", result);
+}
+
+int test_construct_unsigned_and_ull() {
+	int result = 0;
+	const Size from_unsigned{100u};
+	const Size from_ull{100ull};
+	ASSERT_EQUAL("test_construct_unsigned_and_ull", 100ull, from_unsigned.Value());
+	ASSERT_EQUAL("test_construct_unsigned_and_ull", 100ull, from_ull.Value());
+	RETURN_TEST("test_construct_unsigned_and_ull", result);
+}
+
+int test_construct_zero() {
+	int result = 0;
+	const Size empty;
+	ASSERT_EQUAL("test_construct_zero", 0ull, empty.Value());
+	RETURN_TEST("test_construct_zero", result);
+}
+
 // -------------------
 // Convert
 // -------------------
-
-int test_convert_value_and_uint64() {
-	int result = 0;
-	const Size size{42};
-	ASSERT_EQUAL("test_convert_value_and_uint64", 42ull, size.Value());
-	ASSERT_EQUAL("test_convert_value_and_uint64", 42ull, static_cast<std::uint64_t>(size));
-	RETURN_TEST("test_convert_value_and_uint64", result);
-}
 
 int test_convert_cstring_and_string() {
 	int result = 0;
@@ -121,93 +246,23 @@ int test_convert_human_readable_bytes_and_fraction() {
 	RETURN_TEST("test_convert_human_readable_bytes_and_fraction", result);
 }
 
-// -------------------
-// Compare
-// -------------------
-
-int test_compare_equal_and_order() {
+int test_convert_size_t_and_ptrdiff() {
 	int result = 0;
-	const Size a{10};
-	const Size b{10};
-	const Size c{11};
-	ASSERT_TRUE("test_compare_equal_and_order", a == b);
-	ASSERT_TRUE("test_compare_equal_and_order", a != c);
-	ASSERT_TRUE("test_compare_equal_and_order", a < c);
-	ASSERT_TRUE("test_compare_equal_and_order", c > a);
-	ASSERT_TRUE("test_compare_equal_and_order", a <= b);
-	ASSERT_TRUE("test_compare_equal_and_order", c >= a);
-	RETURN_TEST("test_compare_equal_and_order", result);
+	const Size size{42};
+	ASSERT_EQUAL("test_convert_size_t_and_ptrdiff", static_cast<std::size_t>(42), static_cast<std::size_t>(size));
+	ASSERT_EQUAL("test_convert_size_t_and_ptrdiff", static_cast<std::ptrdiff_t>(42), static_cast<std::ptrdiff_t>(size));
+	const Size empty;
+	ASSERT_EQUAL("test_convert_size_t_and_ptrdiff", static_cast<std::size_t>(0), static_cast<std::size_t>(empty));
+	ASSERT_EQUAL("test_convert_size_t_and_ptrdiff", static_cast<std::ptrdiff_t>(0), static_cast<std::ptrdiff_t>(empty));
+	RETURN_TEST("test_convert_size_t_and_ptrdiff", result);
 }
 
-// -------------------
-// Add
-// -------------------
-
-int test_add_and_sub() {
+int test_convert_value_and_uint64() {
 	int result = 0;
-	const Size left{100};
-	const Size right{40};
-	ASSERT_EQUAL("test_add_and_sub", 140ull, (left + right).Value());
-	ASSERT_EQUAL("test_add_and_sub", 60ull, (left - right).Value());
-	Size acc{10};
-	acc += Size{5};
-	ASSERT_EQUAL("test_add_and_sub", 15ull, acc.Value());
-	acc -= Size{3};
-	ASSERT_EQUAL("test_add_and_sub", 12ull, acc.Value());
-	RETURN_TEST("test_add_and_sub", result);
-}
-
-// -------------------
-// Unit
-// -------------------
-
-int test_unit_iec_factors() {
-	int result = 0;
-	ASSERT_EQUAL("test_unit_iec_factors", 1ull, B.factor);
-	ASSERT_EQUAL("test_unit_iec_factors", 1024ull, KiB.factor);
-	ASSERT_EQUAL("test_unit_iec_factors", 1024ull * 1024, MiB.factor);
-	ASSERT_EQUAL("test_unit_iec_factors", 1024ull * 1024 * 1024, GiB.factor);
-	ASSERT_EQUAL("test_unit_iec_factors", 1024ull * 1024 * 1024 * 1024, TiB.factor);
-	ASSERT_EQUAL("test_unit_iec_factors", 1024ull * 1024 * 1024 * 1024 * 1024, PiB.factor);
-	ASSERT_EQUAL("test_unit_iec_factors", 1024ull * 1024 * 1024 * 1024 * 1024 * 1024, EiB.factor);
-	RETURN_TEST("test_unit_iec_factors", result);
-}
-
-int test_unit_si_factors() {
-	int result = 0;
-	ASSERT_EQUAL("test_unit_si_factors", 1000ull, KB.factor);
-	ASSERT_EQUAL("test_unit_si_factors", 1000ull * 1000, MB.factor);
-	ASSERT_EQUAL("test_unit_si_factors", 1000ull * 1000 * 1000, GB.factor);
-	ASSERT_EQUAL("test_unit_si_factors", 1000ull * 1000 * 1000 * 1000, TB.factor);
-	ASSERT_EQUAL("test_unit_si_factors", 1000ull * 1000 * 1000 * 1000 * 1000, PB.factor);
-	ASSERT_EQUAL("test_unit_si_factors", 1000ull * 1000 * 1000 * 1000 * 1000 * 1000, EB.factor);
-	RETURN_TEST("test_unit_si_factors", result);
-}
-
-int test_unit_scale_integer() {
-	int result = 0;
-	ASSERT_EQUAL("test_unit_scale_integer", 4096ull, (4 * KiB).Value());
-	ASSERT_EQUAL("test_unit_scale_integer", 4096ull, (KiB * 4).Value());
-	ASSERT_EQUAL("test_unit_scale_integer", 4000ull, (4 * KB).Value());
-	ASSERT_EQUAL("test_unit_scale_integer", 2ull * MiB.factor, (2u * MiB).Value());
-	ASSERT_EQUAL("test_unit_scale_integer", 3ull * GiB.factor, (GiB * 3ull).Value());
-	RETURN_TEST("test_unit_scale_integer", result);
-}
-
-int test_unit_scale_float() {
-	int result = 0;
-	ASSERT_EQUAL("test_unit_scale_float", 1536ull, (1.5 * KiB).Value());
-	ASSERT_EQUAL("test_unit_scale_float", 1536ull, (KiB * 1.5).Value());
-	ASSERT_EQUAL("test_unit_scale_float", 4301ull, (4.2 * KiB).Value());
-	ASSERT_EQUAL("test_unit_scale_float", 2ull * MiB.factor, (2.0 * MiB).Value());
-	RETURN_TEST("test_unit_scale_float", result);
-}
-
-int test_unit_iec_not_si() {
-	int result = 0;
-	ASSERT_TRUE("test_unit_iec_not_si", (1 * KiB) != (1 * KB));
-	ASSERT_TRUE("test_unit_iec_not_si", (1 * KiB) > (1 * KB));
-	RETURN_TEST("test_unit_iec_not_si", result);
+	const Size size{42};
+	ASSERT_EQUAL("test_convert_value_and_uint64", 42ull, size.Value());
+	ASSERT_EQUAL("test_convert_value_and_uint64", 42ull, static_cast<std::uint64_t>(size));
+	RETURN_TEST("test_convert_value_and_uint64", result);
 }
 
 // -------------------
@@ -258,43 +313,92 @@ int test_split_zero_size() {
 	RETURN_TEST("test_split_zero_size", result);
 }
 
+// -------------------
+// Unit
+// -------------------
+
+int test_unit_iec_factors() {
+	int result = 0;
+	ASSERT_EQUAL("test_unit_iec_factors", 1ull, B.factor);
+	ASSERT_EQUAL("test_unit_iec_factors", 1024ull, KiB.factor);
+	ASSERT_EQUAL("test_unit_iec_factors", 1024ull * 1024, MiB.factor);
+	ASSERT_EQUAL("test_unit_iec_factors", 1024ull * 1024 * 1024, GiB.factor);
+	ASSERT_EQUAL("test_unit_iec_factors", 1024ull * 1024 * 1024 * 1024, TiB.factor);
+	ASSERT_EQUAL("test_unit_iec_factors", 1024ull * 1024 * 1024 * 1024 * 1024, PiB.factor);
+	ASSERT_EQUAL("test_unit_iec_factors", 1024ull * 1024 * 1024 * 1024 * 1024 * 1024, EiB.factor);
+	RETURN_TEST("test_unit_iec_factors", result);
+}
+
+int test_unit_iec_not_si() {
+	int result = 0;
+	ASSERT_TRUE("test_unit_iec_not_si", (1 * KiB) != (1 * KB));
+	ASSERT_TRUE("test_unit_iec_not_si", (1 * KiB) > (1 * KB));
+	RETURN_TEST("test_unit_iec_not_si", result);
+}
+
+int test_unit_scale_float() {
+	int result = 0;
+	ASSERT_EQUAL("test_unit_scale_float", 1536ull, (1.5 * KiB).Value());
+	ASSERT_EQUAL("test_unit_scale_float", 1536ull, (KiB * 1.5).Value());
+	ASSERT_EQUAL("test_unit_scale_float", 4301ull, (4.2 * KiB).Value());
+	ASSERT_EQUAL("test_unit_scale_float", 2ull * MiB.factor, (2.0 * MiB).Value());
+	RETURN_TEST("test_unit_scale_float", result);
+}
+
+int test_unit_scale_integer() {
+	int result = 0;
+	ASSERT_EQUAL("test_unit_scale_integer", 4096ull, (4 * KiB).Value());
+	ASSERT_EQUAL("test_unit_scale_integer", 4096ull, (KiB * 4).Value());
+	ASSERT_EQUAL("test_unit_scale_integer", 4000ull, (4 * KB).Value());
+	ASSERT_EQUAL("test_unit_scale_integer", 2ull * MiB.factor, (2u * MiB).Value());
+	ASSERT_EQUAL("test_unit_scale_integer", 3ull * GiB.factor, (GiB * 3ull).Value());
+	RETURN_TEST("test_unit_scale_integer", result);
+}
+
+int test_unit_si_factors() {
+	int result = 0;
+	ASSERT_EQUAL("test_unit_si_factors", 1000ull, KB.factor);
+	ASSERT_EQUAL("test_unit_si_factors", 1000ull * 1000, MB.factor);
+	ASSERT_EQUAL("test_unit_si_factors", 1000ull * 1000 * 1000, GB.factor);
+	ASSERT_EQUAL("test_unit_si_factors", 1000ull * 1000 * 1000 * 1000, TB.factor);
+	ASSERT_EQUAL("test_unit_si_factors", 1000ull * 1000 * 1000 * 1000 * 1000, PB.factor);
+	ASSERT_EQUAL("test_unit_si_factors", 1000ull * 1000 * 1000 * 1000 * 1000 * 1000, EB.factor);
+	RETURN_TEST("test_unit_si_factors", result);
+}
+
 int main() {
 	int result = 0;
-
-	// -------------------
-	// Construct
-	// -------------------
-	result += test_construct_zero();
-	result += test_construct_int_literal();
-	result += test_construct_unsigned_and_ull();
-	result += test_construct_copy_move();
-	result += test_construct_from_unit_expression();
-
-	// -------------------
-	// Convert
-	// -------------------
-	result += test_convert_value_and_uint64();
-	result += test_convert_cstring_and_string();
-	result += test_convert_human_readable_bytes_and_fraction();
-
-	// -------------------
-	// Compare
-	// -------------------
-	result += test_compare_equal_and_order();
 
 	// -------------------
 	// Add
 	// -------------------
 	result += test_add_and_sub();
+	result += test_add_mixed_integer();
 
 	// -------------------
-	// Unit
+	// Compare
 	// -------------------
-	result += test_unit_iec_factors();
-	result += test_unit_si_factors();
-	result += test_unit_scale_integer();
-	result += test_unit_scale_float();
-	result += test_unit_iec_not_si();
+	result += test_compare_equal_and_order();
+	result += test_compare_mixed_integer();
+
+	// -------------------
+	// Construct
+	// -------------------
+	result += test_construct_assign_integer();
+	result += test_construct_copy_move();
+	result += test_construct_from_unit_expression();
+	result += test_construct_implicit_from_int();
+	result += test_construct_int_literal();
+	result += test_construct_unsigned_and_ull();
+	result += test_construct_zero();
+
+	// -------------------
+	// Convert
+	// -------------------
+	result += test_convert_cstring_and_string();
+	result += test_convert_human_readable_bytes_and_fraction();
+	result += test_convert_size_t_and_ptrdiff();
+	result += test_convert_value_and_uint64();
 
 	// -------------------
 	// Scale
@@ -307,6 +411,15 @@ int main() {
 	result += test_split_div_and_mod();
 	result += test_split_exact_and_unsigned();
 	result += test_split_zero_size();
+
+	// -------------------
+	// Unit
+	// -------------------
+	result += test_unit_iec_factors();
+	result += test_unit_iec_not_si();
+	result += test_unit_scale_float();
+	result += test_unit_scale_integer();
+	result += test_unit_si_factors();
 
 	if (result == 0)
 		std::cout << "All tests passed!" << std::endl;
