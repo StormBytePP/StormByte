@@ -89,13 +89,13 @@ int test_expected_holds_error() {
 	RETURN_TEST("test_expected_holds_error", result);
 }
 
-int test_unexpected_from_shared_ptr() {
+int test_unexpected_from_shared() {
 	int result = 0;
-	auto ptr = std::make_shared<TestError>("via pointer");
+	Shared<TestError> ptr = Heap::MakeShared<TestError>("via pointer");
 	Expected<int, TestError> failure = Unexpected(ptr);
-	ASSERT_FALSE("test_unexpected_from_shared_ptr", failure.has_value());
-	ASSERT_TRUE("test_unexpected_from_shared_ptr", failure.error() == ptr);
-	RETURN_TEST("test_unexpected_from_shared_ptr", result);
+	ASSERT_FALSE("test_unexpected_from_shared", failure.has_value());
+	ASSERT_TRUE("test_unexpected_from_shared", failure.error() == ptr);
+	RETURN_TEST("test_unexpected_from_shared", result);
 }
 
 int test_unexpected_from_format() {
@@ -157,7 +157,7 @@ int main() {
 	// Error
 	// -------------------
 	result += test_expected_holds_error();
-	result += test_unexpected_from_shared_ptr();
+	result += test_unexpected_from_shared();
 	result += test_unexpected_from_format();
 	result += test_unexpected_from_format_no_args();
 	result += test_unexpected_same_type_not_upcast();

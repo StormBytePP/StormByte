@@ -17,7 +17,7 @@ The suite is split on purpose. Buffer, Config, Crypto, Database, Logger, Multime
 
 - **Exceptions** — `StormByte::Exception`. `what()` is `StormByte: …`, or `StormByte.Crypto.Crypter: …` when a parent passes the segments under `StormByte`. The text is a `CString`. A final leaf adds no segment.
 - **Error** — `Domain`, `Category`, `Code` and `Fault` for `std::error_code`. `Fault` is not thrown; its text is a `CString`.
-- **Expected** — `Expected<T, E>` on top of `std::expected`. Errors are `shared_ptr<E>` allocated on Base's heap. `Unexpected<E>("… {}", arg)` stays as it is.
+- **Expected** — `Expected<T, E>` on top of `std::expected`. The error is a `Shared<E>` on Base's heap. It converts to `std::shared_ptr<E>`. `Unexpected<E>("… {}", arg)` stays as it is.
 - **Serialization** — `Serializable<T>` to `BinaryData`, always little-endian, no BOM and no version tag. Optional / pair / container / trivial / `Detail::Codec<T>`. On-wire lengths are `ByteSize`.
 - **CString / WCString** — owned NUL-terminated narrow and wide buffers, safe to use across a DLL boundary. Not `std::string` / `std::wstring`. `Length()` is `Size`. Construct from C string, `string_view` / `wstring_view` and `string` / `wstring` (copy onto Base's heap). Content equality, `<=>`, `swap` and `std::hash`.
 - **BinaryData** — owned contiguous `std::byte` sequence, safe to use across a DLL boundary. Same kind of API as `std::vector<std::byte>`. Lengths and indices use `ByteSize`. `HexDump` prints offset + hex + ASCII; column count is `std::size_t`.
@@ -146,7 +146,7 @@ int main() {
 
 ### Expected
 
-Errors are `shared_ptr<E>`, allocated on Base's heap. Read them with `result.error()->what()`. The call does not change: `Unexpected<E>("Password '{}' not found", name)` formats in the caller and constructs `E` from that string on Base's heap. `Unexpected(result.error())` forwards the pointer and does not allocate.
+The error is a `Shared<E>` on Base's heap. Read it with `result.error()->what()`. It converts to `std::shared_ptr<E>` when a signature already asks for one. The call does not change: `Unexpected<E>("Password '{}' not found", name)` formats in the caller and constructs `E` from that string. `Unexpected(result.error())` forwards the same `Shared` and does not allocate. A `std::shared_ptr` is not accepted.
 
 ```cpp
 #include <StormByte/expected.hxx>

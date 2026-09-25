@@ -56,38 +56,47 @@ namespace StormByte {
 	/**
 	 * @brief `std::expected` alias with reference and shared-error handling.
 	 * @tparam T Value type. References are stored as `std::reference_wrapper`.
-	 * @tparam E Error type. Always stored as `std::shared_ptr<E>`, allocated on Base's heap.
+	 * @tparam E Error type. Always stored as @ref Shared. Converts to `std::shared_ptr<E>`.
 	 */
 	template <typename T, class E>
 	using Expected = std::conditional_t<
 		Type::Reference<T>,
-		std::expected<std::reference_wrapper<std::remove_reference_t<T>>, std::shared_ptr<E>>,
-		std::expected<T, std::shared_ptr<E>>
+		std::expected<std::reference_wrapper<std::remove_reference_t<T>>, Shared<E>>,
+		std::expected<T, Shared<E>>
 	>;
 
 	/**
-	 * @brief Forwards an error pointer already stored by @ref Expected.
+	 * @brief Forwards an error already stored by @ref Expected.
 	 * @tparam E Error type.
-	 * @param error_ptr Pointer previously built by @ref Unexpected. Not reallocated.
-	 * @return `std::unexpected` holding that pointer.
-	 *
-	 * Does not allocate. A `std::make_shared` from outside is not on Base's heap.
+	 * @param error Pointer previously built by @ref Unexpected. Not reallocated.
+	 * @return `std::unexpected` holding that @ref Shared.
 	 */
 	template <typename E>
-	auto Unexpected(std::shared_ptr<E> error_ptr) {
-		return std::unexpected<std::shared_ptr<E>>(std::move(error_ptr));
+	auto Unexpected(Shared<E> error) {
+		return std::unexpected<Shared<E>>(std::move(error));
 	}
+
+	/**
+	 * @brief Rejects a `std::shared_ptr`. It is not on Base's heap, and @ref Shared does not adopt it.
+	 * @tparam E Error type.
+	 */
+	template <typename E>
+	auto Unexpected(std::shared_ptr<E>) = delete;
 
 	/**
 	 * @brief Builds `std::unexpected` by constructing `E`.
 	 * @tparam E Error type.
 	 * @param error Error instance, moved or copied onto Base's heap.
-	 * @return `std::unexpected` holding `shared_ptr<decay_t<E>>`.
+	 * @return `std::unexpected` holding @ref Shared of `decay_t<E>`.
 	 */
 	template <typename E>
+	requires (
+		!requires { typename std::remove_cvref_t<E>::element_type; } ||
+		!Type::SameAs<std::remove_cvref_t<E>, Shared<typename std::remove_cvref_t<E>::element_type>>
+	)
 	auto Unexpected(E&& error) {
 		using Error = std::decay_t<E>;
-		return std::unexpected<std::shared_ptr<Error>>(
+		return std::unexpected<Shared<Error>>(
 			Heap::MakeShared<Error>(std::forward<E>(error))
 		);
 	}
@@ -97,15 +106,15 @@ namespace StormByte {
 	 * @tparam Base Error base type stored in the pointer.
 	 * @tparam Derived Concrete error type, derived from @p Base and not the same type.
 	 * @param error Derived instance to own.
-	 * @return `std::unexpected` with an upcast `shared_ptr<Base>`. The deleter still destroys @p Derived.
+	 * @return `std::unexpected` with an upcast @ref Shared. The deleter still destroys @p Derived.
 	 */
 	template <typename Base, typename Derived>
-	auto Unexpected(Derived&& error) -> std::unexpected<std::shared_ptr<Base>>
+	auto Unexpected(Derived&& error) -> std::unexpected<Shared<Base>>
 	requires Type::DerivedFrom<std::decay_t<Derived>, Base> &&
 		(!Type::SameAs<Base, std::decay_t<Derived>>)
 	{
 		using DerivedT = std::decay_t<Derived>;
-		return std::unexpected<std::shared_ptr<Base>>(
+		return std::unexpected<Shared<Base>>(
 			Shared<Base>::MakePointer<DerivedT>(std::forward<Derived>(error))
 		);
 	}
@@ -132,7 +141,7 @@ namespace StormByte {
 			formatted_message = std::vformat(fmt, format_args);
 		}
 
-		return std::unexpected<std::shared_ptr<E>>(
+		return std::unexpected<Shared<E>>(
 			Heap::MakeShared<E>(std::move(formatted_message))
 		);
 	}
