@@ -39,6 +39,7 @@
 
 #pragma once
 
+#include <StormByte/binary_data.hxx>
 #include <StormByte/cstring.hxx>
 #include <StormByte/exception.hxx>
 #include <StormByte/expected.hxx>
@@ -57,7 +58,6 @@
 #include <type_traits>
 #include <tuple>
 #include <utility>
-#include <vector>
 
 /**
  * @namespace StormByte
@@ -109,14 +109,14 @@ namespace StormByte {
 		 * template<>
 		 * struct StormByte::Detail::Codec<MyType> {
 		 *     static std::size_t Size(const MyType& v) noexcept;
-		 *     static std::vector<std::byte> Write(const MyType& v) noexcept;
+		 *     static BinaryData Write(const MyType& v) noexcept;
 		 *     static Expected<MyType, DeserializeError> Read(std::span<const std::byte>) noexcept;
 		 * };
 		 * @endcode
 		 *
 		 * @note The three members must agree with each other. `Size(v)` must
-		 *       equal `Write(v).size()`. `Read` consumes a prefix of that
-		 *       length; leftover bytes belong to the caller.
+		 *       equal `Write(v).size()` as a byte count. `Read` consumes a
+		 *       prefix of that length; leftover bytes belong to the caller.
 		 */
 		template<typename T>
 		struct Codec {
@@ -135,9 +135,9 @@ namespace StormByte {
 			/**
 			 * @brief Encodes @p data to a little-endian blob.
 			 * @param[in] data Value to encode.
-			 * @return Blob. No framing beyond what @p T itself needs.
+			 * @return Blob owned by Base. No framing beyond what @p T itself needs.
 			 */
-			static std::vector<std::byte> Write(const T& data) noexcept {
+			static BinaryData Write(const T& data) noexcept {
 				static_assert(codec_always_false_v<T>,
 					"Specialize StormByte::Detail::Codec<T> instead of Serializable<T>");
 				(void)data;
@@ -174,9 +174,9 @@ namespace StormByte {
 			/**
 			 * @brief Encodes @p data.
 			 * @param data Value to encode.
-			 * @return Blob.
+			 * @return Blob owned by Base.
 			 */
-			static STORMBYTE_PUBLIC std::vector<std::byte> Write(const std::string& data) noexcept;
+			static STORMBYTE_PUBLIC BinaryData Write(const std::string& data) noexcept;
 
 			/**
 			 * @brief Decodes a string from the start of @p data.
@@ -204,9 +204,9 @@ namespace StormByte {
 			/**
 			 * @brief Encodes @p data.
 			 * @param data Value to encode.
-			 * @return Blob.
+			 * @return Blob owned by Base.
 			 */
-			static STORMBYTE_PUBLIC std::vector<std::byte> Write(const std::wstring& data) noexcept;
+			static STORMBYTE_PUBLIC BinaryData Write(const std::wstring& data) noexcept;
 
 			/**
 			 * @brief Decodes a wide string from the start of @p data.
@@ -233,9 +233,9 @@ namespace StormByte {
 			/**
 			 * @brief Encodes @p data.
 			 * @param data Value to encode.
-			 * @return Blob.
+			 * @return Blob owned by Base.
 			 */
-			static STORMBYTE_PUBLIC std::vector<std::byte> Write(const std::u16string& data) noexcept;
+			static STORMBYTE_PUBLIC BinaryData Write(const std::u16string& data) noexcept;
 
 			/**
 			 * @brief Decodes a UTF-16 string from the start of @p data.
@@ -262,9 +262,9 @@ namespace StormByte {
 			/**
 			 * @brief Encodes @p data.
 			 * @param data Value to encode.
-			 * @return Blob.
+			 * @return Blob owned by Base.
 			 */
-			static STORMBYTE_PUBLIC std::vector<std::byte> Write(const std::u32string& data) noexcept;
+			static STORMBYTE_PUBLIC BinaryData Write(const std::u32string& data) noexcept;
 
 			/**
 			 * @brief Decodes a UTF-32 string from the start of @p data.
@@ -294,9 +294,9 @@ namespace StormByte {
 			/**
 			 * @brief Encodes @p data.
 			 * @param data Value to encode.
-			 * @return Blob.
+			 * @return Blob owned by Base.
 			 */
-			static STORMBYTE_PUBLIC std::vector<std::byte> Write(const CString& data) noexcept;
+			static STORMBYTE_PUBLIC BinaryData Write(const CString& data) noexcept;
 
 			/**
 			 * @brief Decodes a @ref StormByte::CString from the start of @p data.
@@ -325,9 +325,9 @@ namespace StormByte {
 			/**
 			 * @brief Encodes @p data.
 			 * @param data Value to encode.
-			 * @return Blob.
+			 * @return Blob owned by Base.
 			 */
-			static STORMBYTE_PUBLIC std::vector<std::byte> Write(const WCString& data) noexcept;
+			static STORMBYTE_PUBLIC BinaryData Write(const WCString& data) noexcept;
 
 			/**
 			 * @brief Decodes a @ref StormByte::WCString from the start of @p data.
@@ -350,6 +350,8 @@ namespace StormByte {
 	 *
 	 * Custom types: specialize @ref StormByte::Detail::Codec, then this class routes
 	 * them through the “complex” path automatically.
+	 *
+	 * The blob is a @ref StormByte::BinaryData. The wire layout is unchanged.
 	 *
 	 * @note `Type::String` (`string` / `wstring` / `u16string` / `u32string`)
 	 *       is excluded from @ref StormByte::Type::Container so those types hit Codec
@@ -396,9 +398,9 @@ namespace StormByte {
 
 			/**
 			 * @brief Encodes the bound value to a little-endian blob.
-			 * @return Blob for this one value. No outer framing.
+			 * @return Blob for this one value, owned by Base. No outer framing.
 			 */
-			std::vector<std::byte> Serialize() const noexcept;
+			BinaryData Serialize() const noexcept;
 
 			/**
 			 * @brief Decodes one @p T from the start of @p data.
@@ -408,11 +410,11 @@ namespace StormByte {
 			static Expected<T, DeserializeError> Deserialize(std::span<const std::byte> data) noexcept;
 
 			/**
-			 * @brief Decodes one @p T from a vector.
+			 * @brief Decodes one @p T from a @ref StormByte::BinaryData.
 			 * @param[in] data Input blob.
 			 * @return Value, or @ref StormByte::DeserializeError.
 			 */
-			static Expected<T, DeserializeError> Deserialize(const std::vector<std::byte>& data) noexcept;
+			static Expected<T, DeserializeError> Deserialize(const BinaryData& data) noexcept;
 
 			/**
 			 * @brief Serialized size of @p data.
@@ -434,28 +436,28 @@ namespace StormByte {
 			 *           explicit instantiation of `Serializable<T>` does not
 			 *           try to instantiate it for a `T` that fails the
 			 *           `requires` clause (observed with clang-cl/MSVC ABI).
-			 * @return Blob of `sizeof(T)` bytes.
+			 * @return Blob of `sizeof(T)` bytes owned by Base.
 			 */
 			template<typename U = T>
-			std::vector<std::byte> SerializeTrivial() const noexcept
+			BinaryData SerializeTrivial() const noexcept
 			requires Type::TriviallyCopyable<U>;
 
 			/**
 			 * @brief Encodes a container: `uint64` count (LE) then each element.
 			 * @tparam U Defaulted to @p T; see @ref StormByte::Serializable::SerializeTrivial.
-			 * @return Blob.
+			 * @return Blob owned by Base.
 			 */
 			template<typename U = T>
-			std::vector<std::byte> SerializeContainer() const noexcept
+			BinaryData SerializeContainer() const noexcept
 			requires Type::Container<U>;
 
 			/**
 			 * @brief Encodes a pair: first, then second. No separator.
 			 * @tparam U Defaulted to @p T; see @ref StormByte::Serializable::SerializeTrivial.
-			 * @return Blob.
+			 * @return Blob owned by Base.
 			 */
 			template<typename U = T>
-			std::vector<std::byte> SerializePair() const noexcept
+			BinaryData SerializePair() const noexcept
 			requires Type::Pair<U>;
 
 			/**
@@ -464,10 +466,10 @@ namespace StormByte {
 			 * Never copies the `optional` object representation (padding).
 			 *
 			 * @tparam U Defaulted to @p T; see @ref StormByte::Serializable::SerializeTrivial.
-			 * @return Blob.
+			 * @return Blob owned by Base.
 			 */
 			template<typename U = T>
-			std::vector<std::byte> SerializeOptional() const noexcept
+			BinaryData SerializeOptional() const noexcept
 			requires Type::Optional<U>;
 
 			/**
@@ -581,6 +583,7 @@ namespace StormByte {
 	extern template class STORMBYTE_PUBLIC Serializable<std::u32string>;
 	extern template class STORMBYTE_PUBLIC Serializable<CString>;
 	extern template class STORMBYTE_PUBLIC Serializable<WCString>;
+	extern template class STORMBYTE_PUBLIC Serializable<BinaryData>;
 	/// @endcond
 }
 

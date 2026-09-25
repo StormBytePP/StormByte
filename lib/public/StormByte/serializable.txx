@@ -1,21 +1,41 @@
 /*
- * Copyright (C) 2024-2026 David C. Manuelda (StormBytePP)
- *
- * This file is part of StormByte.
- *
- * StormByte is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3
- * or later, as published by the Free Software Foundation.
- *
- * StormByte is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with StormByte. If not, see
- * <https://www.gnu.org/licenses/lgpl-3.0.html>.
- */
+* Copyright (C) 2024-2026 David C. Manuelda (StormBytePP)
+*
+* This file is part of StormByte.
+*
+* StormByte original source is dual-licensed:
+*
+* 1. GNU Lesser General Public License v3.0 (or later)
+*    You may redistribute and/or modify this file under the terms of the
+*    GNU Lesser General Public License as published by the Free Software
+*    Foundation, either version 3 of the License, or (at your option)
+*    any later version.
+*
+* 2. Commercial license
+*    Alternatively, this file may be used under the terms of a commercial
+*    license agreement with the copyright holder
+*    (David C. Manuelda <StormByte@gmail.com>).
+*
+* Both licenses apply only to original StormByte source in this repository.
+* They do not cover other StormByte modules or any third-party material
+* shipped with this repository (including everything under thirdparty/),
+* which remains under its own license.
+*
+* Neither license grants any patent rights. Any patent licenses required
+* to use this software or third-party components must be obtained separately
+* from the patent holders.
+*
+* StormByte is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU Lesser General Public License for more details.
+*
+* You should have received a copy of the GNU Lesser General Public License
+* version 3 along with StormByte. If not, see
+* <https://www.gnu.org/licenses/lgpl-3.0.html>.
+*
+* SPDX-License-Identifier: LGPL-3.0-or-later OR LicenseRef-StormByte-Commercial
+*/
 
 #pragma once
 
@@ -24,7 +44,7 @@
 
 namespace StormByte {
 	template<typename T>
-	std::vector<std::byte> Serializable<T>::Serialize() const noexcept {
+	BinaryData Serializable<T>::Serialize() const noexcept {
 		if constexpr (Type::Optional<T>) {
 			return SerializeOptional();
 		} else if constexpr (Type::Pair<T>) {
@@ -54,8 +74,8 @@ namespace StormByte {
 	}
 
 	template<typename T>
-	Expected<T, DeserializeError> Serializable<T>::Deserialize(const std::vector<std::byte>& data) noexcept {
-		return Deserialize(std::span<const std::byte>(data.data(), data.size()));
+	Expected<T, DeserializeError> Serializable<T>::Deserialize(const BinaryData& data) noexcept {
+		return Deserialize(data.span());
 	}
 
 	template<typename T>
@@ -75,7 +95,7 @@ namespace StormByte {
 
 	template<typename T>
 	template<typename U>
-	std::vector<std::byte> Serializable<T>::SerializeTrivial() const noexcept
+	BinaryData Serializable<T>::SerializeTrivial() const noexcept
 	requires Type::TriviallyCopyable<U> {
 		DecayedT value = m_data;
 
@@ -84,50 +104,49 @@ namespace StormByte {
 			value = Type::Detail::swap_endian(value);
 		}
 
-		return {
-			reinterpret_cast<const std::byte*>(&value),
-			reinterpret_cast<const std::byte*>(&value) + sizeof(value)
-		};
+		const auto* raw = reinterpret_cast<const std::byte*>(&value);
+		return BinaryData(raw, StormByte::Size{ static_cast<std::uint64_t>(sizeof(value)) });
 	}
 
 	template<typename T>
 	template<typename U>
-	std::vector<std::byte> Serializable<T>::SerializeContainer() const noexcept
+	BinaryData Serializable<T>::SerializeContainer() const noexcept
 	requires Type::Container<U> {
 		const std::uint64_t size = static_cast<std::uint64_t>(m_data.size());
-		std::vector<std::byte> buffer = Serializable<std::uint64_t>(size).Serialize();
-		buffer.reserve(buffer.size() + SizeContainer(m_data));
+		BinaryData buffer = Serializable<std::uint64_t>(size).Serialize();
+		buffer.reserve(StormByte::Size{ static_cast<std::uint64_t>(
+			static_cast<std::size_t>(buffer.size()) + SizeContainer(m_data)) });
 		for (const auto& element : m_data) {
 			Serializable<std::decay_t<decltype(element)>> element_serial(element);
-			append_vector(buffer, element_serial.Serialize());
+			append_bytes(buffer, element_serial.Serialize());
 		}
 		return buffer;
 	}
 
 	template<typename T>
 	template<typename U>
-	std::vector<std::byte> Serializable<T>::SerializePair() const noexcept
+	BinaryData Serializable<T>::SerializePair() const noexcept
 	requires Type::Pair<U> {
 		Serializable<std::decay_t<typename T::first_type>> first_serial(m_data.first);
 		Serializable<std::decay_t<typename T::second_type>> second_serial(m_data.second);
-		std::vector<std::byte> buffer;
-		buffer.reserve(SizePair(m_data));
-		append_vector(buffer, first_serial.Serialize());
-		append_vector(buffer, second_serial.Serialize());
+		BinaryData buffer;
+		buffer.reserve(StormByte::Size{ static_cast<std::uint64_t>(SizePair(m_data)) });
+		append_bytes(buffer, first_serial.Serialize());
+		append_bytes(buffer, second_serial.Serialize());
 		return buffer;
 	}
 
 	template<typename T>
 	template<typename U>
-	std::vector<std::byte> Serializable<T>::SerializeOptional() const noexcept
+	BinaryData Serializable<T>::SerializeOptional() const noexcept
 	requires Type::Optional<U> {
 		const bool has_value = m_data.has_value();
-		std::vector<std::byte> buffer;
-		buffer.reserve(SizeOptional(m_data));
-		append_vector(buffer, Serializable<bool>(has_value).Serialize());
+		BinaryData buffer;
+		buffer.reserve(StormByte::Size{ static_cast<std::uint64_t>(SizeOptional(m_data)) });
+		append_bytes(buffer, Serializable<bool>(has_value).Serialize());
 		if (m_data.has_value()) {
 			Serializable<std::decay_t<decltype(m_data.value())>> value_serial(m_data.value());
-			append_vector(buffer, value_serial.Serialize());
+			append_bytes(buffer, value_serial.Serialize());
 		}
 		return buffer;
 	}

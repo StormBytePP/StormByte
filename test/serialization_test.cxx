@@ -40,6 +40,7 @@
 #include <StormByte/binary_data.hxx>
 #include <StormByte/helpers.hxx>
 #include <StormByte/serializable.hxx>
+#include <StormByte/size.hxx>
 #include <StormByte/test_handlers.h>
 
 #include <array>
@@ -55,28 +56,34 @@
 using namespace StormByte;
 
 namespace {
-	void CorruptByte(std::vector<std::byte>& buf, std::size_t index, std::byte value) {
-		if (index < buf.size())
-			buf[index] = value;
+	std::size_t ByteCount(const BinaryData& buf) {
+		return static_cast<std::size_t>(static_cast<std::uint64_t>(buf.size()));
 	}
 
-	void FlipBit(std::vector<std::byte>& buf, std::size_t byte_index, unsigned bit) {
-		if (byte_index >= buf.size() || bit > 7) return;
-		auto& b = reinterpret_cast<unsigned char&>(buf[byte_index]);
+	void CorruptByte(BinaryData& buf, std::size_t index, std::byte value) {
+		if (index < ByteCount(buf))
+			buf[Size{ static_cast<std::uint64_t>(index) }] = value;
+	}
+
+	void FlipBit(BinaryData& buf, std::size_t byte_index, unsigned bit) {
+		if (byte_index >= ByteCount(buf) || bit > 7)
+			return;
+		auto& b = reinterpret_cast<unsigned char&>(buf[Size{ static_cast<std::uint64_t>(byte_index) }]);
 		b ^= static_cast<unsigned char>(1u << bit);
 	}
 
-	std::vector<std::byte> Truncate(const std::vector<std::byte>& buf, std::size_t new_size) {
-		if (new_size >= buf.size()) return buf;
-		return {buf.begin(), buf.begin() + static_cast<std::ptrdiff_t>(new_size)};
+	BinaryData Truncate(const BinaryData& buf, std::size_t new_size) {
+		if (new_size >= ByteCount(buf))
+			return buf;
+		return BinaryData(buf.data(), Size{ static_cast<std::uint64_t>(new_size) });
 	}
 
-	std::vector<std::byte> MakeStringVectorBuffer() {
+	BinaryData MakeStringVectorBuffer() {
 		std::vector<std::string> data = {"Hello", "StormByte", "World"};
 		return Serializable<std::vector<std::string>>(data).Serialize();
 	}
 
-	std::vector<std::byte> MakeStringBuffer() {
+	BinaryData MakeStringBuffer() {
 		return Serializable<std::string>("StormByte serialization test").Serialize();
 	}
 
@@ -89,7 +96,7 @@ namespace {
 		return data;
 	}
 
-	std::vector<std::byte> MakeBinaryDataBuffer() {
+	BinaryData MakeBinaryDataBuffer() {
 		return Serializable<BinaryData>(MakeBinaryPayload()).Serialize();
 	}
 
@@ -108,10 +115,10 @@ struct StormByte::Detail::Codec<Tag> {
 		return Serializable<int>::Size(v.a) + Serializable<std::string>::Size(v.b);
 	}
 
-	static std::vector<std::byte> Write(const Tag& v) noexcept {
-		std::vector<std::byte> buf;
-		append_vector(buf, Serializable<int>(v.a).Serialize());
-		append_vector(buf, Serializable<std::string>(v.b).Serialize());
+	static BinaryData Write(const Tag& v) noexcept {
+		BinaryData buf;
+		append_bytes(buf, Serializable<int>(v.a).Serialize());
+		append_bytes(buf, Serializable<std::string>(v.b).Serialize());
 		return buf;
 	}
 
@@ -144,7 +151,7 @@ int test_serialize_binary_data() {
 		RETURN_TEST("test_serialize_binary_data", 1);
 	}
 	ASSERT_TRUE("test_serialize_binary_data", data == expected.value());
-	ASSERT_EQUAL("test_serialize_binary_data", Serializable<BinaryData>::Size(data), buffer.size());
+	ASSERT_EQUAL("test_serialize_binary_data", Serializable<BinaryData>::Size(data), ByteCount(buffer));
 	RETURN_TEST("test_serialize_binary_data", 0);
 }
 
@@ -185,7 +192,7 @@ int test_serialize_binary_data_trailing_garbage() {
 
 int test_serialize_binary_data_truncated() {
 	auto clean = MakeBinaryDataBuffer();
-	for (std::size_t len = 0; len < clean.size(); ++len) {
+	for (std::size_t len = 0; len < ByteCount(clean); ++len) {
 		auto truncated = Truncate(clean, len);
 		auto result = Serializable<BinaryData>::Deserialize(truncated);
 		if (result) {
@@ -221,7 +228,7 @@ int test_serialize_optional_binary_data() {
 int test_binary_data_corruption_huge_size() {
 	auto clean = MakeBinaryDataBuffer();
 	int accepted = 0;
-	if (clean.size() >= sizeof(std::uint64_t)) {
+	if (ByteCount(clean) >= sizeof(std::uint64_t)) {
 		auto buf = clean;
 		std::uint64_t huge = static_cast<std::uint64_t>(-1);
 		std::memcpy(buf.data(), &huge, sizeof(huge));
@@ -238,7 +245,7 @@ int test_binary_data_corruption_huge_size() {
 
 int test_binary_data_corruption_no_crash_bit_flip() {
 	auto clean = MakeBinaryDataBuffer();
-	for (std::size_t i = 0; i < clean.size(); ++i) {
+	for (std::size_t i = 0; i < ByteCount(clean); ++i) {
 		for (unsigned bit = 0; bit < 8; ++bit) {
 			auto buf = clean;
 			FlipBit(buf, i, bit);
@@ -251,7 +258,7 @@ int test_binary_data_corruption_no_crash_bit_flip() {
 
 int test_binary_data_corruption_no_crash_byte_overwrite() {
 	auto clean = MakeBinaryDataBuffer();
-	for (std::size_t i = 0; i < clean.size(); ++i) {
+	for (std::size_t i = 0; i < ByteCount(clean); ++i) {
 		for (int v = 0; v < 256; v += 31) {
 			auto buf = clean;
 			CorruptByte(buf, i, static_cast<std::byte>(v));
@@ -265,7 +272,7 @@ int test_binary_data_corruption_no_crash_byte_overwrite() {
 int test_binary_data_corruption_random_stress() {
 	auto clean = MakeBinaryDataBuffer();
 	std::mt19937 rng(0xB10A);
-	std::uniform_int_distribution<std::size_t> pos_dist(0, clean.size() - 1);
+	std::uniform_int_distribution<std::size_t> pos_dist(0, ByteCount(clean) - 1);
 	std::uniform_int_distribution<int> val_dist(0, 255);
 	constexpr int ITERATIONS = 400;
 	for (int i = 0; i < ITERATIONS; ++i) {
@@ -277,6 +284,18 @@ int test_binary_data_corruption_random_stress() {
 		(void)result;
 	}
 	RETURN_TEST("test_binary_data_corruption_random_stress", 0);
+}
+
+int test_serialize_binary_data_from_blob_and_span() {
+	const BinaryData data = MakeBinaryPayload();
+	auto buffer = Serializable<BinaryData>(data).Serialize();
+	auto from_blob = Serializable<BinaryData>::Deserialize(buffer);
+	auto from_span = Serializable<BinaryData>::Deserialize(buffer.span());
+	ASSERT_TRUE("test_serialize_binary_data_from_blob_and_span", static_cast<bool>(from_blob));
+	ASSERT_TRUE("test_serialize_binary_data_from_blob_and_span", static_cast<bool>(from_span));
+	ASSERT_TRUE("test_serialize_binary_data_from_blob_and_span", from_blob.value() == data);
+	ASSERT_TRUE("test_serialize_binary_data_from_blob_and_span", from_span.value() == data);
+	RETURN_TEST("test_serialize_binary_data_from_blob_and_span", 0);
 }
 
 // -------------------
@@ -294,14 +313,14 @@ int test_codec_custom_type() {
 		RETURN_TEST("test_codec_custom_type", 1);
 	}
 	ASSERT_TRUE("test_codec_custom_type", original == expected.value());
-	ASSERT_EQUAL("test_codec_custom_type", Serializable<Tag>::Size(original), buffer.size());
+	ASSERT_EQUAL("test_codec_custom_type", Serializable<Tag>::Size(original), ByteCount(buffer));
 	RETURN_TEST("test_codec_custom_type", 0);
 }
 
 int test_codec_custom_type_truncated() {
 	const Tag original{ 7, "codec" };
 	auto buffer = Serializable<Tag>(original).Serialize();
-	for (std::size_t len = 0; len < buffer.size(); ++len) {
+	for (std::size_t len = 0; len < ByteCount(buffer); ++len) {
 		auto truncated = Truncate(buffer, len);
 		auto result = Serializable<Tag>::Deserialize(truncated);
 		if (result) {
@@ -317,11 +336,11 @@ int test_codec_custom_type_truncated() {
 // -------------------
 
 int test_base_corruption_empty_buffer() {
-	auto r1 = Serializable<int>::Deserialize(std::vector<std::byte>{});
-	auto r2 = Serializable<std::string>::Deserialize(std::vector<std::byte>{});
-	auto r3 = Serializable<std::vector<std::string>>::Deserialize(std::vector<std::byte>{});
-	auto r4 = Serializable<std::pair<int, double>>::Deserialize(std::vector<std::byte>{});
-	auto r5 = Serializable<BinaryData>::Deserialize(std::vector<std::byte>{});
+	auto r1 = Serializable<int>::Deserialize(BinaryData{});
+	auto r2 = Serializable<std::string>::Deserialize(BinaryData{});
+	auto r3 = Serializable<std::vector<std::string>>::Deserialize(BinaryData{});
+	auto r4 = Serializable<std::pair<int, double>>::Deserialize(BinaryData{});
+	auto r5 = Serializable<BinaryData>::Deserialize(BinaryData{});
 	if (r1 || r2 || r3 || r4 || r5) {
 		std::cerr << "test_base_corruption_empty_buffer: empty buffer was accepted\n";
 		RETURN_TEST("test_base_corruption_empty_buffer", 1);
@@ -332,8 +351,8 @@ int test_base_corruption_empty_buffer() {
 int test_base_corruption_huge_container_size() {
 	auto clean = MakeStringVectorBuffer();
 	int accepted = 0;
-	for (std::size_t i = 0; i < std::min<std::size_t>(16, clean.size()); ++i) {
-		if (i + sizeof(std::uint64_t) > clean.size()) break;
+	for (std::size_t i = 0; i < std::min<std::size_t>(16, ByteCount(clean)); ++i) {
+		if (i + sizeof(std::uint64_t) > ByteCount(clean)) break;
 		auto buf = clean;
 		std::uint64_t huge = static_cast<std::uint64_t>(-1);
 		std::memcpy(buf.data() + i, &huge, sizeof(huge));
@@ -352,7 +371,7 @@ int test_base_corruption_huge_container_size() {
 int test_base_corruption_huge_string_size() {
 	auto clean = MakeStringBuffer();
 	int accepted = 0;
-	if (clean.size() >= sizeof(std::uint64_t)) {
+	if (ByteCount(clean) >= sizeof(std::uint64_t)) {
 		auto buf = clean;
 		std::uint64_t huge = static_cast<std::uint64_t>(-1);
 		std::memcpy(buf.data(), &huge, sizeof(huge));
@@ -369,7 +388,7 @@ int test_base_corruption_huge_string_size() {
 
 int test_base_corruption_no_crash_bit_flip() {
 	auto clean = MakeStringVectorBuffer();
-	for (std::size_t i = 0; i < clean.size(); ++i) {
+	for (std::size_t i = 0; i < ByteCount(clean); ++i) {
 		for (unsigned bit = 0; bit < 8; ++bit) {
 			auto buf = clean;
 			FlipBit(buf, i, bit);
@@ -382,7 +401,7 @@ int test_base_corruption_no_crash_bit_flip() {
 
 int test_base_corruption_no_crash_byte_overwrite() {
 	auto clean = MakeStringBuffer();
-	for (std::size_t i = 0; i < clean.size(); ++i) {
+	for (std::size_t i = 0; i < ByteCount(clean); ++i) {
 		for (int v = 0; v < 256; v += 31) {
 			auto buf = clean;
 			CorruptByte(buf, i, static_cast<std::byte>(v));
@@ -396,7 +415,7 @@ int test_base_corruption_no_crash_byte_overwrite() {
 int test_base_corruption_random_stress() {
 	auto clean = MakeStringVectorBuffer();
 	std::mt19937 rng(0xC0FFEE);
-	std::uniform_int_distribution<std::size_t> pos_dist(0, clean.size() - 1);
+	std::uniform_int_distribution<std::size_t> pos_dist(0, ByteCount(clean) - 1);
 	std::uniform_int_distribution<int> val_dist(0, 255);
 	constexpr int ITERATIONS = 400;
 	for (int i = 0; i < ITERATIONS; ++i) {
@@ -412,7 +431,7 @@ int test_base_corruption_random_stress() {
 
 int test_base_corruption_string_truncated_all() {
 	auto clean = MakeStringBuffer();
-	for (std::size_t len = 0; len < clean.size(); ++len) {
+	for (std::size_t len = 0; len < ByteCount(clean); ++len) {
 		auto truncated = Truncate(clean, len);
 		auto result = Serializable<std::string>::Deserialize(truncated);
 		if (result) {
@@ -426,7 +445,7 @@ int test_base_corruption_string_truncated_all() {
 
 int test_base_corruption_vector_truncated_all() {
 	auto clean = MakeStringVectorBuffer();
-	for (std::size_t len = 0; len < clean.size(); ++len) {
+	for (std::size_t len = 0; len < ByteCount(clean); ++len) {
 		auto truncated = Truncate(clean, len);
 		auto result = Serializable<std::vector<std::string>>::Deserialize(truncated);
 		if (result) {
@@ -447,13 +466,13 @@ int test_base_cross_type_vector_as_string() {
 
 int test_base_double_corruption() {
 	auto clean = MakeStringVectorBuffer();
-	if (clean.size() < 8)
+	if (ByteCount(clean) < 8)
 		RETURN_TEST("test_base_double_corruption", 0);
 	auto buf = clean;
 	for (std::size_t i = 0; i < 4; ++i)
-		buf[i] = std::byte{0xFF};
+		buf[Size{ static_cast<std::uint64_t>(i) }] = std::byte{0xFF};
 	for (std::size_t i = 0; i < 4; ++i)
-		buf[buf.size() - 1 - i] = std::byte{0xAA};
+		buf[Size{ static_cast<std::uint64_t>(ByteCount(buf) - 1 - i) }] = std::byte{0xAA};
 	auto result = Serializable<std::vector<std::string>>::Deserialize(buf);
 	(void)result;
 	RETURN_TEST("test_base_double_corruption", 0);
@@ -542,8 +561,8 @@ int test_serialize_nested_optional() {
 int test_serialize_optional_empty() {
 	std::optional<int> data;
 	Serializable<std::optional<int>> serialization(data);
-	std::vector<std::byte> buffer = serialization.Serialize();
-	if (buffer.size() == 0)
+	BinaryData buffer = serialization.Serialize();
+	if (buffer.empty())
 		RETURN_TEST("test_serialize_optional_empty", 1);
 	auto expected_data = Serializable<std::optional<int>>::Deserialize(buffer);
 	if (!expected_data) {
@@ -557,8 +576,8 @@ int test_serialize_optional_empty() {
 int test_serialize_optional_notempty() {
 	std::optional<int> data = 42;
 	Serializable<std::optional<int>> serialization(data);
-	std::vector<std::byte> buffer = serialization.Serialize();
-	if (buffer.size() == 0)
+	BinaryData buffer = serialization.Serialize();
+	if (buffer.empty())
 		RETURN_TEST("test_serialize_optional_notempty", 1);
 	auto expected_data = Serializable<std::optional<int>>::Deserialize(buffer);
 	if (!expected_data) {
@@ -572,8 +591,8 @@ int test_serialize_optional_notempty() {
 int test_serialize_optional_string() {
 	std::optional<std::string> data = "Hello, World!";
 	Serializable<std::optional<std::string>> serialization(data);
-	std::vector<std::byte> buffer = serialization.Serialize();
-	if (buffer.size() == 0)
+	BinaryData buffer = serialization.Serialize();
+	if (buffer.empty())
 		RETURN_TEST("test_serialize_optional_string", 1);
 	auto expected_data = Serializable<std::optional<std::string>>::Deserialize(buffer);
 	if (!expected_data) {
@@ -598,7 +617,7 @@ int test_serialize_array() {
 	}
 	ASSERT_TRUE("test_serialize_array", data == expected.value());
 	const auto expected_size = Serializable<std::array<int, 3>>::Size(data);
-	ASSERT_EQUAL("test_serialize_array", expected_size, buffer.size());
+	ASSERT_EQUAL("test_serialize_array", expected_size, ByteCount(buffer));
 	RETURN_TEST("test_serialize_array", 0);
 }
 
@@ -614,7 +633,7 @@ int test_serialize_deserialize_big_string() {
 	const std::string fn_name = "test_serialize_deserialize_big_string";
 	const std::string data(10 * 1024 * 1024, 'A');
 	Serializable<std::string> serialization(data);
-	std::vector<std::byte> buffer = serialization.Serialize();
+	BinaryData buffer = serialization.Serialize();
 	ASSERT_FALSE(fn_name, buffer.empty());
 	auto expected_data = Serializable<std::string>::Deserialize(buffer);
 	if (!expected_data) {
@@ -629,10 +648,10 @@ int test_serialize_deserialize_with_span() {
 	const std::string fn_name = "test_serialize_deserialize_with_span";
 	int data = 123456;
 	Serializable<int> serialization(data);
-	std::vector<std::byte> buffer = serialization.Serialize();
+	BinaryData buffer = serialization.Serialize();
 	if (buffer.empty())
 		RETURN_TEST(fn_name.c_str(), 1);
-	auto expected_data = Serializable<int>::Deserialize(std::span<const std::byte>(buffer.data(), buffer.size()));
+	auto expected_data = Serializable<int>::Deserialize(buffer.span());
 	if (!expected_data) {
 		std::cerr << expected_data.error()->what() << std::endl;
 		RETURN_TEST(fn_name.c_str(), 1);
@@ -644,8 +663,8 @@ int test_serialize_deserialize_with_span() {
 int test_serialize_double() {
 	double data = 777.777;
 	Serializable<double> serialization(data);
-	std::vector<std::byte> buffer = serialization.Serialize();
-	if (buffer.size() == 0)
+	BinaryData buffer = serialization.Serialize();
+	if (buffer.empty())
 		RETURN_TEST("test_serialize_double", 1);
 	auto expected_data = Serializable<double>::Deserialize(buffer);
 	if (!expected_data)
@@ -657,8 +676,8 @@ int test_serialize_double() {
 int test_serialize_int() {
 	int data = 42;
 	Serializable<int> serialization(data);
-	std::vector<std::byte> buffer = serialization.Serialize();
-	if (buffer.size() == 0)
+	BinaryData buffer = serialization.Serialize();
+	if (buffer.empty())
 		RETURN_TEST("test_serialize_int", 1);
 	auto expected_data = Serializable<int>::Deserialize(buffer);
 	if (!expected_data)
@@ -670,8 +689,8 @@ int test_serialize_int() {
 int test_serialize_map() {
 	std::map<int, std::string> data = { { 1, "Hello" }, { 2, "World!" } };
 	Serializable<std::map<int, std::string>> serialization(data);
-	std::vector<std::byte> buffer = serialization.Serialize();
-	if (buffer.size() == 0)
+	BinaryData buffer = serialization.Serialize();
+	if (buffer.empty())
 		RETURN_TEST("test_serialize_map", 1);
 	auto expected_data = Serializable<std::map<int, std::string>>::Deserialize(buffer);
 	if (!expected_data) {
@@ -685,8 +704,8 @@ int test_serialize_map() {
 int test_serialize_pair() {
 	std::pair<int, double> data = { 42, 777.777 };
 	Serializable<std::pair<int, double>> serialization(data);
-	std::vector<std::byte> buffer = serialization.Serialize();
-	if (buffer.size() == 0)
+	BinaryData buffer = serialization.Serialize();
+	if (buffer.empty())
 		RETURN_TEST("test_serialize_pair", 1);
 	auto expected_data = Serializable<std::pair<int, double>>::Deserialize(buffer);
 	if (!expected_data) {
@@ -701,8 +720,8 @@ int test_serialize_size_t() {
 	std::string data = "Hello, World!";
 	std::size_t size = data.size();
 	Serializable<std::size_t> serialization(size);
-	std::vector<std::byte> buffer = serialization.Serialize();
-	if (buffer.size() == 0)
+	BinaryData buffer = serialization.Serialize();
+	if (buffer.empty())
 		RETURN_TEST("test_serialize_size_t", 1);
 	auto expected_data = Serializable<std::size_t>::Deserialize(buffer);
 	if (!expected_data)
@@ -714,8 +733,8 @@ int test_serialize_size_t() {
 int test_serialize_string() {
 	std::string data = "Hello, World!";
 	Serializable<std::string> serialization(data);
-	std::vector<std::byte> buffer = serialization.Serialize();
-	if (buffer.size() == 0)
+	BinaryData buffer = serialization.Serialize();
+	if (buffer.empty())
 		RETURN_TEST("test_serialize_string", 1);
 	auto expected_data = Serializable<std::string>::Deserialize(buffer);
 	if (!expected_data)
@@ -727,8 +746,8 @@ int test_serialize_string() {
 int test_serialize_string_vector() {
 	std::vector<std::string> data = { "Hello", "World!" };
 	Serializable<std::vector<std::string>> serialization(data);
-	std::vector<std::byte> buffer = serialization.Serialize();
-	if (buffer.size() == 0)
+	BinaryData buffer = serialization.Serialize();
+	if (buffer.empty())
 		RETURN_TEST("test_serialize_string_vector", 1);
 	auto expected_data = Serializable<std::vector<std::string>>::Deserialize(buffer);
 	if (!expected_data) {
@@ -747,7 +766,7 @@ int test_serialize_deserialize_with_span_truncated() {
 	const std::string fn_name = "test_serialize_deserialize_with_span_truncated";
 	int data = 123456;
 	Serializable<int> serialization(data);
-	std::vector<std::byte> buffer = serialization.Serialize();
+	BinaryData buffer = serialization.Serialize();
 	if (buffer.empty())
 		RETURN_TEST(fn_name.c_str(), 1);
 	std::size_t truncated_len = sizeof(int) / 2;
@@ -763,10 +782,10 @@ int test_serialize_deserialize_with_span_truncated() {
 int test_serialize_int_truncated() {
 	int data = 42;
 	Serializable<int> serialization(data);
-	std::vector<std::byte> buffer = serialization.Serialize();
-	if (buffer.size() == 0)
+	BinaryData buffer = serialization.Serialize();
+	if (buffer.empty())
 		RETURN_TEST("test_serialize_int_truncated", 1);
-	std::vector<std::byte> truncated_buffer(buffer.begin(), buffer.begin() + sizeof(int) / 2);
+	auto truncated_buffer = Truncate(buffer, sizeof(int) / 2);
 	auto expected_data = Serializable<int>::Deserialize(truncated_buffer);
 	if (expected_data) {
 		std::cerr << "Expected failure, but got value: " << expected_data.value() << std::endl;
@@ -778,11 +797,10 @@ int test_serialize_int_truncated() {
 int test_serialize_pair_truncated() {
 	std::pair<int, double> data = { 42, 777.777 };
 	Serializable<std::pair<int, double>> serialization(data);
-	std::vector<std::byte> buffer = serialization.Serialize();
-	if (buffer.size() == 0)
+	BinaryData buffer = serialization.Serialize();
+	if (buffer.empty())
 		RETURN_TEST("test_serialize_pair_truncated", 1);
-	std::size_t truncated_length = sizeof(int);
-	std::vector<std::byte> truncated_buffer(buffer.begin(), buffer.begin() + truncated_length);
+	auto truncated_buffer = Truncate(buffer, sizeof(int));
 	auto expected_data = Serializable<std::pair<int, double>>::Deserialize(truncated_buffer);
 	if (expected_data) {
 		std::cerr << "Expected failure, but got value" << std::endl;
@@ -794,11 +812,10 @@ int test_serialize_pair_truncated() {
 int test_serialize_string_vector_truncated() {
 	std::vector<std::string> data = { "Hello", "World!" };
 	Serializable<std::vector<std::string>> serialization(data);
-	std::vector<std::byte> buffer = serialization.Serialize();
-	if (buffer.size() == 0)
+	BinaryData buffer = serialization.Serialize();
+	if (buffer.empty())
 		RETURN_TEST("test_serialize_string_vector_truncated", 1);
-	std::size_t truncated_length = sizeof(std::size_t) + 2;
-	std::vector<std::byte> truncated_buffer(buffer.begin(), buffer.begin() + truncated_length);
+	auto truncated_buffer = Truncate(buffer, sizeof(std::size_t) + 2);
 	auto expected_data = Serializable<std::vector<std::string>>::Deserialize(truncated_buffer);
 	if (expected_data) {
 		std::cerr << "Expected failure, but got value" << std::endl;
@@ -830,7 +847,7 @@ int test_serialize_cstring() {
 		RETURN_TEST("test_serialize_cstring", 1);
 	}
 	ASSERT_TRUE("test_serialize_cstring", data == expected.value());
-	ASSERT_EQUAL("test_serialize_cstring", Serializable<CString>::Size(data), buffer.size());
+	ASSERT_EQUAL("test_serialize_cstring", Serializable<CString>::Size(data), ByteCount(buffer));
 	RETURN_TEST("test_serialize_cstring", 0);
 }
 
@@ -864,7 +881,7 @@ int test_serialize_cstring_null_is_empty_wire() {
 
 int test_serialize_cstring_truncated() {
 	auto buffer = Serializable<CString>(CString("TruncationTest")).Serialize();
-	for (std::size_t len = 0; len < buffer.size(); ++len) {
+	for (std::size_t len = 0; len < ByteCount(buffer); ++len) {
 		auto truncated = Truncate(buffer, len);
 		auto result = Serializable<CString>::Deserialize(truncated);
 		if (result) {
@@ -878,7 +895,7 @@ int test_serialize_cstring_truncated() {
 int test_serialize_u16string() {
 	std::u16string data = u"Hello, StormByte!";
 	Serializable<std::u16string> serialization(data);
-	std::vector<std::byte> buffer = serialization.Serialize();
+	BinaryData buffer = serialization.Serialize();
 	if (buffer.empty())
 		RETURN_TEST("test_serialize_u16string", 1);
 	auto expected = Serializable<std::u16string>::Deserialize(buffer);
@@ -904,7 +921,7 @@ int test_serialize_u16string_empty() {
 
 int test_serialize_u16string_huge_size() {
 	auto clean = Serializable<std::u16string>(u"safe").Serialize();
-	if (clean.size() < sizeof(std::uint64_t))
+	if (ByteCount(clean) < sizeof(std::uint64_t))
 		RETURN_TEST("test_serialize_u16string_huge_size", 1);
 	auto buf = clean;
 	std::uint64_t huge = static_cast<std::uint64_t>(-1);
@@ -932,8 +949,8 @@ int test_serialize_u16string_non_bmp() {
 int test_serialize_u16string_truncated() {
 	std::u16string data = u"TruncationTest";
 	auto buffer = Serializable<std::u16string>(data).Serialize();
-	for (std::size_t len = 0; len < buffer.size(); ++len) {
-		auto truncated = std::vector<std::byte>(buffer.begin(), buffer.begin() + static_cast<std::ptrdiff_t>(len));
+	for (std::size_t len = 0; len < ByteCount(buffer); ++len) {
+		auto truncated = Truncate(buffer, len);
 		auto result = Serializable<std::u16string>::Deserialize(truncated);
 		if (result) {
 			std::cerr << "test_serialize_u16string_truncated: size " << len << " accepted\n";
@@ -966,7 +983,7 @@ int test_serialize_wcstring() {
 		RETURN_TEST("test_serialize_wcstring", 1);
 	}
 	ASSERT_TRUE("test_serialize_wcstring", data == expected.value());
-	ASSERT_EQUAL("test_serialize_wcstring", Serializable<WCString>::Size(data), buffer.size());
+	ASSERT_EQUAL("test_serialize_wcstring", Serializable<WCString>::Size(data), ByteCount(buffer));
 	RETURN_TEST("test_serialize_wcstring", 0);
 }
 
@@ -1011,7 +1028,7 @@ int test_serialize_wcstring_null_is_empty_wire() {
 
 int test_serialize_wcstring_truncated() {
 	auto buffer = Serializable<WCString>(WCString(L"TruncationTest")).Serialize();
-	for (std::size_t len = 0; len < buffer.size(); ++len) {
+	for (std::size_t len = 0; len < ByteCount(buffer); ++len) {
 		auto truncated = Truncate(buffer, len);
 		auto result = Serializable<WCString>::Deserialize(truncated);
 		if (result) {
@@ -1070,8 +1087,8 @@ int test_wide_and_u16_share_utf8_wire() {
 // -------------------
 
 int test_base_bool_accepts_0_and_1() {
-	auto z = Serializable<bool>::Deserialize(std::vector<std::byte>{ std::byte{0} });
-	auto o = Serializable<bool>::Deserialize(std::vector<std::byte>{ std::byte{1} });
+	auto z = Serializable<bool>::Deserialize(BinaryData{ std::byte{0} });
+	auto o = Serializable<bool>::Deserialize(BinaryData{ std::byte{1} });
 	if (!z || z.value() != false) {
 		std::cerr << "test_base_bool_accepts_0_and_1: 0 not decoded as false\n";
 		RETURN_TEST("test_base_bool_accepts_0_and_1", 1);
@@ -1084,7 +1101,7 @@ int test_base_bool_accepts_0_and_1() {
 }
 
 int test_base_bool_rejects_invalid_byte() {
-	std::vector<std::byte> buf = { std::byte{17} };
+	BinaryData buf{ std::byte{17} };
 	bool threw = false;
 	bool accepted = false;
 	try {
@@ -1106,7 +1123,7 @@ int test_base_bool_rejects_invalid_byte() {
 }
 
 int test_base_optional_flag_rejects_invalid_bool() {
-	std::vector<std::byte> buf = { std::byte{17} };
+	BinaryData buf{ std::byte{17} };
 	bool threw = false;
 	bool accepted = false;
 	try {
@@ -1140,14 +1157,14 @@ int test_base_trailing_garbage() {
 int test_wire_int_is_little_endian() {
 	const int data = 0x01020304;
 	auto buffer = Serializable<int>(data).Serialize();
-	if (buffer.size() != sizeof(int)) {
-		std::cerr << "test_wire_int_is_little_endian: unexpected size " << buffer.size() << "\n";
+	if (ByteCount(buffer) != sizeof(int)) {
+		std::cerr << "test_wire_int_is_little_endian: unexpected size\n";
 		RETURN_TEST("test_wire_int_is_little_endian", 1);
 	}
-	const unsigned char b0 = static_cast<unsigned char>(buffer[0]);
-	const unsigned char b1 = static_cast<unsigned char>(buffer[1]);
-	const unsigned char b2 = static_cast<unsigned char>(buffer[2]);
-	const unsigned char b3 = static_cast<unsigned char>(buffer[3]);
+	const unsigned char b0 = static_cast<unsigned char>(buffer[Size{0}]);
+	const unsigned char b1 = static_cast<unsigned char>(buffer[Size{1}]);
+	const unsigned char b2 = static_cast<unsigned char>(buffer[Size{2}]);
+	const unsigned char b3 = static_cast<unsigned char>(buffer[Size{3}]);
 	if (b0 != 0x04 || b1 != 0x03 || b2 != 0x02 || b3 != 0x01) {
 		std::cerr << "test_wire_int_is_little_endian: got "
 			<< static_cast<int>(b0) << " " << static_cast<int>(b1) << " "
@@ -1160,15 +1177,15 @@ int test_wire_int_is_little_endian() {
 int test_wire_string_length_is_uint64_le() {
 	const std::string data = "AB";
 	auto buffer = Serializable<std::string>(data).Serialize();
-	if (buffer.size() != sizeof(std::uint64_t) + data.size()) {
+	if (ByteCount(buffer) != sizeof(std::uint64_t) + data.size()) {
 		std::cerr << "test_wire_string_length_is_uint64_le: unexpected size\n";
 		RETURN_TEST("test_wire_string_length_is_uint64_le", 1);
 	}
-	if (static_cast<unsigned char>(buffer[0]) != 2 ||
-			static_cast<unsigned char>(buffer[1]) != 0 ||
-			static_cast<unsigned char>(buffer[7]) != 0 ||
-			static_cast<char>(buffer[8]) != 'A' ||
-			static_cast<char>(buffer[9]) != 'B') {
+	if (static_cast<unsigned char>(buffer[Size{0}]) != 2 ||
+			static_cast<unsigned char>(buffer[Size{1}]) != 0 ||
+			static_cast<unsigned char>(buffer[Size{7}]) != 0 ||
+			static_cast<char>(buffer[Size{8}]) != 'A' ||
+			static_cast<char>(buffer[Size{9}]) != 'B') {
 		std::cerr << "test_wire_string_length_is_uint64_le: layout mismatch\n";
 		RETURN_TEST("test_wire_string_length_is_uint64_le", 1);
 	}
@@ -1191,6 +1208,7 @@ int main() {
 	result += test_binary_data_corruption_no_crash_bit_flip();
 	result += test_binary_data_corruption_no_crash_byte_overwrite();
 	result += test_binary_data_corruption_random_stress();
+	result += test_serialize_binary_data_from_blob_and_span();
 
 	// -------------------
 	// Codec

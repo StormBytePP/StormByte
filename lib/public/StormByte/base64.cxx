@@ -106,9 +106,9 @@ namespace {
 	}
 }
 
-std::vector<std::byte> StormByte::Base64Decode(std::string_view input) {
-	std::vector<std::byte> output;
-	output.reserve((input.size() / 4) * 3);
+BinaryData StormByte::Base64Decode(std::string_view input) {
+	BinaryData output;
+	output.reserve(StormByte::Size{ static_cast<std::uint64_t>((input.size() / 4) * 3) });
 	std::uint32_t buffer = 0;
 	int bits_collected = 0;
 	for (char c : input) {
@@ -131,8 +131,8 @@ std::vector<std::byte> StormByte::Base64Decode(std::string_view input) {
 	return output;
 }
 
-CString StormByte::Base64Encode(const std::vector<std::byte>& input) {
-	return EncodeImpl(input);
+CString StormByte::Base64Encode(const BinaryData& input) {
+	return EncodeImpl(input.span());
 }
 
 CString StormByte::Base64Encode(std::span<const std::byte> input) {

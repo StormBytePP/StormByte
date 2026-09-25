@@ -67,6 +67,7 @@ namespace StormByte {
 	template class STORMBYTE_INSTANTIATE Serializable<std::u32string>;
 	template class STORMBYTE_INSTANTIATE Serializable<CString>;
 	template class STORMBYTE_INSTANTIATE Serializable<WCString>;
+	template class STORMBYTE_INSTANTIATE Serializable<BinaryData>;
 
 	namespace {
 		void append_utf8(std::string& out, char32_t cp) {
@@ -230,13 +231,11 @@ namespace StormByte {
 			return out;
 		}
 
-		std::vector<std::byte> write_byte_string(const std::string& payload) {
+		BinaryData write_byte_string(const std::string& payload) {
 			const std::uint64_t size = static_cast<std::uint64_t>(payload.size());
-			std::vector<std::byte> buffer;
-			buffer.reserve(sizeof(std::uint64_t) + payload.size());
-			append_vector(buffer, Serializable<std::uint64_t>(size).Serialize());
+			BinaryData buffer = Serializable<std::uint64_t>(size).Serialize();
 			const auto* ptr = reinterpret_cast<const std::byte*>(payload.data());
-			buffer.insert(buffer.end(), ptr, ptr + payload.size());
+			buffer.append(ptr, StormByte::Size{ size });
 			return buffer;
 		}
 
@@ -263,7 +262,7 @@ namespace StormByte {
 		return sizeof(std::uint64_t) + data.size();
 	}
 
-	std::vector<std::byte> Detail::Codec<std::string>::Write(const std::string& data) noexcept {
+	BinaryData Detail::Codec<std::string>::Write(const std::string& data) noexcept {
 		return write_byte_string(data);
 	}
 
@@ -275,7 +274,7 @@ namespace StormByte {
 		return sizeof(std::uint64_t) + wstring_to_utf8(data).size();
 	}
 
-	std::vector<std::byte> Detail::Codec<std::wstring>::Write(const std::wstring& data) noexcept {
+	BinaryData Detail::Codec<std::wstring>::Write(const std::wstring& data) noexcept {
 		return write_byte_string(wstring_to_utf8(data));
 	}
 
@@ -290,7 +289,7 @@ namespace StormByte {
 		return sizeof(std::uint64_t) + u16_to_utf8(data).size();
 	}
 
-	std::vector<std::byte> Detail::Codec<std::u16string>::Write(const std::u16string& data) noexcept {
+	BinaryData Detail::Codec<std::u16string>::Write(const std::u16string& data) noexcept {
 		return write_byte_string(u16_to_utf8(data));
 	}
 
@@ -305,7 +304,7 @@ namespace StormByte {
 		return sizeof(std::uint64_t) + u32_to_utf8(data).size();
 	}
 
-	std::vector<std::byte> Detail::Codec<std::u32string>::Write(const std::u32string& data) noexcept {
+	BinaryData Detail::Codec<std::u32string>::Write(const std::u32string& data) noexcept {
 		return write_byte_string(u32_to_utf8(data));
 	}
 
@@ -320,7 +319,7 @@ namespace StormByte {
 		return Detail::Codec<std::string>::Size(static_cast<std::string>(data));
 	}
 
-	std::vector<std::byte> Detail::Codec<CString>::Write(const CString& data) noexcept {
+	BinaryData Detail::Codec<CString>::Write(const CString& data) noexcept {
 		return Detail::Codec<std::string>::Write(static_cast<std::string>(data));
 	}
 
@@ -335,7 +334,7 @@ namespace StormByte {
 		return Detail::Codec<std::wstring>::Size(static_cast<std::wstring>(data));
 	}
 
-	std::vector<std::byte> Detail::Codec<WCString>::Write(const WCString& data) noexcept {
+	BinaryData Detail::Codec<WCString>::Write(const WCString& data) noexcept {
 		return Detail::Codec<std::wstring>::Write(static_cast<std::wstring>(data));
 	}
 

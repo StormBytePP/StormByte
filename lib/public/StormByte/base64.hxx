@@ -39,12 +39,13 @@
 
 #pragma once
 
+#include <StormByte/binary_data.hxx>
 #include <StormByte/cstring.hxx>
+#include <StormByte/visibility.h>
 
 #include <cstddef>
 #include <span>
 #include <string_view>
-#include <vector>
 
 /**
  * @namespace StormByte
@@ -60,17 +61,17 @@ namespace StormByte {
 	 * Padding is accepted but not strictly checked.
 	 *
 	 * @param input Base64 text (`std::string_view`, `std::string` or a string literal).
-	 * @return Decoded bytes.
+	 * @return Decoded bytes owned by Base.
 	 * @throws StormByte::Base64Error If a character is outside the alphabet.
 	 */
-	STORMBYTE_PUBLIC std::vector<std::byte> Base64Decode(std::string_view input);
+	STORMBYTE_PUBLIC BinaryData Base64Decode(std::string_view input);
 
 	/**
 	 * @brief Encodes bytes as Base64 with `=` padding.
 	 * @param input Bytes to encode.
 	 * @return Base64 text as a `CString`.
 	 */
-	STORMBYTE_PUBLIC CString Base64Encode(const std::vector<std::byte>& input);
+	STORMBYTE_PUBLIC CString Base64Encode(const BinaryData& input);
 
 	/**
 	 * @brief Encodes a contiguous byte span as Base64 with `=` padding.

@@ -18,11 +18,12 @@ The suite is split on purpose. Buffer, Config, Crypto, Database, Logger, Multime
 - **Exceptions** — `StormByte::Exception` with `std::format` messages stored in `CString` (`what()` is a `const char*` owned by the exception).
 - **Error** — `Domain`, `Category`, `Code` and `Fault` for `std::error_code`. `Fault` is not thrown; its text is a `CString`.
 - **Expected** — `Expected<T, E>` on top of `std::expected`, references via `reference_wrapper`, errors as `shared_ptr<E>`, plus `Unexpected`.
-- **Serialization** — `Serializable<T>` to `vector<byte>`, always little-endian, no BOM and no version tag. Optional / pair / container / trivial / `Detail::Codec<T>`.
+- **Serialization** — `Serializable<T>` to `BinaryData`, always little-endian, no BOM and no version tag. Optional / pair / container / trivial / `Detail::Codec<T>`. `Deserialize` takes `BinaryData` or `span`.
 - **CString / WCString** — owned NUL-terminated narrow and wide buffers, safe to use across a DLL boundary. Not `std::string` / `std::wstring`. Content equality, `<=>`, `swap` and `std::hash`.
-- **BinaryData** — owned contiguous `std::byte` sequence, safe to use across a DLL boundary. Same kind of API as `std::vector<std::byte>`. Lengths use `Size`.
+- **BinaryData** — owned contiguous `std::byte` sequence, safe to use across a DLL boundary. Same kind of API as `std::vector<std::byte>`. Lengths use `Size`. Public APIs no longer return or take a free `std::vector<std::byte>`.
 - **Size** — `uint64_t` byte count, same width on every host and safe across a DLL. IEC and SI units, `*` / `/` / `%`, IEC text as `CString`.
 - **UUID** — RFC 4122 version 4 (`GenerateUUIDv4`).
+- **Base64** — `Base64Encode` returns `CString`. `Base64Decode` returns `BinaryData`.
 - **Bitmask** — CRTP flags over `Type::UnsignedEnum`.
 - **Clonable** — virtual `Clone` / `Move` into `shared_ptr` or `unique_ptr`.
 - **ThreadLock** — owner-thread reentry; `Unlock` from a non-owner is a no-op.
@@ -201,6 +202,8 @@ For `<algorithm>` and `std::ranges` it supports everything `std::vector<std::byt
 
 `Serializable<BinaryData>` uses the container path. The wire is the same as `std::vector<std::byte>`: `uint64` little-endian count, then the payload.
 
+`Serialize()` itself returns `BinaryData`. So do `Base64Decode` and `Codec::Write`.
+
 ```cpp
 #include <StormByte/binary_data.hxx>
 #include <StormByte/serializable.hxx>
@@ -286,9 +289,11 @@ int main() {
 
 ### Serialization
 
-Wire is little-endian. `Deserialize` reads a prefix; leftover bytes stay with the caller. Custom types specialize `StormByte::Detail::Codec<T>` (`Size` / `Write` / `Read`), not `Serializable<T>`.
+Wire is little-endian. `Serialize()` returns `BinaryData`. `Deserialize` reads a prefix from `BinaryData` or `span`; leftover bytes stay with the caller. Custom types specialize `StormByte::Detail::Codec<T>` (`Size` / `Write` / `Read`), not `Serializable<T>`. `Write` also returns `BinaryData`.
 
-`BinaryData` is a `Type::Container` of `std::byte`. No `Codec` specialization is required; the container path writes the same layout as `std::vector<std::byte>`.
+`BinaryData` is a `Type::Container` of `std::byte`. No `Codec` specialization is required; the container path writes the same layout as a local `std::vector<std::byte>` would.
+
+Do not put `std::vector<std::byte>` in a public signature. Convert at the call site if a host API still wants a vector.
 
 ```cpp
 #include <StormByte/serializable.hxx>
@@ -311,8 +316,7 @@ int main() {
 
 	std::vector<int> numbers{1, 2, 3};
 	auto vblob = Serializable<std::vector<int>>(numbers).Serialize();
-	auto vback = Serializable<std::vector<int>>::Deserialize(
-		std::span<const std::byte>(vblob.data(), vblob.size()));
+	auto vback = Serializable<std::vector<int>>::Deserialize(vblob.span());
 }
 ```
 
