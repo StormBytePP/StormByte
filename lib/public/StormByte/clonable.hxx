@@ -52,7 +52,7 @@
  */
 namespace StormByte {
 	/**
-	 * @brief `true` when @p SmartPointer is @ref Shared or @ref Unique.
+	 * @brief `true` when @p SmartPointer is @ref StormByte::Shared<T> or @ref StormByte::Unique<T>.
 	 * @tparam SmartPointer Candidate pointer type.
 	 * @tparam T Pointee type.
 	 *
@@ -67,9 +67,9 @@ namespace StormByte {
 	 * @class Clonable
 	 * @brief Polymorphic copy and move through a base.
 	 * @tparam T Interface stored in the pointer.
-	 * @tparam SmartPointer @ref Shared (default) or @ref Unique.
+	 * @tparam SmartPointer @ref StormByte::Shared<T> (default) or @ref StormByte::Unique<T>.
 	 *
-	 * Not an owner. @ref Shared and @ref Unique own the object on Base's heap.
+	 * Not an owner. @ref StormByte::Shared<T> and @ref StormByte::Unique<T> own the object on Base's heap.
 	 * @ref Clonable is the interface: `Clone` and `Move` return that owner for
 	 * the dynamic type, so the caller does not name the derived class.
 	 * `MakePointer` forwards to `Shared::MakePointer` or `Unique::MakePointer`.
@@ -88,7 +88,7 @@ namespace StormByte {
 			 * @tparam Target Concrete type (`T` or derived).
 			 * @tparam Args Constructor argument types.
 			 * @param args Forwarded to `Target`.
-			 * @return @ref Shared or @ref Unique according to `PointerType`.
+			 * @return @ref StormByte::Shared<T> or @ref StormByte::Unique<T> according to `PointerType`.
 			 */
 			template<class Target, typename... Args>
 			static PointerType MakePointer(Args&&... args);

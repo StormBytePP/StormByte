@@ -56,9 +56,9 @@ namespace StormByte {
 	 * @class Exception
 	 * @brief Base exception type for the suite.
 	 *
-	 * `what()` is `StormByte: <message>`, or `StormByte.<path>: <message>` when
+	 * `what()` is `StormByte: message`, or `StormByte.path: message` when
 	 * a module parent passes the segments under `StormByte` (`Crypto.Crypter`).
-	 * Segments are joined with `.`. The message is a @ref StormByte::CString.
+	 * Segments are joined with a dot. The message is a @ref StormByte::CString.
 	 * `std::format` runs in the caller's translation unit. This DLL only copies
 	 * a `const char*`. A parent passes @ref StormByte::Exception::Path, a
 	 * `std::string_view` that lives for the constructor call and is not stored.
@@ -72,20 +72,20 @@ namespace StormByte {
 	class STORMBYTE_PUBLIC Exception {
 		public:
 			/**
-			 * @brief Constructs from a string. Text is `StormByte: <message>`.
+			 * @brief Constructs from a string. Text is `StormByte: message`.
 			 * @param message Exception text. Not a format string.
 			 */
 			explicit Exception(const std::string& message);
 
 			/**
-			 * @brief Constructs from a moved string. Text is `StormByte: <message>`.
+			 * @brief Constructs from a moved string. Text is `StormByte: message`.
 			 * @param message Exception text. Not a format string. Not stolen.
 			 */
 			explicit Exception(std::string&& message);
 
 		protected:
 			/**
-			 * @brief Segments under `StormByte`, already joined with `.`.
+			 * @brief Segments under `StormByte`, already joined with a dot.
 			 *
 			 * Exists so a path cannot be mistaken for a format string.
 			 * The view must live for the constructor call. It is not stored.
@@ -102,7 +102,7 @@ namespace StormByte {
 
 		public:
 			/**
-			 * @brief Constructs with `std::format`. Text is `StormByte: <formatted>`.
+			 * @brief Constructs with `std::format`. Text is `StormByte: formatted`.
 			 * @tparam Args Format argument types.
 			 * @param fmt Format string.
 			 * @param args Format arguments.
@@ -151,7 +151,7 @@ namespace StormByte {
 
 		protected:
 			/**
-			 * @brief Stores `StormByte.<path>: <message>`, or `StormByte: <message>` when @p path is empty.
+			 * @brief Stores `StormByte.path: message`, or `StormByte: message` when @p path is empty.
 			 * @tparam Args Format argument types.
 			 * @param path Segments under `StormByte`.
 			 * @param fmt Format string.
