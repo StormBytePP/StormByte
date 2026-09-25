@@ -249,7 +249,7 @@ namespace StormByte {
 			 * @return @c *this after adding one.
 			 */
 			constexpr Size& operator++() noexcept {
-				*this += Size{1u};
+				*this += Size(Raw{}, 1);
 				return *this;
 			}
 
@@ -268,7 +268,7 @@ namespace StormByte {
 			 * @return @c *this after subtracting one.
 			 */
 			constexpr Size& operator--() noexcept {
-				*this -= Size{1u};
+				*this -= Size(Raw{}, 1);
 				return *this;
 			}
 
