@@ -827,22 +827,6 @@ namespace StormByte {
 	}
 
 	/// @cond
-	extern template STORMBYTE_PUBLIC Size::Size(char) noexcept;
-	extern template STORMBYTE_PUBLIC Size::Size(signed char) noexcept;
-	extern template STORMBYTE_PUBLIC Size::Size(unsigned char) noexcept;
-	extern template STORMBYTE_PUBLIC Size::Size(short) noexcept;
-	extern template STORMBYTE_PUBLIC Size::Size(unsigned short) noexcept;
-	extern template STORMBYTE_PUBLIC Size::Size(int) noexcept;
-	extern template STORMBYTE_PUBLIC Size::Size(unsigned int) noexcept;
-	extern template STORMBYTE_PUBLIC Size::Size(long) noexcept;
-	extern template STORMBYTE_PUBLIC Size::Size(unsigned long) noexcept;
-	extern template STORMBYTE_PUBLIC Size::Size(long long) noexcept;
-	extern template STORMBYTE_PUBLIC Size::Size(unsigned long long) noexcept;
-	extern template STORMBYTE_PUBLIC Size::Size(wchar_t) noexcept;
-	extern template STORMBYTE_PUBLIC Size::Size(char8_t) noexcept;
-	extern template STORMBYTE_PUBLIC Size::Size(char16_t) noexcept;
-	extern template STORMBYTE_PUBLIC Size::Size(char32_t) noexcept;
-
 	extern template STORMBYTE_PUBLIC Size& Size::operator=(char) noexcept;
 	extern template STORMBYTE_PUBLIC Size& Size::operator=(signed char) noexcept;
 	extern template STORMBYTE_PUBLIC Size& Size::operator=(unsigned char) noexcept;

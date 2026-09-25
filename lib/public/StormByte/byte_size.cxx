@@ -84,22 +84,6 @@ namespace StormByte {
 		return WCString(static_cast<CString>(*this));
 	}
 
-	template STORMBYTE_INSTANTIATE ByteSize::ByteSize(char) noexcept;
-	template STORMBYTE_INSTANTIATE ByteSize::ByteSize(signed char) noexcept;
-	template STORMBYTE_INSTANTIATE ByteSize::ByteSize(unsigned char) noexcept;
-	template STORMBYTE_INSTANTIATE ByteSize::ByteSize(short) noexcept;
-	template STORMBYTE_INSTANTIATE ByteSize::ByteSize(unsigned short) noexcept;
-	template STORMBYTE_INSTANTIATE ByteSize::ByteSize(int) noexcept;
-	template STORMBYTE_INSTANTIATE ByteSize::ByteSize(unsigned int) noexcept;
-	template STORMBYTE_INSTANTIATE ByteSize::ByteSize(long) noexcept;
-	template STORMBYTE_INSTANTIATE ByteSize::ByteSize(unsigned long) noexcept;
-	template STORMBYTE_INSTANTIATE ByteSize::ByteSize(long long) noexcept;
-	template STORMBYTE_INSTANTIATE ByteSize::ByteSize(unsigned long long) noexcept;
-	template STORMBYTE_INSTANTIATE ByteSize::ByteSize(wchar_t) noexcept;
-	template STORMBYTE_INSTANTIATE ByteSize::ByteSize(char8_t) noexcept;
-	template STORMBYTE_INSTANTIATE ByteSize::ByteSize(char16_t) noexcept;
-	template STORMBYTE_INSTANTIATE ByteSize::ByteSize(char32_t) noexcept;
-
 	template STORMBYTE_INSTANTIATE ByteSize& ByteSize::operator=(char) noexcept;
 	template STORMBYTE_INSTANTIATE ByteSize& ByteSize::operator=(signed char) noexcept;
 	template STORMBYTE_INSTANTIATE ByteSize& ByteSize::operator=(unsigned char) noexcept;

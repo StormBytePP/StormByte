@@ -59,22 +59,6 @@ namespace StormByte {
 		return WCString(buf);
 	}
 
-	template STORMBYTE_INSTANTIATE Size::Size(char) noexcept;
-	template STORMBYTE_INSTANTIATE Size::Size(signed char) noexcept;
-	template STORMBYTE_INSTANTIATE Size::Size(unsigned char) noexcept;
-	template STORMBYTE_INSTANTIATE Size::Size(short) noexcept;
-	template STORMBYTE_INSTANTIATE Size::Size(unsigned short) noexcept;
-	template STORMBYTE_INSTANTIATE Size::Size(int) noexcept;
-	template STORMBYTE_INSTANTIATE Size::Size(unsigned int) noexcept;
-	template STORMBYTE_INSTANTIATE Size::Size(long) noexcept;
-	template STORMBYTE_INSTANTIATE Size::Size(unsigned long) noexcept;
-	template STORMBYTE_INSTANTIATE Size::Size(long long) noexcept;
-	template STORMBYTE_INSTANTIATE Size::Size(unsigned long long) noexcept;
-	template STORMBYTE_INSTANTIATE Size::Size(wchar_t) noexcept;
-	template STORMBYTE_INSTANTIATE Size::Size(char8_t) noexcept;
-	template STORMBYTE_INSTANTIATE Size::Size(char16_t) noexcept;
-	template STORMBYTE_INSTANTIATE Size::Size(char32_t) noexcept;
-
 	template STORMBYTE_INSTANTIATE Size& Size::operator=(char) noexcept;
 	template STORMBYTE_INSTANTIATE Size& Size::operator=(signed char) noexcept;
 	template STORMBYTE_INSTANTIATE Size& Size::operator=(unsigned char) noexcept;
