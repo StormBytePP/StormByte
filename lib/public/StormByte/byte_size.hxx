@@ -328,7 +328,7 @@ namespace StormByte {
 			 * @return @c *this after adding one octet.
 			 */
 			constexpr ByteSize& operator++() noexcept {
-				*this += ByteSize{1u};
+				*this += ByteSize(Raw{}, 1);
 				return *this;
 			}
 
@@ -347,7 +347,7 @@ namespace StormByte {
 			 * @return @c *this after subtracting one octet.
 			 */
 			constexpr ByteSize& operator--() noexcept {
-				*this -= ByteSize{1u};
+				*this -= ByteSize(Raw{}, 1);
 				return *this;
 			}
 
@@ -728,71 +728,6 @@ namespace StormByte {
 				return ByteSize(Raw{}, Mul(lhs, static_cast<std::uint64_t>(rhs)));
 			}
 	};
-
-	/**
-	 * @brief One octet.
-	 */
-	inline constexpr ByteSize B{1ull};
-
-	/**
-	 * @brief 2^10 octets. `1 * KiB` is 1024.
-	 */
-	inline constexpr ByteSize KiB{1024ull};
-
-	/**
-	 * @brief 2^20 octets.
-	 */
-	inline constexpr ByteSize MiB{1024ull * 1024};
-
-	/**
-	 * @brief 2^30 octets.
-	 */
-	inline constexpr ByteSize GiB{1024ull * 1024 * 1024};
-
-	/**
-	 * @brief 2^40 octets.
-	 */
-	inline constexpr ByteSize TiB{1024ull * 1024 * 1024 * 1024};
-
-	/**
-	 * @brief 2^50 octets.
-	 */
-	inline constexpr ByteSize PiB{1024ull * 1024 * 1024 * 1024 * 1024};
-
-	/**
-	 * @brief 2^60 octets.
-	 */
-	inline constexpr ByteSize EiB{1024ull * 1024 * 1024 * 1024 * 1024 * 1024};
-
-	/**
-	 * @brief 10^3 octets.
-	 */
-	inline constexpr ByteSize KB{1000ull};
-
-	/**
-	 * @brief 10^6 octets.
-	 */
-	inline constexpr ByteSize MB{1000ull * 1000};
-
-	/**
-	 * @brief 10^9 octets.
-	 */
-	inline constexpr ByteSize GB{1000ull * 1000 * 1000};
-
-	/**
-	 * @brief 10^12 octets.
-	 */
-	inline constexpr ByteSize TB{1000ull * 1000 * 1000 * 1000};
-
-	/**
-	 * @brief 10^15 octets.
-	 */
-	inline constexpr ByteSize PB{1000ull * 1000 * 1000 * 1000 * 1000};
-
-	/**
-	 * @brief 10^18 octets.
-	 */
-	inline constexpr ByteSize EB{1000ull * 1000 * 1000 * 1000 * 1000 * 1000};
 
 	/**
 	 * @brief Mixed equality.
@@ -1268,4 +1203,70 @@ namespace StormByte {
 	extern template STORMBYTE_PUBLIC ByteSize operator%(ByteSize, char16_t) noexcept;
 	extern template STORMBYTE_PUBLIC ByteSize operator%(ByteSize, char32_t) noexcept;
 	/// @endcond
+
+	/**
+	 * @brief One octet.
+	 */
+	inline constexpr ByteSize B{1ull};
+
+	/**
+	 * @brief 2^10 octets. `1 * KiB` is 1024.
+	 */
+	inline constexpr ByteSize KiB{1024ull};
+
+	/**
+	 * @brief 2^20 octets.
+	 */
+	inline constexpr ByteSize MiB{1024ull * 1024};
+
+	/**
+	 * @brief 2^30 octets.
+	 */
+	inline constexpr ByteSize GiB{1024ull * 1024 * 1024};
+
+	/**
+	 * @brief 2^40 octets.
+	 */
+	inline constexpr ByteSize TiB{1024ull * 1024 * 1024 * 1024};
+
+	/**
+	 * @brief 2^50 octets.
+	 */
+	inline constexpr ByteSize PiB{1024ull * 1024 * 1024 * 1024 * 1024};
+
+	/**
+	 * @brief 2^60 octets.
+	 */
+	inline constexpr ByteSize EiB{1024ull * 1024 * 1024 * 1024 * 1024 * 1024};
+
+	/**
+	 * @brief 10^3 octets.
+	 */
+	inline constexpr ByteSize KB{1000ull};
+
+	/**
+	 * @brief 10^6 octets.
+	 */
+	inline constexpr ByteSize MB{1000ull * 1000};
+
+	/**
+	 * @brief 10^9 octets.
+	 */
+	inline constexpr ByteSize GB{1000ull * 1000 * 1000};
+
+	/**
+	 * @brief 10^12 octets.
+	 */
+	inline constexpr ByteSize TB{1000ull * 1000 * 1000 * 1000};
+
+	/**
+	 * @brief 10^15 octets.
+	 */
+	inline constexpr ByteSize PB{1000ull * 1000 * 1000 * 1000 * 1000};
+
+	/**
+	 * @brief 10^18 octets.
+	 */
+	inline constexpr ByteSize EB{1000ull * 1000 * 1000 * 1000 * 1000 * 1000};
+
 }
