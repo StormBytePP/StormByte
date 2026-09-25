@@ -37,6 +37,7 @@
  * SPDX-License-Identifier: LGPL-3.0-or-later OR LicenseRef-StormByte-Commercial
  */
 
+#include <StormByte/cstring.hxx>
 #include <StormByte/size.hxx>
 #include <StormByte/test_handlers.h>
 #include <StormByte/wcstring.hxx>
@@ -361,6 +362,19 @@ int test_spaceship_order() {
 	RETURN_TEST("test_spaceship_order", result);
 }
 
+int test_roundtrip_with_cstring() {
+	int result = 0;
+	const WCString original(L"cañón 日本語");
+	const CString narrow(original);
+	const WCString back(narrow);
+	ASSERT_TRUE("test_roundtrip_with_cstring", back == original);
+	const CString ascii("1.00 KiB");
+	ASSERT_TRUE("test_roundtrip_with_cstring", WCString(ascii) == L"1.00 KiB");
+	ASSERT_TRUE("test_roundtrip_with_cstring", !WCString(CString()));
+	ASSERT_TRUE("test_roundtrip_with_cstring", !CString(WCString()));
+	RETURN_TEST("test_roundtrip_with_cstring", result);
+}
+
 int test_hash_and_containers() {
 	int result = 0;
 	WCString a(L"key");
@@ -432,6 +446,7 @@ int main() {
 	result += test_null_equals_null_not_empty();
 	result += test_spaceship_order();
 	result += test_hash_and_containers();
+	result += test_roundtrip_with_cstring();
 
 	if (result == 0)
 		std::cout << "All tests passed!" << std::endl;

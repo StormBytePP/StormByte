@@ -38,6 +38,8 @@
  */
 
 #include <StormByte/cstring.hxx>
+#include <StormByte/utf.hxx>
+#include <StormByte/wcstring.hxx>
 
 #include <cassert>
 #include <cstring>
@@ -73,6 +75,14 @@ CString::CString(std::string_view sv) noexcept
 
 CString::CString(const std::string& str) noexcept
 : m_data(Duplicate(std::string_view(str))) {}
+
+CString::CString(const WCString& text) noexcept
+: m_data(nullptr) {
+	const wchar_t* raw = static_cast<const wchar_t*>(text);
+	if (!raw)
+		return;
+	m_data = Duplicate(WideToUtf8(raw));
+}
 
 CString::CString(const CString& other) noexcept
 : m_data(Duplicate(other.m_data)) {}

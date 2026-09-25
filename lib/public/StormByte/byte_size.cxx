@@ -42,7 +42,6 @@
 #include <array>
 #include <cstdint>
 #include <cstdio>
-#include <cwchar>
 
 namespace StormByte {
 	namespace {
@@ -82,13 +81,7 @@ namespace StormByte {
 	}
 
 	ByteSize::operator WCString() const noexcept {
-		char buffer[32];
-		FormatIec(m_value, buffer, sizeof(buffer));
-		wchar_t wide[32];
-		const int n = std::swprintf(wide, sizeof(wide) / sizeof(wide[0]), L"%s", buffer);
-		if (n <= 0)
-			return WCString(L"0 B");
-		return WCString(wide);
+		return WCString(static_cast<CString>(*this));
 	}
 
 	template STORMBYTE_INSTANTIATE ByteSize::ByteSize(char) noexcept;

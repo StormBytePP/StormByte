@@ -55,6 +55,7 @@
  */
 namespace StormByte {
 	class Size;
+	class CString;
 
 	/**
 	 * @class WCString
@@ -124,6 +125,12 @@ namespace StormByte {
 			 * @note Not a heap steal. Empty yields @c L"".
 			 */
 			explicit WCString(const std::wstring& str) noexcept;
+
+			/**
+			 * @brief Copies @p text as wide characters. Narrow text is UTF-8.
+			 * @param text Narrow text. Null stays null.
+			 */
+			explicit WCString(const CString& text) noexcept;
 
 			/**
 			 * @brief Copy constructor.

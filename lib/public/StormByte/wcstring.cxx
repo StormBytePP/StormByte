@@ -37,6 +37,8 @@
  * SPDX-License-Identifier: LGPL-3.0-or-later OR LicenseRef-StormByte-Commercial
  */
 
+#include <StormByte/cstring.hxx>
+#include <StormByte/utf.hxx>
 #include <StormByte/wcstring.hxx>
 
 #include <cassert>
@@ -73,6 +75,14 @@ WCString::WCString(std::wstring_view sv) noexcept
 
 WCString::WCString(const std::wstring& str) noexcept
 : m_data(Duplicate(std::wstring_view(str))) {}
+
+WCString::WCString(const CString& text) noexcept
+: m_data(nullptr) {
+	const char* raw = static_cast<const char*>(text);
+	if (!raw)
+		return;
+	m_data = Duplicate(Utf8ToWide(raw));
+}
 
 WCString::WCString(const WCString& other) noexcept
 : m_data(Duplicate(other.m_data)) {}

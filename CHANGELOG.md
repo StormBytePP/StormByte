@@ -66,6 +66,7 @@ If you landed here from a release link and have not read the tree:
 
 - **`FindStormByte`.** `Buffer` pulls `Logger`, `String` and `System`. `Logger` and `System` pull `String`. `Database` pulls `Logger` and `String`. `Crypto`, `Multimedia` and `Network` name only `Buffer`; the closure still finds `Logger`, `String` and `System`. `Config` and `String` still link only the core.
 - **`ByteSize`.** The `ull` constants and `++` / `--` no longer instantiate a constructor before its `extern template`. GCC rejected that as a duplicate explicit instantiation.
+- **`CString` / `WCString`.** Each constructs from the other. Narrow text is UTF-8. `ByteSize`'s wide form uses that conversion. `swprintf` and `%s` is a narrow string on glibc and a wide string on the Windows CRT, so `1.00 KiB` did not match.
 
 [2.0.0]: https://github.com/StormBytePP/StormByte/compare/1.2.0...2.0.0
 
