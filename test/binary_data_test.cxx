@@ -1264,6 +1264,57 @@ int test_binary_data_serializable_roundtrip() {
 	RETURN_TEST("test_binary_data_serializable_roundtrip", 0);
 }
 
+// -------------------
+// Vector boundary
+// -------------------
+
+int test_binary_data_construct_from_vector_copy() {
+	std::vector<std::byte> src{std::byte{1}, std::byte{2}, std::byte{3}};
+	const BinaryData data(src);
+	ASSERT_EQUAL("test_binary_data_construct_from_vector_copy", StormByte::Size{3}, data.size());
+	ASSERT_TRUE("test_binary_data_construct_from_vector_copy", src.size() == 3);
+	ASSERT_TRUE("test_binary_data_construct_from_vector_copy", data[StormByte::Size{0}] == std::byte{1});
+	ASSERT_TRUE("test_binary_data_construct_from_vector_copy", data[StormByte::Size{2}] == std::byte{3});
+	RETURN_TEST("test_binary_data_construct_from_vector_copy", 0);
+}
+
+int test_binary_data_construct_from_vector_rvalue_empties_source() {
+	std::vector<std::byte> src{std::byte{9}, std::byte{8}};
+	const BinaryData data(std::move(src));
+	ASSERT_EQUAL("test_binary_data_construct_from_vector_rvalue_empties_source", StormByte::Size{2}, data.size());
+	ASSERT_TRUE("test_binary_data_construct_from_vector_rvalue_empties_source", src.empty());
+	ASSERT_TRUE("test_binary_data_construct_from_vector_rvalue_empties_source", data[StormByte::Size{0}] == std::byte{9});
+	RETURN_TEST("test_binary_data_construct_from_vector_rvalue_empties_source", 0);
+}
+
+int test_binary_data_convert_to_vector_copy_leaves_source() {
+	BinaryData data{std::byte{4}, std::byte{5}};
+	const std::vector<std::byte> out = static_cast<std::vector<std::byte>>(data);
+	ASSERT_EQUAL("test_binary_data_convert_to_vector_copy_leaves_source", StormByte::Size{2}, data.size());
+	ASSERT_TRUE("test_binary_data_convert_to_vector_copy_leaves_source", out.size() == 2);
+	ASSERT_TRUE("test_binary_data_convert_to_vector_copy_leaves_source", out[0] == std::byte{4});
+	ASSERT_TRUE("test_binary_data_convert_to_vector_copy_leaves_source", data[StormByte::Size{1}] == std::byte{5});
+	RETURN_TEST("test_binary_data_convert_to_vector_copy_leaves_source", 0);
+}
+
+int test_binary_data_convert_to_vector_rvalue_empties_source() {
+	BinaryData data{std::byte{6}, std::byte{7}, std::byte{8}};
+	const std::vector<std::byte> out = static_cast<std::vector<std::byte>>(std::move(data));
+	ASSERT_TRUE("test_binary_data_convert_to_vector_rvalue_empties_source", data.empty());
+	ASSERT_TRUE("test_binary_data_convert_to_vector_rvalue_empties_source", out.size() == 3);
+	ASSERT_TRUE("test_binary_data_convert_to_vector_rvalue_empties_source", out[2] == std::byte{8});
+	RETURN_TEST("test_binary_data_convert_to_vector_rvalue_empties_source", 0);
+}
+
+int test_binary_data_span_roundtrip_vector() {
+	const std::vector<std::byte> src{std::byte{0}, std::byte{255}};
+	BinaryData data{std::span<const std::byte>(src)};
+	const std::span<const std::byte> view = data;
+	ASSERT_TRUE("test_binary_data_span_roundtrip_vector", view.size() == 2);
+	ASSERT_TRUE("test_binary_data_span_roundtrip_vector", view[1] == std::byte{255});
+	RETURN_TEST("test_binary_data_span_roundtrip_vector", 0);
+}
+
 int main() {
 	int result = 0;
 
@@ -1470,6 +1521,15 @@ int main() {
 	// -------------------
 	result += test_binary_data_serializable_empty();
 	result += test_binary_data_serializable_roundtrip();
+
+	// -------------------
+	// Vector boundary
+	// -------------------
+	result += test_binary_data_construct_from_vector_copy();
+	result += test_binary_data_construct_from_vector_rvalue_empties_source();
+	result += test_binary_data_convert_to_vector_copy_leaves_source();
+	result += test_binary_data_convert_to_vector_rvalue_empties_source();
+	result += test_binary_data_span_roundtrip_vector();
 
 	if (result == 0)
 		std::cout << "All tests passed!" << std::endl;

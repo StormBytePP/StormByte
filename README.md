@@ -191,9 +191,13 @@ int main() {
 
 It is not text (`CString`) and not a structured document. Lengths are `StormByte::Size`. Member names stay lowercase to match the STL.
 
-For `<algorithm>` and `std::ranges` it supports everything `std::vector<std::byte>` supports on a contiguous sequence of bytes: copy / transform / sort / reverse / rotate / unique / remove / replace / partition / heap / set operations / binary search / permutations, plus iterators, `std::span` and insert / erase / assign. `std::iota` is the exception that is *also* true of `std::vector<std::byte>`: `std::byte` is an enum class and has no `operator++`.
+For `<algorithm>` and `std::ranges` it supports everything `std::vector<std::byte>` supports on a contiguous sequence of bytes: copy / transform / sort / reverse / rotate / unique / remove / replace / partition / heap / set operations / binary search / permutations, plus iterators, `std::span` and insert / erase / assign / append / emplace. `std::iota` is the exception that is *also* true of `std::vector<std::byte>`: `std::byte` is an enum class and has no `operator++`.
 
 `at()` throws `OutOfBoundsError`. `operator[]` is unchecked, like `std::vector`.
+
+**`std::vector` and `std::span`.** You can build a `BinaryData` from a `span` or from a caller-owned `vector`. You can view the bytes as a `span` (implicit). You can copy them out to a `vector` (`explicit operator std::vector<std::byte>`). The rvalue overloads *look* like a move: the source is emptied after the copy. They are not a heap steal. Base cannot donate its pointer to a foreign `vector`, and it cannot adopt a caller `vector` pointer. Peak usage is two copies during the transfer.
+
+`append(BinaryData&&)` is different: both sides live on Base’s heap, so that move is real.
 
 `Serializable<BinaryData>` uses the container path. The wire is the same as `std::vector<std::byte>`: `uint64` little-endian count, then the payload.
 
@@ -205,6 +209,7 @@ For `<algorithm>` and `std::ranges` it supports everything `std::vector<std::byt
 #include <iostream>
 #include <ranges>
 #include <span>
+#include <vector>
 
 using namespace StormByte;
 
@@ -222,10 +227,16 @@ int main() {
 	const Size n = payload.size();
 	std::cout << static_cast<unsigned long long>(n.Value()) << std::endl;
 
-	auto blob = Serializable<BinaryData>(payload).Serialize();
-	auto back = Serializable<BinaryData>::Deserialize(blob);
-	if (back)
-		std::cout << (back.value() == payload) << std::endl;
+	std::vector<std::byte> caller = static_cast<std::vector<std::byte>>(payload);
+	BinaryData back{std::move(caller)};
+
+	BinaryData extra{std::byte{0xFF}};
+	back.append(std::move(extra));
+
+	auto blob = Serializable<BinaryData>(back).Serialize();
+	auto loaded = Serializable<BinaryData>::Deserialize(blob);
+	if (loaded)
+		std::cout << (loaded.value() == back) << std::endl;
 }
 ```
 

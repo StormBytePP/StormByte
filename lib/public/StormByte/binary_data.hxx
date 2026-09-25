@@ -49,14 +49,14 @@
 #include <initializer_list>
 #include <iterator>
 #include <memory>
-#include <ranges>
 #include <span>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 /**
  * @file StormByte/binary_data.hxx
- * @brief Owned raw byte sequence for the StormByte suite.
+ * @brief DLL-boundary-safe owned byte sequence for the StormByte suite.
  */
 
 /**
@@ -66,31 +66,34 @@
 namespace StormByte {
 	/**
 	 * @class BinaryData
-	 * @brief Owned raw byte sequence, safe across shared-library boundaries.
+	 * @brief DLL-boundary-safe owned contiguous sequence of @c std::byte.
 	 *
-	 * @par What it is
-	 * A contiguous container of @c std::byte with the same kind of API as
-	 * @c std::vector&lt;std::byte&gt; (iterators, @c &lt;algorithm&gt;,
-	 * @c std::ranges, @c std::span, insert / erase / assign). Lengths use
-	 * @ref StormByte::Size. Member names stay lowercase to match the STL.
+	 * @par Why this type exists
+	 * Suite modules must not put @c std::vector&lt;std::byte&gt; in a public
+	 * signature that can cross a shared-library boundary (Windows DLL, or
+	 * mismatched libc++ / libstdc++ on Unix).
 	 *
-	 * @par Why it exists
-	 * @c std::vector is not a safe ABI type between two copies of a C++
-	 * runtime. A vector allocated in the application and grown, returned
-	 * or destroyed inside a StormByte shared library (or the other way
-	 * around) uses two heaps. On Windows that is a hard crash when CRTs
-	 * differ; on Unix it fails when libc++ and libstdc++ mix.
+	 * A @c std::vector constructed in the application and mutated inside a
+	 * StormByte shared library — or returned and destroyed on the other
+	 * side — allocates and frees with two heaps. That is undefined behaviour
+	 * whenever the two sides do not share one CRT.
 	 *
-	 * @c BinaryData owns its storage on StormByte Base's heap.
-	 * Construction, growth and destruction always run in this library.
-	 * Other suite modules can put @c BinaryData in a public signature
-	 * without exporting @c std::vector&lt;std::byte&gt;.
+	 * @c BinaryData owns its bytes on Base's heap. Allocation, growth and
+	 * destruction run in this library. The header exposes contiguous
+	 * @c std::byte* iterators, @c std::span views and a vector-like API
+	 * so @c &lt;algorithm&gt; and @c std::ranges keep working.
 	 *
-	 * @par What it is for
-	 * Any StormByte component that must carry raw binary — payloads,
-	 * encoded blobs, file images, wire fragments — uses this type
-	 * instead of a standard vector of bytes. It is not text
-	 * (@ref StormByte::CString) and not a structured document.
+	 * Member names are lowercase to match @c std::vector.
+	 *
+	 * @par Construction from / conversion to @c std::vector
+	 * Bytes can be copied in from a caller-owned @c std::vector and copied
+	 * out to a caller-owned @c std::vector. The rvalue overloads *look*
+	 * like a move: the source is emptied after the copy. They are **not**
+	 * a heap steal. @c BinaryData storage is allocated and freed by Base;
+	 * @c std::vector storage is allocated and freed by the caller CRT.
+	 * Donating the pointer across those heaps would reintroduce the
+	 * boundary this type exists to close. Peak usage is two copies during
+	 * the transfer; afterwards the emptied side can release its allocation.
 	 *
 	 * @par Thread safety
 	 * Not thread-safe. Callers that share an instance must synchronise.
@@ -153,11 +156,6 @@ namespace StormByte {
 			using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
 			/**
-			 * @name Constructors / destructor / assignment
-			 * @{
-			 */
-
-			/**
 			 * @brief Construct an empty sequence.
 			 */
 			BinaryData() noexcept;
@@ -167,13 +165,13 @@ namespace StormByte {
 			 * @param count Element count.
 			 * @param value Fill byte.
 			 */
-			BinaryData(const Size& count, std::byte value);
+			BinaryData(const StormByte::Size& count, std::byte value);
 
 			/**
 			 * @brief Construct @p count zeroed bytes.
 			 * @param count Element count.
 			 */
-			explicit BinaryData(const Size& count);
+			explicit BinaryData(const StormByte::Size& count);
 
 			/**
 			 * @brief Copy bytes from a contiguous span.
@@ -186,7 +184,7 @@ namespace StormByte {
 			 * @param bytes Source pointer; may be null when @p count is zero.
 			 * @param count Byte count.
 			 */
-			BinaryData(const std::byte* bytes, const Size& count);
+			BinaryData(const std::byte* bytes, const StormByte::Size& count);
 
 			/**
 			 * @brief Copy from an initializer list.
@@ -207,6 +205,21 @@ namespace StormByte {
 			explicit BinaryData(const char* s);
 
 			/**
+			 * @brief Copy bytes from a caller-owned vector onto Base's heap.
+			 * @param bytes Source. Remains valid and unchanged.
+			 * @note Not a heap steal. The vector stays on the caller CRT.
+			 */
+			explicit BinaryData(const std::vector<std::byte>& bytes);
+
+			/**
+			 * @brief Copy bytes from a caller-owned vector onto Base's heap, then empty @p bytes.
+			 * @param bytes Source. Cleared and shrunk after the copy.
+			 * @note Looks like a move. Not a heap steal: Base cannot adopt the
+			 *       caller pointer. Peak usage is two copies during the transfer.
+			 */
+			explicit BinaryData(std::vector<std::byte>&& bytes);
+
+			/**
 			 * @brief Copy from an input range of byte-convertible values.
 			 * @tparam R Range type satisfying @ref StormByte::Type::ByteInputRange.
 			 * @param range Source range.
@@ -215,10 +228,10 @@ namespace StormByte {
 			explicit BinaryData(const R& range);
 
 			/**
-			 * @brief Consume an rvalue range. Moves when @p R is an rvalue @ref StormByte::BinaryData.
+			 * @brief Consume an rvalue range. Moves when @p R is an rvalue @ref BinaryData.
 			 * @tparam R Range type satisfying @ref StormByte::Type::ByteInputRange.
 			 * @param range Source range.
-			 * @note An lvalue @ref StormByte::BinaryData is copied. @ref StormByte::Type::SameAs
+			 * @note An lvalue @ref BinaryData is copied. @ref StormByte::Type::SameAs
 			 *       ignores references, so the implementation uses
 			 *       @ref StormByte::Type::LvalueReference before moving.
 			 */
@@ -226,7 +239,7 @@ namespace StormByte {
 			explicit BinaryData(R&& range);
 
 			/**
-			 * @brief Copy construct. Allocation runs in this library.
+			 * @brief Copy construct. Allocation runs in Base.
 			 * @param other Source sequence.
 			 */
 			BinaryData(const BinaryData& other);
@@ -238,12 +251,12 @@ namespace StormByte {
 			BinaryData(BinaryData&& other) noexcept;
 
 			/**
-			 * @brief Destroy the sequence on this library's heap.
+			 * @brief Destroy the sequence on Base's heap.
 			 */
 			~BinaryData() noexcept;
 
 			/**
-			 * @brief Copy assign. Allocation runs in this library.
+			 * @brief Copy assign. Allocation runs in Base.
 			 * @param other Source sequence.
 			 * @return @c *this.
 			 */
@@ -262,13 +275,6 @@ namespace StormByte {
 			 * @return @c *this.
 			 */
 			BinaryData& operator=(std::initializer_list<std::byte> list);
-
-			/** @} */
-
-			/**
-			 * @name Comparison
-			 * @{
-			 */
 
 			/**
 			 * @brief Equality of byte contents.
@@ -290,13 +296,6 @@ namespace StormByte {
 			 * @return @c std::strong_ordering.
 			 */
 			std::strong_ordering operator<=>(const BinaryData& other) const noexcept;
-
-			/** @} */
-
-			/**
-			 * @name Iterators
-			 * @{
-			 */
 
 			/**
 			 * @brief Mutable iterator to the first byte.
@@ -370,30 +369,23 @@ namespace StormByte {
 			 */
 			const_reverse_iterator crend() const noexcept;
 
-			/** @} */
-
-			/**
-			 * @name Capacity
-			 * @{
-			 */
-
 			/**
 			 * @brief Occupied length in bytes.
 			 * @return @ref StormByte::Size (this is a byte length).
 			 */
-			Size size() const noexcept;
+			StormByte::Size size() const noexcept;
 
 			/**
 			 * @brief Implementation maximum size in bytes.
 			 * @return @ref StormByte::Size.
 			 */
-			Size max_size() const noexcept;
+			StormByte::Size max_size() const noexcept;
 
 			/**
 			 * @brief Allocated capacity in bytes.
 			 * @return @ref StormByte::Size.
 			 */
-			Size capacity() const noexcept;
+			StormByte::Size capacity() const noexcept;
 
 			/**
 			 * @brief Whether the sequence holds no bytes.
@@ -405,20 +397,20 @@ namespace StormByte {
 			 * @brief Request capacity of at least @p new_cap bytes.
 			 * @param new_cap Requested capacity.
 			 */
-			void reserve(const Size& new_cap);
+			void reserve(const StormByte::Size& new_cap);
 
 			/**
 			 * @brief Resize to @p new_size bytes. Appended bytes are zero.
 			 * @param new_size New size.
 			 */
-			void resize(const Size& new_size);
+			void resize(const StormByte::Size& new_size);
 
 			/**
 			 * @brief Resize to @p new_size bytes. Appended bytes are @p value.
 			 * @param new_size New size.
 			 * @param value Fill for new bytes.
 			 */
-			void resize(const Size& new_size, std::byte value);
+			void resize(const StormByte::Size& new_size, std::byte value);
 
 			/**
 			 * @brief Release unused capacity when the implementation allows it.
@@ -430,113 +422,166 @@ namespace StormByte {
 			 */
 			void clear() noexcept;
 
-			/** @} */
-
-			/**
-			 * @name Element access
-			 * @{
-			 */
-
 			/**
 			 * @brief Unchecked mutable subscript.
 			 * @param index Byte offset.
 			 * @return Reference to the byte at @p index.
 			 */
-			std::byte& operator[](const Size& index) noexcept;
+			std::byte& operator[](const StormByte::Size& index) noexcept;
 
 			/**
 			 * @brief Unchecked const subscript.
 			 * @param index Byte offset.
 			 * @return Const reference to the byte at @p index.
 			 */
-			const std::byte& operator[](const Size& index) const noexcept;
+			const std::byte& operator[](const StormByte::Size& index) const noexcept;
 
 			/**
 			 * @brief Checked mutable subscript.
 			 * @param index Byte offset.
 			 * @return Reference to the byte at @p index.
-			 * @throws OutOfBoundsError When @p index is not less than @ref size().
+			 * @throws StormByte::OutOfBoundsError When @p index is not less than @ref size().
 			 */
-			std::byte& at(const Size& index);
+			std::byte& at(const StormByte::Size& index);
 
 			/**
 			 * @brief Checked const subscript.
 			 * @param index Byte offset.
 			 * @return Const reference to the byte at @p index.
-			 * @throws OutOfBoundsError When @p index is not less than @ref size().
+			 * @throws StormByte::OutOfBoundsError When @p index is not less than @ref size().
 			 */
-			const std::byte& at(const Size& index) const;
+			const std::byte& at(const StormByte::Size& index) const;
 
 			/**
 			 * @brief First byte.
-			 * @return Mutable reference to the first byte.
-			 * @warning Undefined when @ref empty().
+			 * @return Reference to the first byte.
 			 */
-			std::byte& front() noexcept;
+			std::byte& front();
 
 			/**
 			 * @brief First byte.
 			 * @return Const reference to the first byte.
-			 * @warning Undefined when @ref empty().
 			 */
-			const std::byte& front() const noexcept;
+			const std::byte& front() const;
 
 			/**
 			 * @brief Last byte.
-			 * @return Mutable reference to the last byte.
-			 * @warning Undefined when @ref empty().
+			 * @return Reference to the last byte.
 			 */
-			std::byte& back() noexcept;
+			std::byte& back();
 
 			/**
 			 * @brief Last byte.
 			 * @return Const reference to the last byte.
-			 * @warning Undefined when @ref empty().
 			 */
-			const std::byte& back() const noexcept;
+			const std::byte& back() const;
 
 			/**
-			 * @brief Pointer to the first byte, or null when empty.
-			 * @return Mutable pointer.
+			 * @brief Mutable pointer to the first byte, or @c nullptr when empty.
+			 * @return Contiguous storage.
 			 */
 			std::byte* data() noexcept;
 
 			/**
-			 * @brief Pointer to the first byte, or null when empty.
-			 * @return Const pointer.
+			 * @brief Const pointer to the first byte, or @c nullptr when empty.
+			 * @return Contiguous storage.
 			 */
 			const std::byte* data() const noexcept;
 
 			/**
-			 * @brief Mutable span covering the occupied bytes.
-			 * @return @c std::span&lt;std::byte&gt;.
+			 * @brief Mutable view of the occupied bytes.
+			 * @return Span over @c [data(), data() + size()).
 			 */
 			std::span<std::byte> span() noexcept;
 
 			/**
-			 * @brief Const span covering the occupied bytes.
-			 * @return @c std::span&lt;const std::byte&gt;.
+			 * @brief Const view of the occupied bytes.
+			 * @return Span over @c [data(), data() + size()).
 			 */
 			std::span<const std::byte> span() const noexcept;
 
 			/**
-			 * @brief Convert to a mutable span.
-			 * @return Same as @ref span() noexcept.
+			 * @brief Implicit mutable span conversion.
+			 * @return Same as @ref span().
 			 */
 			operator std::span<std::byte>() noexcept;
 
 			/**
-			 * @brief Convert to a const span.
-			 * @return Same as const @ref span() const.
+			 * @brief Implicit const span conversion.
+			 * @return Same as const @ref span().
 			 */
 			operator std::span<const std::byte>() const noexcept;
 
-			/** @} */
+			/**
+			 * @brief Copy bytes onto the caller CRT as a @c std::vector.
+			 * @return New vector owned by the caller. @c *this is unchanged.
+			 * @note Not a heap steal. The vector allocation is the caller's.
+			 */
+			explicit operator std::vector<std::byte>() const&;
 
 			/**
-			 * @name Modifiers
-			 * @{
+			 * @brief Copy bytes onto the caller CRT, then release this object's storage.
+			 * @return New vector owned by the caller.
+			 * @note Looks like a move. Not a heap steal: Base cannot hand its
+			 *       pointer to a foreign @c std::vector. Peak usage is two copies
+			 *       during the transfer; @c *this is empty afterwards.
 			 */
+			explicit operator std::vector<std::byte>() &&;
+
+			/**
+			 * @brief Replace contents with @p count copies of @p value.
+			 * @param count New size.
+			 * @param value Fill byte.
+			 */
+			void assign(const StormByte::Size& count, std::byte value);
+
+			/**
+			 * @brief Replace contents with a copy of @p bytes.
+			 * @param bytes Source view.
+			 */
+			void assign(std::span<const std::byte> bytes);
+
+			/**
+			 * @brief Replace contents with an initializer list.
+			 * @param list Source bytes.
+			 */
+			void assign(std::initializer_list<std::byte> list);
+
+			/**
+			 * @brief Replace contents with the range @c [first, last).
+			 * @tparam InputIt Input iterator whose value converts to @c std::byte.
+			 * @param first Start of the source range.
+			 * @param last End of the source range.
+			 */
+			template<typename InputIt>
+			void assign(InputIt first, InputIt last);
+
+			/**
+			 * @brief Append a copy of @p bytes.
+			 * @param bytes Source view.
+			 */
+			void append(std::span<const std::byte> bytes);
+
+			/**
+			 * @brief Append @p count bytes starting at @p bytes.
+			 * @param bytes Source pointer; may be null when @p count is zero.
+			 * @param count Byte count.
+			 */
+			void append(const std::byte* bytes, const StormByte::Size& count);
+
+			/**
+			 * @brief Append a copy of @p other.
+			 * @param other Source sequence. Unchanged.
+			 */
+			void append(const BinaryData& other);
+
+			/**
+			 * @brief Append @p other and leave it empty.
+			 * @param other Source sequence on Base's heap.
+			 * @note Same-heap transfer: bytes move into @c *this and @p other
+			 *       is cleared. This is a real move, not a vector CRT steal.
+			 */
+			void append(BinaryData&& other);
 
 			/**
 			 * @brief Append one byte.
@@ -545,22 +590,22 @@ namespace StormByte {
 			void push_back(std::byte value);
 
 			/**
-			 * @brief Append one byte constructed from @p args.
-			 * @tparam Args Constructor argument types for @c std::byte.
-			 * @param args Arguments forwarded to @c std::byte.
+			 * @brief Append a byte constructed in place.
+			 * @tparam T Source type convertible to the underlying value of @c std::byte.
+			 * @param value Value forwarded into @c std::byte.
+			 * @return Reference to the appended byte.
 			 */
-			template<typename... Args>
-			void emplace_back(Args&&... args);
+			template<typename T>
+			reference emplace_back(T&& value);
 
 			/**
 			 * @brief Remove the last byte.
-			 * @warning Undefined when @ref empty().
 			 */
 			void pop_back();
 
 			/**
-			 * @brief Insert @p value before @p pos.
-			 * @param pos Insertion iterator.
+			 * @brief Insert one byte before @p pos.
+			 * @param pos Insertion point.
 			 * @param value Byte to insert.
 			 * @return Iterator to the inserted byte.
 			 */
@@ -568,35 +613,35 @@ namespace StormByte {
 
 			/**
 			 * @brief Insert @p count copies of @p value before @p pos.
-			 * @param pos Insertion iterator.
+			 * @param pos Insertion point.
 			 * @param count Number of bytes.
 			 * @param value Fill byte.
-			 * @return Iterator to the first inserted byte, or @p pos when @p count is 0.
+			 * @return Iterator to the first inserted byte, or @p pos when @p count is zero.
 			 */
-			iterator insert(const_iterator pos, const Size& count, std::byte value);
+			iterator insert(const_iterator pos, const StormByte::Size& count, std::byte value);
 
 			/**
-			 * @brief Insert a copy of @p list before @p pos.
-			 * @param pos Insertion iterator.
-			 * @param list Bytes to insert.
+			 * @brief Insert an initializer list before @p pos.
+			 * @param pos Insertion point.
+			 * @param list Source bytes.
 			 * @return Iterator to the first inserted byte, or @p pos when @p list is empty.
 			 */
 			iterator insert(const_iterator pos, std::initializer_list<std::byte> list);
 
 			/**
-			 * @brief Insert a copy of @p bytes before @p pos.
-			 * @param pos Insertion iterator.
-			 * @param bytes Source span.
+			 * @brief Insert a span before @p pos.
+			 * @param pos Insertion point.
+			 * @param bytes Source view.
 			 * @return Iterator to the first inserted byte, or @p pos when @p bytes is empty.
 			 */
 			iterator insert(const_iterator pos, std::span<const std::byte> bytes);
 
 			/**
 			 * @brief Insert the range @c [first, last) before @p pos.
-			 * @tparam InputIt Input iterator type.
-			 * @param pos Insertion iterator.
-			 * @param first Range begin.
-			 * @param last Range end.
+			 * @tparam InputIt Input iterator whose value converts to @c std::byte.
+			 * @param pos Insertion point.
+			 * @param first Start of the source range.
+			 * @param last End of the source range.
 			 * @return Iterator to the first inserted byte, or @p pos when the range is empty.
 			 */
 			template<typename InputIt>
@@ -611,155 +656,113 @@ namespace StormByte {
 
 			/**
 			 * @brief Erase @c [first, last).
-			 * @param first Range begin.
-			 * @param last Range end.
+			 * @param first Start of the range.
+			 * @param last End of the range.
 			 * @return Iterator following the last erased byte.
 			 */
 			iterator erase(const_iterator first, const_iterator last);
 
 			/**
-			 * @brief Replace contents with @p count copies of @p value.
-			 * @param count New size.
-			 * @param value Fill byte.
-			 */
-			void assign(const Size& count, std::byte value);
-
-			/**
-			 * @brief Replace contents with @p list.
-			 * @param list Source bytes.
-			 */
-			void assign(std::initializer_list<std::byte> list);
-
-			/**
-			 * @brief Replace contents with @p bytes.
-			 * @param bytes Source span.
-			 */
-			void assign(std::span<const std::byte> bytes);
-
-			/**
-			 * @brief Replace contents with @c [first, last).
-			 * @tparam InputIt Input iterator type.
-			 * @param first Range begin.
-			 * @param last Range end.
-			 */
-			template<typename InputIt>
-			void assign(InputIt first, InputIt last);
-
-			/**
-			 * @brief Append a copy of @p bytes.
-			 * @param bytes Source span.
-			 */
-			void append(std::span<const std::byte> bytes);
-
-			/**
-			 * @brief Append @p count bytes from @p bytes.
-			 * @param bytes Source pointer; may be null when @p count is zero.
-			 * @param count Byte count.
-			 */
-			void append(const std::byte* bytes, const Size& count);
-
-			/**
-			 * @brief Append a copy of @p other.
-			 * @param other Source sequence.
-			 */
-			void append(const BinaryData& other);
-
-			/**
-			 * @brief Append by moving @p other. @p other is left empty.
-			 * @param other Source sequence.
-			 */
-			void append(BinaryData&& other);
-
-			/**
-			 * @brief Exchange contents with @p other.
+			 * @brief Exchange storage with @p other.
 			 * @param other Other sequence.
 			 */
 			void swap(BinaryData& other) noexcept;
 
-			/** @} */
-
 		private:
-			/// @cond
-			class Storage;
+			/**
+			 * @brief Heap block owned by Base. Hidden from Doxygen.
+			 * @cond
+			 */
+			struct Storage;
+			/** @endcond */
+
+			/**
+			 * @brief Opaque pointer to @ref Storage.
+			 */
 			std::unique_ptr<Storage> m_storage;
-			/// @endcond
-
-			/**
-			 * @brief Byte offset of @p pos from @ref data().
-			 * @param pos Iterator into this sequence.
-			 * @return Offset in bytes.
-			 */
-			Size offset_of(const_iterator pos) const noexcept;
-
-			/**
-			 * @brief Insert @p count bytes from @p bytes before offset @p index.
-			 * @param index Insertion offset.
-			 * @param bytes Source pointer; may be null when @p count is zero.
-			 * @param count Byte count.
-			 * @return Iterator to the first inserted byte.
-			 */
-			iterator insert_at(const Size& index, const std::byte* bytes, const Size& count);
 	};
 
 	/**
-	 * @brief Swap two @ref StormByte::BinaryData sequences.
-	 * @param lhs Left-hand side.
-	 * @param rhs Right-hand side.
+	 * @brief Exchange two sequences.
+	 * @param lhs First sequence.
+	 * @param rhs Second sequence.
 	 */
 	STORMBYTE_PUBLIC void swap(BinaryData& lhs, BinaryData& rhs) noexcept;
 
-	/// @cond
+	/**
+	 * @brief Copy from an input range of byte-convertible values.
+	 * @tparam R Range type satisfying @ref StormByte::Type::ByteInputRange.
+	 * @param range Source range.
+	 */
 	template<Type::ByteInputRange R>
 	BinaryData::BinaryData(const R& range)
 		: BinaryData() {
-		if constexpr (requires { std::ranges::size(range); }) {
-			const auto s = std::ranges::size(range);
-			if (s > 0)
-				reserve(Size{static_cast<std::size_t>(s)});
-		}
-		for (auto&& element : range)
-			push_back(static_cast<std::byte>(element));
+		if constexpr (requires { std::size(range); })
+			reserve(StormByte::Size{ static_cast<std::uint64_t>(std::size(range)) });
+		for (auto&& b : range)
+			push_back(static_cast<std::byte>(b));
 	}
 
+	/**
+	 * @brief Consume an rvalue range. Moves when @p R is an rvalue @ref BinaryData.
+	 * @tparam R Range type satisfying @ref StormByte::Type::ByteInputRange.
+	 * @param range Source range.
+	 */
 	template<Type::ByteInputRange R>
 	BinaryData::BinaryData(R&& range)
 		: BinaryData() {
-		if constexpr (Type::SameAs<R, BinaryData>) {
-			if constexpr (Type::LvalueReference<R>)
-				*this = range;
-			else
-				*this = std::move(range);
-		}
-		else {
-			if constexpr (requires { std::ranges::size(range); }) {
-				const auto s = std::ranges::size(range);
-				if (s > 0)
-					reserve(Size{static_cast<std::size_t>(s)});
-			}
-			for (auto&& element : range)
-				push_back(static_cast<std::byte>(element));
+		using U = std::remove_cvref_t<R>;
+		if constexpr (Type::SameAs<U, BinaryData> && !Type::LvalueReference<R>) {
+			*this = std::move(range);
+		} else {
+			if constexpr (requires { std::size(range); })
+				reserve(StormByte::Size{ static_cast<std::uint64_t>(std::size(range)) });
+			for (auto&& b : range)
+				push_back(static_cast<std::byte>(b));
 		}
 	}
 
-	template<typename... Args>
-	void BinaryData::emplace_back(Args&&... args) {
-		push_back(std::byte(std::forward<Args>(args)...));
-	}
-
-	template<typename InputIt>
-	BinaryData::iterator BinaryData::insert(const_iterator pos, InputIt first, InputIt last) {
-		const Size index = offset_of(pos);
-		BinaryData scratch;
-		for (; first != last; ++first)
-			scratch.push_back(static_cast<std::byte>(*first));
-		return insert_at(index, scratch.data(), scratch.size());
-	}
-
+	/**
+	 * @brief Replace contents with the range @c [first, last).
+	 * @tparam InputIt Input iterator whose value converts to @c std::byte.
+	 * @param first Start of the source range.
+	 * @param last End of the source range.
+	 */
 	template<typename InputIt>
 	void BinaryData::assign(InputIt first, InputIt last) {
 		clear();
 		for (; first != last; ++first)
 			push_back(static_cast<std::byte>(*first));
 	}
-	/// @endcond
+
+	/**
+	 * @brief Insert the range @c [first, last) before @p pos.
+	 * @tparam InputIt Input iterator whose value converts to @c std::byte.
+	 * @param pos Insertion point.
+	 * @param first Start of the source range.
+	 * @param last End of the source range.
+	 * @return Iterator to the first inserted byte, or @p pos when the range is empty.
+	 */
+	template<typename InputIt>
+	BinaryData::iterator BinaryData::insert(const_iterator pos, InputIt first, InputIt last) {
+		const auto start = static_cast<std::size_t>(pos - cbegin());
+		std::size_t n = start;
+		for (; first != last; ++first) {
+			insert(cbegin() + static_cast<difference_type>(n), static_cast<std::byte>(*first));
+			++n;
+		}
+		return begin() + static_cast<difference_type>(start);
+	}
+
+	/**
+	 * @brief Append a byte constructed in place.
+	 * @tparam T Source type convertible to the underlying value of @c std::byte.
+	 * @param value Value forwarded into @c std::byte.
+	 * @return Reference to the appended byte.
+	 */
+	template<typename T>
+	BinaryData::reference BinaryData::emplace_back(T&& value) {
+		push_back(std::byte{ static_cast<unsigned char>(std::forward<T>(value)) });
+		return back();
+	}
 }
