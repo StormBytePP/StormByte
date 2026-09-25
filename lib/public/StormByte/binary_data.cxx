@@ -82,7 +82,7 @@ BinaryData::BinaryData(std::span<const std::byte> bytes)
 BinaryData::BinaryData(const std::byte* bytes, const ByteSize& count)
 	: m_storage(std::make_unique<Storage>()) {
 	if (bytes == nullptr && count != ByteSize{0})
-		throw OutOfBoundsError(StormByte::Component("BinaryData"), "null source with non-zero count");
+		throw OutOfBoundsError("null source with non-zero count");
 	if (count == ByteSize{0})
 		return;
 	m_storage->bytes.assign(bytes, bytes + AsIndex(count));
@@ -265,13 +265,13 @@ const std::byte& BinaryData::operator[](const ByteSize& index) const noexcept {
 
 std::byte& BinaryData::at(const ByteSize& index) {
 	if (index >= size())
-		throw OutOfBoundsError(StormByte::Component("BinaryData"), "index out of range");
+		throw OutOfBoundsError("index out of range");
 	return m_storage->bytes[AsIndex(index)];
 }
 
 const std::byte& BinaryData::at(const ByteSize& index) const {
 	if (index >= size())
-		throw OutOfBoundsError(StormByte::Component("BinaryData"), "index out of range");
+		throw OutOfBoundsError("index out of range");
 	return m_storage->bytes[AsIndex(index)];
 }
 
@@ -344,7 +344,7 @@ void BinaryData::append(std::span<const std::byte> bytes) {
 
 void BinaryData::append(const std::byte* bytes, const ByteSize& count) {
 	if (bytes == nullptr && count != ByteSize{0})
-		throw OutOfBoundsError(StormByte::Component("BinaryData"), "null source with non-zero count");
+		throw OutOfBoundsError("null source with non-zero count");
 	if (count == ByteSize{0})
 		return;
 	append(std::span<const std::byte>(bytes, AsIndex(count)));

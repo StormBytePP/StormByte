@@ -45,6 +45,7 @@
 #include <format>
 #include <string>
 #include <string_view>
+#include <utility>
 
 /**
  * @namespace StormByte
@@ -52,142 +53,181 @@
  */
 namespace StormByte {
 	/**
-	 * @struct Component
-	 * @brief Wraps a module name for the component-prefixed `Exception` constructor.
-	 *
-	 * Exists only to disambiguate `Exception(component, fmt, args...)` from
-	 * `Exception(fmt, args...)`: with both taking a leading string-like
-	 * parameter, overload resolution would otherwise silently prefer the
-	 * fmt-only constructor and discard the component and message.
-	 */
-	struct Component {
-		std::string_view name;	///< Module name inserted after `StormByte::`.
-
-		/**
-		 * @brief Wraps @p name.
-		 * @param name Module name.
-		 */
-		constexpr explicit Component(std::string_view name) noexcept: name(name) {}
-	};
-
-	/**
 	 * @class Exception
 	 * @brief Base exception type for the suite.
 	 *
-	 * The message is a @ref StormByte::CString so the text does not cross a DLL
-	 * boundary as `std::string`.
+	 * `what()` is `StormByte: <message>`, or `StormByte.<path>: <message>` when
+	 * a module parent passes the segments under `StormByte` (`Crypto.Crypter`).
+	 * Segments are joined with `.`. The message is a @ref StormByte::CString.
+	 * `std::format` runs in the caller's translation unit. This DLL only copies
+	 * a `const char*`. A parent passes @ref StormByte::Exception::Path, a
+	 * `std::string_view` that lives for the constructor call and is not stored.
+	 * A bare string is not a path: that would be ambiguous with the format constructor.
+	 *
+	 * A parent prepends its own segment and forwards the format and the
+	 * arguments. It does not format. A final leaf adds no segment: it inherits
+	 * the parent constructors. The destructor of each named type is defined in
+	 * that module's `.cxx`, so the `typeinfo` is unique across a DLL.
 	 */
 	class STORMBYTE_PUBLIC Exception {
-	public:
-		/**
-		 * @brief Constructs from a string.
-		 * @param message Exception text.
-		 */
-		explicit Exception(const std::string& message);
+		public:
+			/**
+			 * @brief Constructs from a string. Text is `StormByte: <message>`.
+			 * @param message Exception text. Not a format string.
+			 */
+			explicit Exception(const std::string& message);
 
-		/**
-		 * @brief Constructs from a moved string.
-		 * @param message Exception text.
-		 */
-		explicit Exception(std::string&& message);
+			/**
+			 * @brief Constructs from a moved string. Text is `StormByte: <message>`.
+			 * @param message Exception text. Not a format string. Not stolen.
+			 */
+			explicit Exception(std::string&& message);
 
-		/**
-		 * @brief Constructs with `std::format`.
-		 * @tparam Args Format argument types.
-		 * @param fmt Format string.
-		 * @param args Format arguments.
-		 * @note With zero arguments the format string is the message as-is.
-		 */
-		template <typename... Args>
-		Exception(std::format_string<Args...> fmt, Args&&... args) {
-			if constexpr (sizeof...(Args) == 0) {
-				m_what.Reset(std::string(fmt.get()).c_str());
-			} else {
-				const std::string formatted = std::format(fmt, std::forward<Args>(args)...);
-				m_what.Reset(formatted.c_str());
+		protected:
+			/**
+			 * @brief Segments under `StormByte`, already joined with `.`.
+			 *
+			 * Exists so a path cannot be mistaken for a format string.
+			 * The view must live for the constructor call. It is not stored.
+			 */
+			struct Path {
+				std::string_view text;	///< Joined segments. Empty means the root.
+
+				/**
+				 * @brief Wraps @p text.
+				 * @param text Joined segments, or empty.
+				 */
+				explicit constexpr Path(std::string_view text = {}) noexcept: text(text) {}
+			};
+
+		public:
+			/**
+			 * @brief Constructs with `std::format`. Text is `StormByte: <formatted>`.
+			 * @tparam Args Format argument types.
+			 * @param fmt Format string.
+			 * @param args Format arguments.
+			 * @note With zero arguments the format string is the message as-is.
+			 */
+			template <typename... Args>
+			Exception(std::format_string<Args...> fmt, Args&&... args)
+				: Exception(Path{}, fmt, std::forward<Args>(args)...) {}
+
+			/**
+			 * @brief Copy constructor.
+			 * @param e Exception to copy.
+			 */
+			Exception(const Exception& e) = default;
+
+			/**
+			 * @brief Move constructor.
+			 * @param e Exception to take.
+			 */
+			Exception(Exception&& e) noexcept = default;
+
+			/**
+			 * @brief Destructor. Defined in the Base DLL: this anchors the `typeinfo`.
+			 */
+			virtual ~Exception() noexcept;
+
+			/**
+			 * @brief Copy assignment.
+			 * @param e Exception to copy.
+			 * @return *this.
+			 */
+			Exception& operator=(const Exception& e) = default;
+
+			/**
+			 * @brief Move assignment.
+			 * @param e Exception to take.
+			 * @return *this.
+			 */
+			Exception& operator=(Exception&& e) noexcept = default;
+
+			/**
+			 * @brief Message pointer.
+			 * @return NUL-terminated message owned by this object.
+			 */
+			virtual const char* what() const noexcept;
+
+		protected:
+			/**
+			 * @brief Stores `StormByte.<path>: <message>`, or `StormByte: <message>` when @p path is empty.
+			 * @tparam Args Format argument types.
+			 * @param path Segments under `StormByte`.
+			 * @param fmt Format string.
+			 * @param args Format arguments.
+			 * @note With zero arguments the format string is the message as-is.
+			 */
+			template <typename... Args>
+			Exception(Path path, std::format_string<Args...> fmt, Args&&... args) {
+				const std::string body = sizeof...(Args) == 0
+					? std::string(fmt.get())
+					: std::format(fmt, std::forward<Args>(args)...);
+				if (path.text.empty())
+					Assign("StormByte", body);
+				else {
+					const std::string full = std::string("StormByte.") + std::string(path.text);
+					Assign(full, body);
+				}
 			}
-		}
 
-		/**
-		 * @brief Constructs with a component prefix and `std::format`.
-		 * @tparam Args Format argument types.
-		 * @param component Module name, wrapped so it cannot be mistaken for `fmt`.
-		 * @param fmt Format string.
-		 * @param args Format arguments.
-		 * @note Final text is `StormByte::<component>: <formatted>`.
-		 */
-		template <typename... Args>
-		Exception(Component component, std::format_string<Args...> fmt, Args&&... args) {
-			const std::string formatted = std::format(fmt, std::forward<Args>(args)...);
-			const std::string full = "StormByte::" + std::string(component.name) + ": " + formatted;
-			m_what.Reset(full.c_str());
-		}
+		private:
+			/**
+			 * @brief Copy @p path + `: ` + @p body into @ref m_what.
+			 * @param path Dotted path, including `StormByte`.
+			 * @param body Message body. Already formatted, or raw.
+			 */
+			void Assign(std::string_view path, std::string_view body) {
+				std::string full;
+				full.reserve(path.size() + 2 + body.size());
+				full.append(path);
+				full.append(": ");
+				full.append(body);
+				m_what.Reset(full.c_str());
+			}
 
-		/**
-		 * @brief Copy constructor.
-		 * @param e Exception to copy.
-		 */
-		Exception(const Exception& e) = default;
-
-		/**
-		 * @brief Move constructor.
-		 * @param e Exception to take.
-		 */
-		Exception(Exception&& e) noexcept = default;
-
-		/**
-		 * @brief Destructor.
-		 */
-		virtual ~Exception() noexcept = default;
-
-		/**
-		 * @brief Copy assignment.
-		 * @param e Exception to copy.
-		 * @return *this.
-		 */
-		Exception& operator=(const Exception& e) = default;
-
-		/**
-		 * @brief Move assignment.
-		 * @param e Exception to take.
-		 * @return *this.
-		 */
-		Exception& operator=(Exception&& e) noexcept = default;
-
-		/**
-		 * @brief Message pointer.
-		 * @return NUL-terminated message owned by this object.
-		 */
-		virtual const char* what() const noexcept;
-
-	private:
-		CString m_what;	///< Owned message
+			CString m_what;	///< Owned message
 	};
 
 	/**
 	 * @class DeserializeError
-	 * @brief Thrown when deserialization fails.
+	 * @brief Thrown when deserialization fails. Leaf of the root: `StormByte: …`.
 	 */
 	class STORMBYTE_PUBLIC DeserializeError: public Exception {
 		public:
 			using Exception::Exception;
+
+			/**
+			 * @brief Destructor. Defined in the Base DLL so `catch` matches across modules.
+			 */
+			~DeserializeError() noexcept override;
 	};
 
 	/**
 	 * @class OutOfBoundsError
-	 * @brief Thrown when an index or range is out of bounds.
+	 * @brief Thrown when an index or range is out of bounds. Leaf of the root: `StormByte: …`.
 	 */
 	class STORMBYTE_PUBLIC OutOfBoundsError: public Exception {
 		public:
 			using Exception::Exception;
+
+			/**
+			 * @brief Destructor. Defined in the Base DLL so `catch` matches across modules.
+			 */
+			~OutOfBoundsError() noexcept override;
 	};
 
 	/**
 	 * @class Base64Error
-	 * @brief Thrown when Base64 encode or decode fails.
+	 * @brief Thrown when Base64 encode or decode fails. Leaf of the root: `StormByte: …`.
 	 */
 	class STORMBYTE_PUBLIC Base64Error: public Exception {
 		public:
 			using Exception::Exception;
+
+			/**
+			 * @brief Destructor. Defined in the Base DLL so `catch` matches across modules.
+			 */
+			~Base64Error() noexcept override;
 	};
 }

@@ -41,11 +41,21 @@
 
 using namespace StormByte;
 
-Exception::Exception(const std::string& message)
-: m_what(message.c_str()) {}
+Exception::Exception(const std::string& message) {
+	Assign("StormByte", message);
+}
 
-Exception::Exception(std::string&& message)
-: m_what(message.c_str()) {}
+Exception::Exception(std::string&& message) {
+	Assign("StormByte", message);
+}
+
+Exception::~Exception() noexcept = default;
+
+DeserializeError::~DeserializeError() noexcept = default;
+
+OutOfBoundsError::~OutOfBoundsError() noexcept = default;
+
+Base64Error::~Base64Error() noexcept = default;
 
 const char* Exception::what() const noexcept {
 	const char* text = static_cast<const char*>(m_what);

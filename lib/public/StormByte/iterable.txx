@@ -164,7 +164,7 @@ namespace StormByte {
 		}
 	}()) {
 		if constexpr (!Type::CopyConstructible<Container>) {
-			throw Exception(Component("Iterable"), "container type is not copyable");
+			throw Exception("container type is not copyable");
 		}
 	}
 
@@ -175,7 +175,7 @@ namespace StormByte {
 				m_data = other.m_data;
 			return *this;
 		} else {
-			throw Exception(Component("Iterable"), "container type is not copy-assignable");
+			throw Exception("container type is not copy-assignable");
 		}
 	}
 

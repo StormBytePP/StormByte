@@ -53,7 +53,7 @@ using namespace StormByte;
 int test_plain_message_no_args() {
 	int result = 0;
 	Exception e("Key not found in Iterable::operator[]");
-	ASSERT_EQUAL("test_plain_message_no_args", std::string("Key not found in Iterable::operator[]"), std::string(e.what()));
+	ASSERT_EQUAL("test_plain_message_no_args", std::string("StormByte: Key not found in Iterable::operator[]"), std::string(e.what()));
 	RETURN_TEST("test_plain_message_no_args", result);
 }
 
@@ -61,7 +61,7 @@ int test_construct_from_lvalue_string() {
 	int result = 0;
 	const std::string message("from lvalue");
 	Exception e(message);
-	ASSERT_EQUAL("test_construct_from_lvalue_string", std::string("from lvalue"), std::string(e.what()));
+	ASSERT_EQUAL("test_construct_from_lvalue_string", std::string("StormByte: from lvalue"), std::string(e.what()));
 	ASSERT_EQUAL("test_construct_from_lvalue_string", std::string("from lvalue"), message);
 	RETURN_TEST("test_construct_from_lvalue_string", result);
 }
@@ -69,7 +69,7 @@ int test_construct_from_lvalue_string() {
 int test_formatted_message_with_args() {
 	int result = 0;
 	Exception e("value is {}", 42);
-	ASSERT_EQUAL("test_formatted_message_with_args", std::string("value is 42"), std::string(e.what()));
+	ASSERT_EQUAL("test_formatted_message_with_args", std::string("StormByte: value is 42"), std::string(e.what()));
 	RETURN_TEST("test_formatted_message_with_args", result);
 }
 
@@ -77,22 +77,52 @@ int test_zero_args_format_string_ctor_is_as_is() {
 	int result = 0;
 	constexpr std::string_view sv = "literal {{brace}} as-is";
 	Exception e(sv);
-	ASSERT_EQUAL("test_zero_args_format_string_ctor_is_as_is", std::string("literal {{brace}} as-is"), std::string(e.what()));
+	ASSERT_EQUAL("test_zero_args_format_string_ctor_is_as_is", std::string("StormByte: literal {{brace}} as-is"), std::string(e.what()));
 	RETURN_TEST("test_zero_args_format_string_ctor_is_as_is", result);
 }
 
-int test_component_prefixed_message() {
-	int result = 0;
-	Exception e(Component("MyComponent"), "failed with code {}", 7);
-	ASSERT_EQUAL("test_component_prefixed_message", std::string("StormByte::MyComponent: failed with code 7"), std::string(e.what()));
-	RETURN_TEST("test_component_prefixed_message", result);
+namespace {
+
+class CryptoError: public Exception {
+	public:
+		template <typename... Args>
+		explicit CryptoError(std::format_string<Args...> fmt, Args&&... args)
+			: Exception(Path{"Crypto"}, fmt, std::forward<Args>(args)...) {}
+
+		~CryptoError() override = default;
+
+	protected:
+		template <typename... Args>
+		explicit CryptoError(Path child, std::format_string<Args...> fmt, Args&&... args)
+			: Exception(Path{std::string("Crypto.") + std::string(child.text)}, fmt, std::forward<Args>(args)...) {}
+};
+
+class CrypterError: public CryptoError {
+	public:
+		template <typename... Args>
+		explicit CrypterError(std::format_string<Args...> fmt, Args&&... args)
+			: CryptoError(Path{"Crypter"}, fmt, std::forward<Args>(args)...) {}
+
+		~CrypterError() override = default;
+};
+
+class EncryptError: public CrypterError {
+	public:
+		using CrypterError::CrypterError;
+		~EncryptError() override = default;
+};
+
 }
 
-int test_component_prefixed_message_no_args() {
+int test_parent_prepends_segment() {
 	int result = 0;
-	Exception e(Component("MyComponent"), "plain text");
-	ASSERT_EQUAL("test_component_prefixed_message_no_args", std::string("StormByte::MyComponent: plain text"), std::string(e.what()));
-	RETURN_TEST("test_component_prefixed_message_no_args", result);
+	const CryptoError crypto("failed with code {}", 7);
+	const EncryptError formatted("failed with code {}", 7);
+	const EncryptError plain("plain text");
+	ASSERT_EQUAL("test_parent_prepends_segment", std::string("StormByte.Crypto: failed with code 7"), std::string(crypto.what()));
+	ASSERT_EQUAL("test_parent_prepends_segment", std::string("StormByte.Crypto.Crypter: failed with code 7"), std::string(formatted.what()));
+	ASSERT_EQUAL("test_parent_prepends_segment", std::string("StormByte.Crypto.Crypter: plain text"), std::string(plain.what()));
+	RETURN_TEST("test_parent_prepends_segment", result);
 }
 
 // -------------------
@@ -103,8 +133,8 @@ int test_copy_keeps_what() {
 	int result = 0;
 	Exception original("payload");
 	Exception copy(original);
-	ASSERT_EQUAL("test_copy_keeps_what", std::string("payload"), std::string(copy.what()));
-	ASSERT_EQUAL("test_copy_keeps_what", std::string("payload"), std::string(original.what()));
+	ASSERT_EQUAL("test_copy_keeps_what", std::string("StormByte: payload"), std::string(copy.what()));
+	ASSERT_EQUAL("test_copy_keeps_what", std::string("StormByte: payload"), std::string(original.what()));
 	RETURN_TEST("test_copy_keeps_what", result);
 }
 
@@ -112,7 +142,7 @@ int test_move_keeps_what() {
 	int result = 0;
 	Exception original("payload");
 	Exception taken(std::move(original));
-	ASSERT_EQUAL("test_move_keeps_what", std::string("payload"), std::string(taken.what()));
+	ASSERT_EQUAL("test_move_keeps_what", std::string("StormByte: payload"), std::string(taken.what()));
 	RETURN_TEST("test_move_keeps_what", result);
 }
 
@@ -125,17 +155,17 @@ int test_derived_are_exceptions() {
 	try {
 		throw Base64Error("bad alphabet");
 	} catch (const Exception& e) {
-		ASSERT_EQUAL("test_derived_are_exceptions", std::string("bad alphabet"), std::string(e.what()));
+		ASSERT_EQUAL("test_derived_are_exceptions", std::string("StormByte: bad alphabet"), std::string(e.what()));
 	}
 	try {
 		throw OutOfBoundsError("index");
 	} catch (const Exception& e) {
-		ASSERT_EQUAL("test_derived_are_exceptions", std::string("index"), std::string(e.what()));
+		ASSERT_EQUAL("test_derived_are_exceptions", std::string("StormByte: index"), std::string(e.what()));
 	}
 	try {
 		throw DeserializeError("wire");
 	} catch (const Exception& e) {
-		ASSERT_EQUAL("test_derived_are_exceptions", std::string("wire"), std::string(e.what()));
+		ASSERT_EQUAL("test_derived_are_exceptions", std::string("StormByte: wire"), std::string(e.what()));
 	}
 	RETURN_TEST("test_derived_are_exceptions", result);
 }
@@ -150,8 +180,7 @@ int main() {
 	result += test_construct_from_lvalue_string();
 	result += test_formatted_message_with_args();
 	result += test_zero_args_format_string_ctor_is_as_is();
-	result += test_component_prefixed_message();
-	result += test_component_prefixed_message_no_args();
+	result += test_parent_prepends_segment();
 
 	// -------------------
 	// Copy / move

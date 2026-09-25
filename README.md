@@ -15,7 +15,7 @@ The suite is split on purpose. Buffer, Config, Crypto, Database, Logger, Multime
 
 ## What this module does
 
-- **Exceptions** — `StormByte::Exception` with `std::format` messages stored in `CString` (`what()` is a `const char*` owned by the exception).
+- **Exceptions** — `StormByte::Exception`. `what()` is `StormByte: …`, or `StormByte.Crypto.Crypter: …` when a parent passes the segments under `StormByte`. The text is a `CString`. A final leaf adds no segment.
 - **Error** — `Domain`, `Category`, `Code` and `Fault` for `std::error_code`. `Fault` is not thrown; its text is a `CString`.
 - **Expected** — `Expected<T, E>` on top of `std::expected`, references via `reference_wrapper`, errors as `shared_ptr<E>`, plus `Unexpected`.
 - **Serialization** — `Serializable<T>` to `BinaryData`, always little-endian, no BOM and no version tag. Optional / pair / container / trivial / `Detail::Codec<T>`. On-wire lengths are `ByteSize`.
@@ -86,11 +86,46 @@ Headers are `#include <StormByte/….hxx>`. Namespace root is `StormByte`.
 
 ### Exceptions
 
+Base owns the exception system other modules inherit. A throw of `Exception` reads `StormByte: …`. A parent passes `Exception::Path` (a `string_view` of its segments) and forwards the format and the arguments. It does not format. A bare string is not a path: that would be ambiguous with the format constructor. `Exception` is the only place that calls `std::format`, in the caller's translation unit, and copies a `const char*` into a `CString`. The view lives for that constructor call and is not stored. A runtime `std::string` is not a format string.
+
+A final leaf inherits the parent constructors and adds no segment, so `EncryptException("bad key {}", id)` reads `StormByte.Crypto.Crypter: bad key …`. `DeserializeError`, `OutOfBoundsError` and `Base64Error` are leaves of the root: `StormByte: …`.
+
+Each named type defines its destructor in that module's `.cxx`. That keeps one `typeinfo`, so `catch` matches across a DLL.
+
 ```cpp
 #include <StormByte/exception.hxx>
 #include <iostream>
 
 using namespace StormByte;
+
+class CryptoError: public Exception {
+	public:
+		template <typename... Args>
+		explicit CryptoError(std::format_string<Args...> fmt, Args&&... args)
+			: Exception(Path{"Crypto"}, fmt, std::forward<Args>(args)...) {}
+
+		~CryptoError() override;
+
+	protected:
+		template <typename... Args>
+		explicit CryptoError(Path child, std::format_string<Args...> fmt, Args&&... args)
+			: Exception(Path{std::string("Crypto.") + std::string(child.text)}, fmt, std::forward<Args>(args)...) {}
+};
+
+class CrypterError: public CryptoError {
+	public:
+		template <typename... Args>
+		explicit CrypterError(std::format_string<Args...> fmt, Args&&... args)
+			: CryptoError(Path{"Crypter"}, fmt, std::forward<Args>(args)...) {}
+
+		~CrypterError() override;
+};
+
+class EncryptError: public CrypterError {
+	public:
+		using CrypterError::CrypterError;
+		~EncryptError() override;
+};
 
 void process_data(int value) {
 	if (value < 0)
@@ -101,10 +136,12 @@ int main() {
 	try {
 		process_data(-5);
 	} catch (const Exception& e) {
-		std::cerr << e.what() << std::endl;
+		std::cerr << e.what() << std::endl; // StormByte: Invalid value: -5
 	}
 }
 ```
+
+`~CryptoError`, `~CrypterError` and `~EncryptError` are defined in the module `.cxx` (`= default` is enough).
 
 ### Expected
 
