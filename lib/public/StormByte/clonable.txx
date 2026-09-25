@@ -39,55 +39,20 @@
 
 #pragma once
 
-#include <new>
 #include <utility>
 
-// Out-of-line implementation of StormByte::Clonable and Heap factories.
+// Out-of-line implementation of StormByte::Clonable.
 // See clonable.hxx for documentation of each member.
 
 namespace StormByte {
-	namespace Heap {
-		template<class T, class... Args>
-		Shared<T> MakeShared(Args&&... args) {
-			void* const memory = Allocate(sizeof(T));
-			T* object = nullptr;
-			try {
-				object = ::new (memory) T(std::forward<Args>(args)...);
-			} catch (...) {
-				Free(memory);
-				throw;
-			}
-			try {
-				return Shared<T>(typename Shared<T>::Adopt{}, object);
-			} catch (...) {
-				object->~T();
-				Free(memory);
-				throw;
-			}
-		}
-
-		template<class T, class... Args>
-		Unique<T> MakeUnique(Args&&... args) {
-			void* const memory = Allocate(sizeof(T));
-			T* object = nullptr;
-			try {
-				object = ::new (memory) T(std::forward<Args>(args)...);
-			} catch (...) {
-				Free(memory);
-				throw;
-			}
-			return Unique<T>(typename Unique<T>::Adopt{}, object);
-		}
-	}
-
 	template<class T, typename SmartPointer>
 	requires ValidSmartPointer<SmartPointer, T>
 	template<class Target, typename... Args>
 	typename Clonable<T, SmartPointer>::PointerType Clonable<T, SmartPointer>::MakePointer(Args&&... args) {
 		if constexpr (Type::SameAs<PointerType, Shared<T>>) {
-			return Heap::MakeShared<Target>(std::forward<Args>(args)...);
+			return Shared<T>::template MakePointer<Target>(std::forward<Args>(args)...);
 		} else if constexpr (Type::SameAs<PointerType, Unique<T>>) {
-			return Heap::MakeUnique<Target>(std::forward<Args>(args)...);
+			return Unique<T>::template MakePointer<Target>(std::forward<Args>(args)...);
 		} else {
 			static_assert(false, "Unsupported smart pointer type");
 		}

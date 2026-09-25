@@ -25,7 +25,8 @@ The suite is split on purpose. Buffer, Config, Crypto, Database, Logger, Multime
 - **ByteSize** — octet length (`uint64_t` storage). Implicit only to `std::size_t`. IEC / SI units (`1 * KiB`), human-readable `CString` (`1.00 KiB`). Area products are deleted.
 - **UUID** — RFC 4122 version 4 (`GenerateUUIDv4`).
 - **Bitmask** — CRTP flags over `Type::UnsignedEnum`.
-- **Clonable** — virtual `Clone` / `Move` into `Shared<T>` or `Unique<T>` (Base heap). `Shared` converts to `std::shared_ptr`; `Unique` does not convert to `std::unique_ptr<T>`.
+- **Safe pointers** — `Shared<T>` and `Unique<T>` own an object on Base's heap (`safe_pointers.hxx`). Exact type: `Heap::MakeShared` / `Heap::MakeUnique`. Derived type: `Shared<Base>::MakePointer<Derived>` / `Unique<Base>::MakePointer<Derived>`. `Shared` converts to `std::shared_ptr<T>`. `Unique` converts on move to `std::unique_ptr<T, Heap::ObjectDeleter>`. No conversion from the standard pointers. `Heap` itself is not installed.
+- **Clonable** — virtual `Clone` / `Move` into `Shared<T>` or `Unique<T>`.
 - **ThreadLock** — owner-thread reentry; `Unlock` from a non-owner is a no-op.
 - **Type concepts** — `StormByte::Type::*` (`String`, `Container`, `Optional`, `Pair`, `Numeral`, `Array`, …). `Numeral` includes `Size` and `ByteSize`. No `enable_if` / `void_t` next to them.
 - **Platform / visibility** — `WINDOWS` / `LINUX` / `MACOS`, `BIT32` / `BIT64`, `CLANG` / `GCC` / `MSVC` (clang-cl is `CLANG`, not `MSVC`).
@@ -421,6 +422,14 @@ int main() {
 ### ThreadLock
 
 The owner may `Lock()` again. Another thread blocks. `Unlock()` from a non-owner does nothing.
+
+### Safe pointers
+
+`Shared<T>` and `Unique<T>` (`safe_pointers.hxx`) own an object allocated on Base's heap. The heap implementation is private and is not installed.
+
+`Heap::MakeShared<T>(args...)` / `Heap::MakeUnique<T>(args...)` construct `T`. `Shared<Base>::MakePointer<Derived>(args...)` / `Unique<Base>::MakePointer<Derived>(args...)` construct a derived object and own it as the base. `Derived` needs a virtual destructor when the owner is `Unique`.
+
+`Shared` converts implicitly to `std::shared_ptr<T>` (same control block, Base deleter). `Unique` converts on move to `std::unique_ptr<T, Heap::ObjectDeleter>`. Neither converts from a standard pointer.
 
 ### Clonable
 

@@ -42,6 +42,10 @@ if(ENABLE_TEST)
 	target_link_libraries(IterableTests StormByte)
 	add_test(NAME IterableTests COMMAND IterableTests)
 
+	add_executable(SafePointersTests safe_pointers_test.cxx)
+	target_link_libraries(SafePointersTests StormByte)
+	add_test(NAME SafePointersTests COMMAND SafePointersTests)
+
 	add_executable(SerializationTests serialization_test.cxx)
 	target_link_libraries(SerializationTests StormByte)
 	add_test(NAME SerializationTests COMMAND SerializationTests)
