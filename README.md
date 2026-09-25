@@ -25,7 +25,7 @@ The suite is split on purpose. Buffer, Config, Crypto, Database, Logger, Multime
 - **ByteSize** — octet length (`uint64_t` storage). Implicit only to `std::size_t`. IEC / SI units (`1 * KiB`), human-readable `CString` (`1.00 KiB`). Area products are deleted.
 - **UUID** — RFC 4122 version 4 (`GenerateUUIDv4`).
 - **Bitmask** — CRTP flags over `Type::UnsignedEnum`.
-- **Safe pointers** — `Shared<T>` and `Unique<T>` own an object on Base's heap (`safe_pointers.hxx`). Exact type: `Heap::MakeShared` / `Heap::MakeUnique`. Derived type: `Shared<Base>::MakePointer<Derived>` / `Unique<Base>::MakePointer<Derived>`. `Shared` converts to `std::shared_ptr<T>`. `Unique` converts on move to `std::unique_ptr<T, Heap::ObjectDeleter>`. No conversion from the standard pointers. `Heap` itself is not installed.
+- **Safe pointers** — `Shared<T>`, `Unique<T>` and `Weak<T>` complement `std::shared_ptr`, `std::unique_ptr` and `std::weak_ptr`. They do not replace them: use the standard pointers unless the object must be freed on Base's heap. `Shared` converts implicitly to `std::shared_ptr<T>` (deleter stays Base). `Unique` converts on move only to `std::unique_ptr<T, Heap::ObjectDeleter>`. No `release`, and no constructor from a raw or standard pointer. `Heap` is not installed.
 - **Clonable** — virtual `Clone` / `Move` into `Shared<T>` or `Unique<T>`.
 - **ThreadLock** — owner-thread reentry; `Unlock` from a non-owner is a no-op.
 - **Type concepts** — `StormByte::Type::*` (`String`, `Container`, `Optional`, `Pair`, `Numeral`, `Array`, …). `Numeral` includes `Size` and `ByteSize`. No `enable_if` / `void_t` next to them.
@@ -425,11 +425,11 @@ The owner may `Lock()` again. Another thread blocks. `Unlock()` from a non-owner
 
 ### Safe pointers
 
-`Shared<T>` and `Unique<T>` (`safe_pointers.hxx`) own an object allocated on Base's heap. The heap implementation is private and is not installed.
+`Shared<T>`, `Unique<T>` and `Weak<T>` (`safe_pointers.hxx`) complement the standard smart pointers. They do not replace them. Use `std::shared_ptr`, `std::unique_ptr` and `std::weak_ptr` when the object does not cross a DLL. Use these when the object must be freed on Base's heap. The heap implementation is private and is not installed.
 
-`Heap::MakeShared<T>(args...)` / `Heap::MakeUnique<T>(args...)` construct `T`. `Shared<Base>::MakePointer<Derived>(args...)` / `Unique<Base>::MakePointer<Derived>(args...)` construct a derived object and own it as the base. `Derived` needs a virtual destructor when the owner is `Unique`.
+`Heap::MakeShared<T>(args…)` / `Heap::MakeUnique<T>(args…)` construct `T`. `MakePointer<Derived>` constructs a derived object and owns it as the base. For `Unique`, `~Base` must be virtual in that case. There is no constructor from a raw pointer or from a standard smart pointer, and `Unique` has no `release`.
 
-`Shared` converts implicitly to `std::shared_ptr<T>` (same control block, Base deleter). `Unique` converts on move to `std::unique_ptr<T, Heap::ObjectDeleter>`. Neither converts from a standard pointer.
+The daily operations match the standard ones, so a port is a signature change. `Shared` also converts implicitly to `std::shared_ptr<T>` and keeps Base's deleter, so a parameter that is already `std::shared_ptr<T>` does not have to change. There is no conversion back. `Unique` converts on move only to `std::unique_ptr<T, Heap::ObjectDeleter>`. A `std::unique_ptr<T>` parameter has to change. `Weak` is built from a `Shared`, and `lock` returns a `Shared`.
 
 ### Clonable
 

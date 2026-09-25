@@ -64,6 +64,13 @@ namespace {
 			int id() const override { return 2; }
 	};
 
+	class Plain {
+		public:
+			~Plain() = default;
+	};
+
+	class PlainChild: public Plain {};
+
 	int Derived::destroyed = 0;
 }
 
@@ -102,6 +109,18 @@ int test_shared_make_pointer_keeps_derived() {
 	ASSERT_EQUAL("test_shared_make_pointer_keeps_derived", 1, Derived::destroyed);
 	ASSERT_TRUE("test_shared_make_pointer_keeps_derived", item == nullptr);
 	RETURN_TEST("test_shared_make_pointer_keeps_derived", result);
+}
+
+int test_shared_swap_and_compare() {
+	int result = 0;
+	Shared<Base> first = Heap::MakeShared<Base>(1);
+	Shared<Base> second = Heap::MakeShared<Base>(2);
+	ASSERT_TRUE("test_shared_swap_and_compare", first != second);
+	first.swap(second);
+	ASSERT_EQUAL("test_shared_swap_and_compare", 2, first->value);
+	ASSERT_EQUAL("test_shared_swap_and_compare", 1, second->value);
+	ASSERT_TRUE("test_shared_swap_and_compare", (first <=> second) != 0);
+	RETURN_TEST("test_shared_swap_and_compare", result);
 }
 
 int test_shared_rejects_std_shared_ptr() {
@@ -154,6 +173,59 @@ int test_unique_rejects_std_unique_ptr() {
 	RETURN_TEST("test_unique_rejects_std_unique_ptr", result);
 }
 
+// -------------------
+// Weak
+// -------------------
+
+int test_weak_locks_and_expires() {
+	int result = 0;
+	Shared<Base> item = Heap::MakeShared<Base>(3);
+	Weak<Base> watch(item);
+	ASSERT_TRUE("test_weak_locks_and_expires", !watch.expired());
+	ASSERT_TRUE("test_weak_locks_and_expires", watch.use_count() == 1);
+	Shared<Base> locked = watch.lock();
+	ASSERT_EQUAL("test_weak_locks_and_expires", 3, locked->value);
+	ASSERT_TRUE("test_weak_locks_and_expires", locked.get() == item.get());
+	item.reset();
+	locked.reset();
+	ASSERT_TRUE("test_weak_locks_and_expires", watch.expired());
+	ASSERT_TRUE("test_weak_locks_and_expires", watch.lock() == nullptr);
+	RETURN_TEST("test_weak_locks_and_expires", result);
+}
+
+int test_weak_rejects_std_weak_ptr() {
+	int result = 0;
+	static_assert(!std::is_constructible_v<Weak<Base>, std::weak_ptr<Base>>);
+	static_assert(!std::is_constructible_v<Weak<Base>, std::shared_ptr<Base>>);
+	ASSERT_TRUE("test_weak_rejects_std_weak_ptr", true);
+	RETURN_TEST("test_weak_rejects_std_weak_ptr", result);
+}
+
+// -------------------
+// Cast
+// -------------------
+
+int test_static_pointer_cast_keeps_derived() {
+	int result = 0;
+	Derived::destroyed = 0;
+	Shared<Derived> derived = Heap::MakeShared<Derived>(6);
+	Shared<Base> base = StaticPointerCast<Base>(derived);
+	ASSERT_EQUAL("test_static_pointer_cast_keeps_derived", 2, base->id());
+	derived.reset();
+	base.reset();
+	ASSERT_EQUAL("test_static_pointer_cast_keeps_derived", 1, Derived::destroyed);
+	RETURN_TEST("test_static_pointer_cast_keeps_derived", result);
+}
+
+int test_unique_make_pointer_requires_virtual_destructor() {
+	int result = 0;
+	static_assert(requires { Unique<Plain>::MakePointer<Plain>(); });
+	static_assert(!requires { Unique<Plain>::MakePointer<PlainChild>(); });
+	static_assert(requires { Unique<Base>::MakePointer<Derived>(1); });
+	ASSERT_TRUE("test_unique_make_pointer_requires_virtual_destructor", true);
+	RETURN_TEST("test_unique_make_pointer_requires_virtual_destructor", result);
+}
+
 int main() {
 	int result = 0;
 
@@ -163,6 +235,7 @@ int main() {
 	result += test_shared_make_shared_constructs();
 	result += test_shared_converts_to_std_shared_ptr();
 	result += test_shared_make_pointer_keeps_derived();
+	result += test_shared_swap_and_compare();
 	result += test_shared_rejects_std_shared_ptr();
 
 	// -------------------
@@ -172,6 +245,18 @@ int main() {
 	result += test_unique_converts_to_std_unique_ptr();
 	result += test_unique_make_pointer_keeps_derived();
 	result += test_unique_rejects_std_unique_ptr();
+
+	// -------------------
+	// Weak
+	// -------------------
+	result += test_weak_locks_and_expires();
+	result += test_weak_rejects_std_weak_ptr();
+
+	// -------------------
+	// Cast
+	// -------------------
+	result += test_static_pointer_cast_keeps_derived();
+	result += test_unique_make_pointer_requires_virtual_destructor();
 
 	if (result == 0)
 		std::cout << "All tests passed!" << std::endl;
