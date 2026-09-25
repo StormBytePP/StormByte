@@ -65,6 +65,8 @@ namespace StormByte {
 	template class STORMBYTE_INSTANTIATE Serializable<std::wstring>;
 	template class STORMBYTE_INSTANTIATE Serializable<std::u16string>;
 	template class STORMBYTE_INSTANTIATE Serializable<std::u32string>;
+	template class STORMBYTE_INSTANTIATE Serializable<CString>;
+	template class STORMBYTE_INSTANTIATE Serializable<WCString>;
 
 	namespace {
 		void append_utf8(std::string& out, char32_t cp) {
@@ -312,5 +314,35 @@ namespace StormByte {
 		if (!payload)
 			return Unexpected(payload.error());
 		return utf8_to_u32(payload.value());
+	}
+
+	std::size_t Detail::Codec<CString>::Size(const CString& data) noexcept {
+		return Detail::Codec<std::string>::Size(static_cast<std::string>(data));
+	}
+
+	std::vector<std::byte> Detail::Codec<CString>::Write(const CString& data) noexcept {
+		return Detail::Codec<std::string>::Write(static_cast<std::string>(data));
+	}
+
+	Expected<CString, DeserializeError> Detail::Codec<CString>::Read(std::span<const std::byte> data) noexcept {
+		auto payload = Detail::Codec<std::string>::Read(data);
+		if (!payload)
+			return Unexpected(payload.error());
+		return CString(payload.value().c_str());
+	}
+
+	std::size_t Detail::Codec<WCString>::Size(const WCString& data) noexcept {
+		return Detail::Codec<std::wstring>::Size(static_cast<std::wstring>(data));
+	}
+
+	std::vector<std::byte> Detail::Codec<WCString>::Write(const WCString& data) noexcept {
+		return Detail::Codec<std::wstring>::Write(static_cast<std::wstring>(data));
+	}
+
+	Expected<WCString, DeserializeError> Detail::Codec<WCString>::Read(std::span<const std::byte> data) noexcept {
+		auto payload = Detail::Codec<std::wstring>::Read(data);
+		if (!payload)
+			return Unexpected(payload.error());
+		return WCString(payload.value().c_str());
 	}
 }

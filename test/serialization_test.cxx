@@ -116,461 +116,36 @@ struct StormByte::Detail::Codec<Tag> {
 };
 
 // -------------------
-// Roundtrip
+// Codec
 // -------------------
 
-int test_serialize_int() {
-	int data = 42;
-	Serializable<int> serialization(data);
-	std::vector<std::byte> buffer = serialization.Serialize();
-	if (buffer.size() == 0)
-		RETURN_TEST("test_serialize_int", 1);
-	auto expected_data = Serializable<int>::Deserialize(buffer);
-	if (!expected_data)
-		RETURN_TEST("test_serialize_int", 1);
-	ASSERT_EQUAL("test_serialize_int", data, expected_data.value());
-	RETURN_TEST("test_serialize_int", 0);
-}
-
-int test_serialize_double() {
-	double data = 777.777;
-	Serializable<double> serialization(data);
-	std::vector<std::byte> buffer = serialization.Serialize();
-	if (buffer.size() == 0)
-		RETURN_TEST("test_serialize_double", 1);
-	auto expected_data = Serializable<double>::Deserialize(buffer);
-	if (!expected_data)
-		RETURN_TEST("test_serialize_double", 1);
-	ASSERT_EQUAL("test_serialize_double", data, expected_data.value());
-	RETURN_TEST("test_serialize_double", 0);
-}
-
-int test_serialize_string() {
-	std::string data = "Hello, World!";
-	Serializable<std::string> serialization(data);
-	std::vector<std::byte> buffer = serialization.Serialize();
-	if (buffer.size() == 0)
-		RETURN_TEST("test_serialize_string", 1);
-	auto expected_data = Serializable<std::string>::Deserialize(buffer);
-	if (!expected_data)
-		RETURN_TEST("test_serialize_string", 1);
-	ASSERT_EQUAL("test_serialize_string", data, expected_data.value());
-	RETURN_TEST("test_serialize_string", 0);
-}
-
-int test_serialize_size_t() {
-	std::string data = "Hello, World!";
-	std::size_t size = data.size();
-	Serializable<std::size_t> serialization(size);
-	std::vector<std::byte> buffer = serialization.Serialize();
-	if (buffer.size() == 0)
-		RETURN_TEST("test_serialize_size_t", 1);
-	auto expected_data = Serializable<std::size_t>::Deserialize(buffer);
-	if (!expected_data)
-		RETURN_TEST("test_serialize_size_t", 1);
-	ASSERT_EQUAL("test_serialize_size_t", data.size(), expected_data.value());
-	RETURN_TEST("test_serialize_size_t", 0);
-}
-
-int test_serialize_string_vector() {
-	std::vector<std::string> data = { "Hello", "World!" };
-	Serializable<std::vector<std::string>> serialization(data);
-	std::vector<std::byte> buffer = serialization.Serialize();
-	if (buffer.size() == 0)
-		RETURN_TEST("test_serialize_string_vector", 1);
-	auto expected_data = Serializable<std::vector<std::string>>::Deserialize(buffer);
-	if (!expected_data) {
-		std::cerr << expected_data.error()->what() << std::endl;
-		RETURN_TEST("test_serialize_string_vector", 1);
-	}
-	ASSERT_TRUE("test_serialize_string_vector", data == expected_data.value());
-	RETURN_TEST("test_serialize_string_vector", 0);
-}
-
-int test_serialize_pair() {
-	std::pair<int, double> data = { 42, 777.777 };
-	Serializable<std::pair<int, double>> serialization(data);
-	std::vector<std::byte> buffer = serialization.Serialize();
-	if (buffer.size() == 0)
-		RETURN_TEST("test_serialize_pair", 1);
-	auto expected_data = Serializable<std::pair<int, double>>::Deserialize(buffer);
-	if (!expected_data) {
-		std::cerr << expected_data.error()->what() << std::endl;
-		RETURN_TEST("test_serialize_pair", 1);
-	}
-	ASSERT_TRUE("test_serialize_pair", data == expected_data.value());
-	RETURN_TEST("test_serialize_pair", 0);
-}
-
-int test_serialize_map() {
-	std::map<int, std::string> data = { { 1, "Hello" }, { 2, "World!" } };
-	Serializable<std::map<int, std::string>> serialization(data);
-	std::vector<std::byte> buffer = serialization.Serialize();
-	if (buffer.size() == 0)
-		RETURN_TEST("test_serialize_map", 1);
-	auto expected_data = Serializable<std::map<int, std::string>>::Deserialize(buffer);
-	if (!expected_data) {
-		std::cerr << expected_data.error()->what() << std::endl;
-		RETURN_TEST("test_serialize_map", 1);
-	}
-	ASSERT_TRUE("test_serialize_map", data == expected_data.value());
-	RETURN_TEST("test_serialize_map", 0);
-}
-
-int test_serialize_array() {
-	const std::array<int, 3> data = { 10, 20, 30 };
-	auto buffer = Serializable<std::array<int, 3>>(data).Serialize();
-	auto expected = Serializable<std::array<int, 3>>::Deserialize(buffer);
+int test_codec_custom_type() {
+	const Tag original{ 7, "codec" };
+	auto buffer = Serializable<Tag>(original).Serialize();
+	if (buffer.empty())
+		RETURN_TEST("test_codec_custom_type", 1);
+	auto expected = Serializable<Tag>::Deserialize(buffer);
 	if (!expected) {
 		std::cerr << expected.error()->what() << std::endl;
-		RETURN_TEST("test_serialize_array", 1);
+		RETURN_TEST("test_codec_custom_type", 1);
 	}
-	ASSERT_TRUE("test_serialize_array", data == expected.value());
-	const auto expected_size = Serializable<std::array<int, 3>>::Size(data);
-	ASSERT_EQUAL("test_serialize_array", expected_size, buffer.size());
-	RETURN_TEST("test_serialize_array", 0);
+	ASSERT_TRUE("test_codec_custom_type", original == expected.value());
+	ASSERT_EQUAL("test_codec_custom_type", Serializable<Tag>::Size(original), buffer.size());
+	RETURN_TEST("test_codec_custom_type", 0);
 }
 
-int test_serialize_array_rejects_wrong_element_count() {
-	const std::vector<int> data = { 10, 20 };
-	auto buffer = Serializable<std::vector<int>>(data).Serialize();
-	auto expected = Serializable<std::array<int, 3>>::Deserialize(buffer);
-	ASSERT_FALSE("test_serialize_array_rejects_wrong_element_count", expected.has_value());
-	RETURN_TEST("test_serialize_array_rejects_wrong_element_count", 0);
-}
-
-int test_serialize_deserialize_big_string() {
-	const std::string fn_name = "test_serialize_deserialize_big_string";
-	const std::string data(10 * 1024 * 1024, 'A');
-	Serializable<std::string> serialization(data);
-	std::vector<std::byte> buffer = serialization.Serialize();
-	ASSERT_FALSE(fn_name, buffer.empty());
-	auto expected_data = Serializable<std::string>::Deserialize(buffer);
-	if (!expected_data) {
-		std::cerr << expected_data.error()->what() << std::endl;
-		RETURN_TEST(fn_name.c_str(), 1);
-	}
-	ASSERT_EQUAL(fn_name, data, expected_data.value());
-	RETURN_TEST(fn_name.c_str(), 0);
-}
-
-int test_serialize_deserialize_with_span() {
-	const std::string fn_name = "test_serialize_deserialize_with_span";
-	int data = 123456;
-	Serializable<int> serialization(data);
-	std::vector<std::byte> buffer = serialization.Serialize();
-	if (buffer.empty())
-		RETURN_TEST(fn_name.c_str(), 1);
-	auto expected_data = Serializable<int>::Deserialize(std::span<const std::byte>(buffer.data(), buffer.size()));
-	if (!expected_data) {
-		std::cerr << expected_data.error()->what() << std::endl;
-		RETURN_TEST(fn_name.c_str(), 1);
-	}
-	ASSERT_EQUAL(fn_name.c_str(), data, expected_data.value());
-	RETURN_TEST(fn_name.c_str(), 0);
-}
-
-// -------------------
-// Truncated
-// -------------------
-
-int test_serialize_int_truncated() {
-	int data = 42;
-	Serializable<int> serialization(data);
-	std::vector<std::byte> buffer = serialization.Serialize();
-	if (buffer.size() == 0)
-		RETURN_TEST("test_serialize_int_truncated", 1);
-	std::vector<std::byte> truncated_buffer(buffer.begin(), buffer.begin() + sizeof(int) / 2);
-	auto expected_data = Serializable<int>::Deserialize(truncated_buffer);
-	if (expected_data) {
-		std::cerr << "Expected failure, but got value: " << expected_data.value() << std::endl;
-		RETURN_TEST("test_serialize_int_truncated", 1);
-	}
-	RETURN_TEST("test_serialize_int_truncated", 0);
-}
-
-int test_serialize_string_vector_truncated() {
-	std::vector<std::string> data = { "Hello", "World!" };
-	Serializable<std::vector<std::string>> serialization(data);
-	std::vector<std::byte> buffer = serialization.Serialize();
-	if (buffer.size() == 0)
-		RETURN_TEST("test_serialize_string_vector_truncated", 1);
-	std::size_t truncated_length = sizeof(std::size_t) + 2;
-	std::vector<std::byte> truncated_buffer(buffer.begin(), buffer.begin() + truncated_length);
-	auto expected_data = Serializable<std::vector<std::string>>::Deserialize(truncated_buffer);
-	if (expected_data) {
-		std::cerr << "Expected failure, but got value" << std::endl;
-		RETURN_TEST("test_serialize_string_vector_truncated", 1);
-	}
-	RETURN_TEST("test_serialize_string_vector_truncated", 0);
-}
-
-int test_serialize_pair_truncated() {
-	std::pair<int, double> data = { 42, 777.777 };
-	Serializable<std::pair<int, double>> serialization(data);
-	std::vector<std::byte> buffer = serialization.Serialize();
-	if (buffer.size() == 0)
-		RETURN_TEST("test_serialize_pair_truncated", 1);
-	std::size_t truncated_length = sizeof(int);
-	std::vector<std::byte> truncated_buffer(buffer.begin(), buffer.begin() + truncated_length);
-	auto expected_data = Serializable<std::pair<int, double>>::Deserialize(truncated_buffer);
-	if (expected_data) {
-		std::cerr << "Expected failure, but got value" << std::endl;
-		RETURN_TEST("test_serialize_pair_truncated", 1);
-	}
-	RETURN_TEST("test_serialize_pair_truncated", 0);
-}
-
-int test_serialize_deserialize_with_span_truncated() {
-	const std::string fn_name = "test_serialize_deserialize_with_span_truncated";
-	int data = 123456;
-	Serializable<int> serialization(data);
-	std::vector<std::byte> buffer = serialization.Serialize();
-	if (buffer.empty())
-		RETURN_TEST(fn_name.c_str(), 1);
-	std::size_t truncated_len = sizeof(int) / 2;
-	std::span<const std::byte> truncated_span(buffer.data(), truncated_len);
-	auto expected_data = Serializable<int>::Deserialize(truncated_span);
-	if (expected_data) {
-		std::cerr << "Expected failure, but got value: " << expected_data.value() << std::endl;
-		RETURN_TEST(fn_name.c_str(), 1);
-	}
-	RETURN_TEST(fn_name.c_str(), 0);
-}
-
-// -------------------
-// Optional
-// -------------------
-
-int test_serialize_optional_notempty() {
-	std::optional<int> data = 42;
-	Serializable<std::optional<int>> serialization(data);
-	std::vector<std::byte> buffer = serialization.Serialize();
-	if (buffer.size() == 0)
-		RETURN_TEST("test_serialize_optional_notempty", 1);
-	auto expected_data = Serializable<std::optional<int>>::Deserialize(buffer);
-	if (!expected_data) {
-		std::cerr << expected_data.error()->what() << std::endl;
-		RETURN_TEST("test_serialize_optional_notempty", 1);
-	}
-	ASSERT_EQUAL("test_serialize_optional_notempty", data.value(), expected_data.value().value());
-	RETURN_TEST("test_serialize_optional_notempty", 0);
-}
-
-int test_serialize_optional_empty() {
-	std::optional<int> data;
-	Serializable<std::optional<int>> serialization(data);
-	std::vector<std::byte> buffer = serialization.Serialize();
-	if (buffer.size() == 0)
-		RETURN_TEST("test_serialize_optional_empty", 1);
-	auto expected_data = Serializable<std::optional<int>>::Deserialize(buffer);
-	if (!expected_data) {
-		std::cerr << expected_data.error()->what() << std::endl;
-		RETURN_TEST("test_serialize_optional_empty", 1);
-	}
-	ASSERT_FALSE("test_serialize_optional_empty", expected_data.value().has_value());
-	RETURN_TEST("test_serialize_optional_empty", 0);
-}
-
-int test_serialize_optional_string() {
-	std::optional<std::string> data = "Hello, World!";
-	Serializable<std::optional<std::string>> serialization(data);
-	std::vector<std::byte> buffer = serialization.Serialize();
-	if (buffer.size() == 0)
-		RETURN_TEST("test_serialize_optional_string", 1);
-	auto expected_data = Serializable<std::optional<std::string>>::Deserialize(buffer);
-	if (!expected_data) {
-		std::cerr << expected_data.error()->what() << std::endl;
-		RETURN_TEST("test_serialize_optional_string", 1);
-	}
-	ASSERT_EQUAL("test_serialize_optional_string", data.value(), expected_data.value().value());
-	RETURN_TEST("test_serialize_optional_string", 0);
-}
-
-int test_serialize_nested_optional() {
-	using Value = std::optional<std::optional<int>>;
-	const std::vector<Value> values = { std::nullopt, std::optional<int>{std::nullopt}, std::optional<int>{42} };
-	for (const auto& data : values) {
-		auto buffer = Serializable<Value>(data).Serialize();
-		auto expected = Serializable<Value>::Deserialize(buffer);
-		if (!expected || expected.value() != data) {
-			std::cerr << "test_serialize_nested_optional: nested optional mismatch\n";
-			RETURN_TEST("test_serialize_nested_optional", 1);
+int test_codec_custom_type_truncated() {
+	const Tag original{ 7, "codec" };
+	auto buffer = Serializable<Tag>(original).Serialize();
+	for (std::size_t len = 0; len < buffer.size(); ++len) {
+		auto truncated = Truncate(buffer, len);
+		auto result = Serializable<Tag>::Deserialize(truncated);
+		if (result) {
+			std::cerr << "test_codec_custom_type_truncated: size " << len << " accepted\n";
+			RETURN_TEST("test_codec_custom_type_truncated", 1);
 		}
 	}
-	RETURN_TEST("test_serialize_nested_optional", 0);
-}
-
-// -------------------
-// Nested
-// -------------------
-
-int test_serialize_deep_nested_vector() {
-	using Value = std::vector<std::vector<std::vector<int>>>;
-	const Value data = {
-		{{1, 2}, {3}},
-		{{4, 5, 6}}
-	};
-	auto buffer = Serializable<Value>(data).Serialize();
-	auto expected = Serializable<Value>::Deserialize(buffer);
-	if (!expected) {
-		std::cerr << expected.error()->what() << std::endl;
-		RETURN_TEST("test_serialize_deep_nested_vector", 1);
-	}
-	ASSERT_TRUE("test_serialize_deep_nested_vector", data == expected.value());
-	RETURN_TEST("test_serialize_deep_nested_vector", 0);
-}
-
-int test_base_nested_vector_of_pairs() {
-	std::vector<std::pair<int, std::string>> data = {
-		{1, "one"}, {2, "two"}, {3, "three"}
-	};
-	auto buf = Serializable<std::vector<std::pair<int, std::string>>>(data).Serialize();
-	auto expected = Serializable<std::vector<std::pair<int, std::string>>>::Deserialize(buf);
-	if (!expected) {
-		std::cerr << expected.error()->what() << std::endl;
-		RETURN_TEST("test_base_nested_vector_of_pairs", 1);
-	}
-	ASSERT_TRUE("test_base_nested_vector_of_pairs", data == expected.value());
-	RETURN_TEST("test_base_nested_vector_of_pairs", 0);
-}
-
-int test_base_idempotent_roundtrip_vector() {
-	std::vector<std::string> original = {"a", "b", "StormByte"};
-	auto buf1 = Serializable<std::vector<std::string>>(original).Serialize();
-	auto d1 = Serializable<std::vector<std::string>>::Deserialize(buf1);
-	if (!d1) {
-		std::cerr << d1.error()->what() << std::endl;
-		RETURN_TEST("test_base_idempotent_roundtrip_vector", 1);
-	}
-	auto buf2 = Serializable<std::vector<std::string>>(d1.value()).Serialize();
-	ASSERT_TRUE("test_base_idempotent_roundtrip_vector", original == d1.value());
-	ASSERT_TRUE("test_base_idempotent_roundtrip_vector", buf1 == buf2);
-	RETURN_TEST("test_base_idempotent_roundtrip_vector", 0);
-}
-
-int test_base_idempotent_roundtrip_pair() {
-	std::pair<int, std::string> original{42, "answer"};
-	auto buf1 = Serializable<std::pair<int, std::string>>(original).Serialize();
-	auto d1 = Serializable<std::pair<int, std::string>>::Deserialize(buf1);
-	if (!d1) {
-		std::cerr << d1.error()->what() << std::endl;
-		RETURN_TEST("test_base_idempotent_roundtrip_pair", 1);
-	}
-	auto buf2 = Serializable<std::pair<int, std::string>>(d1.value()).Serialize();
-	ASSERT_TRUE("test_base_idempotent_roundtrip_pair", original == d1.value());
-	ASSERT_TRUE("test_base_idempotent_roundtrip_pair", buf1 == buf2);
-	RETURN_TEST("test_base_idempotent_roundtrip_pair", 0);
-}
-
-// -------------------
-// Wire
-// -------------------
-
-int test_wire_int_is_little_endian() {
-	const int data = 0x01020304;
-	auto buffer = Serializable<int>(data).Serialize();
-	if (buffer.size() != sizeof(int)) {
-		std::cerr << "test_wire_int_is_little_endian: unexpected size " << buffer.size() << "\n";
-		RETURN_TEST("test_wire_int_is_little_endian", 1);
-	}
-	const unsigned char b0 = static_cast<unsigned char>(buffer[0]);
-	const unsigned char b1 = static_cast<unsigned char>(buffer[1]);
-	const unsigned char b2 = static_cast<unsigned char>(buffer[2]);
-	const unsigned char b3 = static_cast<unsigned char>(buffer[3]);
-	if (b0 != 0x04 || b1 != 0x03 || b2 != 0x02 || b3 != 0x01) {
-		std::cerr << "test_wire_int_is_little_endian: got "
-			<< static_cast<int>(b0) << " " << static_cast<int>(b1) << " "
-			<< static_cast<int>(b2) << " " << static_cast<int>(b3) << "\n";
-		RETURN_TEST("test_wire_int_is_little_endian", 1);
-	}
-	RETURN_TEST("test_wire_int_is_little_endian", 0);
-}
-
-int test_wire_string_length_is_uint64_le() {
-	const std::string data = "AB";
-	auto buffer = Serializable<std::string>(data).Serialize();
-	if (buffer.size() != sizeof(std::uint64_t) + data.size()) {
-		std::cerr << "test_wire_string_length_is_uint64_le: unexpected size\n";
-		RETURN_TEST("test_wire_string_length_is_uint64_le", 1);
-	}
-	if (static_cast<unsigned char>(buffer[0]) != 2 ||
-			static_cast<unsigned char>(buffer[1]) != 0 ||
-			static_cast<unsigned char>(buffer[7]) != 0 ||
-			static_cast<char>(buffer[8]) != 'A' ||
-			static_cast<char>(buffer[9]) != 'B') {
-		std::cerr << "test_wire_string_length_is_uint64_le: layout mismatch\n";
-		RETURN_TEST("test_wire_string_length_is_uint64_le", 1);
-	}
-	RETURN_TEST("test_wire_string_length_is_uint64_le", 0);
-}
-
-int test_base_bool_accepts_0_and_1() {
-	auto z = Serializable<bool>::Deserialize(std::vector<std::byte>{ std::byte{0} });
-	auto o = Serializable<bool>::Deserialize(std::vector<std::byte>{ std::byte{1} });
-	if (!z || z.value() != false) {
-		std::cerr << "test_base_bool_accepts_0_and_1: 0 not decoded as false\n";
-		RETURN_TEST("test_base_bool_accepts_0_and_1", 1);
-	}
-	if (!o || o.value() != true) {
-		std::cerr << "test_base_bool_accepts_0_and_1: 1 not decoded as true\n";
-		RETURN_TEST("test_base_bool_accepts_0_and_1", 1);
-	}
-	RETURN_TEST("test_base_bool_accepts_0_and_1", 0);
-}
-
-int test_base_bool_rejects_invalid_byte() {
-	std::vector<std::byte> buf = { std::byte{17} };
-	bool threw = false;
-	bool accepted = false;
-	try {
-		auto result = Serializable<bool>::Deserialize(buf);
-		if (result)
-			accepted = true;
-	} catch (...) {
-		threw = true;
-	}
-	if (threw) {
-		std::cerr << "test_base_bool_rejects_invalid_byte: threw instead of returning error\n";
-		RETURN_TEST("test_base_bool_rejects_invalid_byte", 1);
-	}
-	if (accepted) {
-		std::cerr << "test_base_bool_rejects_invalid_byte: invalid byte 17 was accepted\n";
-		RETURN_TEST("test_base_bool_rejects_invalid_byte", 1);
-	}
-	RETURN_TEST("test_base_bool_rejects_invalid_byte", 0);
-}
-
-int test_base_optional_flag_rejects_invalid_bool() {
-	std::vector<std::byte> buf = { std::byte{17} };
-	bool threw = false;
-	bool accepted = false;
-	try {
-		auto result = Serializable<std::optional<int>>::Deserialize(buf);
-		if (result)
-			accepted = true;
-	} catch (...) {
-		threw = true;
-	}
-	if (threw || accepted) {
-		std::cerr << "test_base_optional_flag_rejects_invalid_bool: invalid flag not rejected cleanly\n";
-		RETURN_TEST("test_base_optional_flag_rejects_invalid_bool", 1);
-	}
-	RETURN_TEST("test_base_optional_flag_rejects_invalid_bool", 0);
-}
-
-int test_base_trailing_garbage() {
-	auto clean = MakeStringBuffer();
-	auto dirty = clean;
-	dirty.push_back(std::byte{0xDE});
-	dirty.push_back(std::byte{0xAD});
-	auto result = Serializable<std::string>::Deserialize(dirty);
-	if (!result) {
-		std::cerr << "test_base_trailing_garbage: trailing bytes should be ignored by Read\n";
-		RETURN_TEST("test_base_trailing_garbage", 1);
-	}
-	ASSERT_EQUAL("test_base_trailing_garbage", std::string("StormByte serialization test"), result.value());
-	RETURN_TEST("test_base_trailing_garbage", 0);
+	RETURN_TEST("test_codec_custom_type_truncated", 0);
 }
 
 // -------------------
@@ -587,34 +162,6 @@ int test_base_corruption_empty_buffer() {
 		RETURN_TEST("test_base_corruption_empty_buffer", 1);
 	}
 	RETURN_TEST("test_base_corruption_empty_buffer", 0);
-}
-
-int test_base_corruption_string_truncated_all() {
-	auto clean = MakeStringBuffer();
-	for (std::size_t len = 0; len < clean.size(); ++len) {
-		auto truncated = Truncate(clean, len);
-		auto result = Serializable<std::string>::Deserialize(truncated);
-		if (result) {
-			std::cerr << "test_base_corruption_string_truncated_all: truncated size "
-				<< len << " was accepted\n";
-			RETURN_TEST("test_base_corruption_string_truncated_all", 1);
-		}
-	}
-	RETURN_TEST("test_base_corruption_string_truncated_all", 0);
-}
-
-int test_base_corruption_vector_truncated_all() {
-	auto clean = MakeStringVectorBuffer();
-	for (std::size_t len = 0; len < clean.size(); ++len) {
-		auto truncated = Truncate(clean, len);
-		auto result = Serializable<std::vector<std::string>>::Deserialize(truncated);
-		if (result) {
-			std::cerr << "test_base_corruption_vector_truncated_all: truncated size "
-				<< len << " was accepted\n";
-			RETURN_TEST("test_base_corruption_vector_truncated_all", 1);
-		}
-	}
-	RETURN_TEST("test_base_corruption_vector_truncated_all", 0);
 }
 
 int test_base_corruption_huge_container_size() {
@@ -698,6 +245,34 @@ int test_base_corruption_random_stress() {
 	RETURN_TEST("test_base_corruption_random_stress", 0);
 }
 
+int test_base_corruption_string_truncated_all() {
+	auto clean = MakeStringBuffer();
+	for (std::size_t len = 0; len < clean.size(); ++len) {
+		auto truncated = Truncate(clean, len);
+		auto result = Serializable<std::string>::Deserialize(truncated);
+		if (result) {
+			std::cerr << "test_base_corruption_string_truncated_all: truncated size "
+				<< len << " was accepted\n";
+			RETURN_TEST("test_base_corruption_string_truncated_all", 1);
+		}
+	}
+	RETURN_TEST("test_base_corruption_string_truncated_all", 0);
+}
+
+int test_base_corruption_vector_truncated_all() {
+	auto clean = MakeStringVectorBuffer();
+	for (std::size_t len = 0; len < clean.size(); ++len) {
+		auto truncated = Truncate(clean, len);
+		auto result = Serializable<std::vector<std::string>>::Deserialize(truncated);
+		if (result) {
+			std::cerr << "test_base_corruption_vector_truncated_all: truncated size "
+				<< len << " was accepted\n";
+			RETURN_TEST("test_base_corruption_vector_truncated_all", 1);
+		}
+	}
+	RETURN_TEST("test_base_corruption_vector_truncated_all", 0);
+}
+
 int test_base_cross_type_vector_as_string() {
 	auto vec_buf = MakeStringVectorBuffer();
 	auto as_string = Serializable<std::string>::Deserialize(vec_buf);
@@ -720,8 +295,420 @@ int test_base_double_corruption() {
 }
 
 // -------------------
+// Nested
+// -------------------
+
+int test_base_idempotent_roundtrip_pair() {
+	std::pair<int, std::string> original{42, "answer"};
+	auto buf1 = Serializable<std::pair<int, std::string>>(original).Serialize();
+	auto d1 = Serializable<std::pair<int, std::string>>::Deserialize(buf1);
+	if (!d1) {
+		std::cerr << d1.error()->what() << std::endl;
+		RETURN_TEST("test_base_idempotent_roundtrip_pair", 1);
+	}
+	auto buf2 = Serializable<std::pair<int, std::string>>(d1.value()).Serialize();
+	ASSERT_TRUE("test_base_idempotent_roundtrip_pair", original == d1.value());
+	ASSERT_TRUE("test_base_idempotent_roundtrip_pair", buf1 == buf2);
+	RETURN_TEST("test_base_idempotent_roundtrip_pair", 0);
+}
+
+int test_base_idempotent_roundtrip_vector() {
+	std::vector<std::string> original = {"a", "b", "StormByte"};
+	auto buf1 = Serializable<std::vector<std::string>>(original).Serialize();
+	auto d1 = Serializable<std::vector<std::string>>::Deserialize(buf1);
+	if (!d1) {
+		std::cerr << d1.error()->what() << std::endl;
+		RETURN_TEST("test_base_idempotent_roundtrip_vector", 1);
+	}
+	auto buf2 = Serializable<std::vector<std::string>>(d1.value()).Serialize();
+	ASSERT_TRUE("test_base_idempotent_roundtrip_vector", original == d1.value());
+	ASSERT_TRUE("test_base_idempotent_roundtrip_vector", buf1 == buf2);
+	RETURN_TEST("test_base_idempotent_roundtrip_vector", 0);
+}
+
+int test_base_nested_vector_of_pairs() {
+	std::vector<std::pair<int, std::string>> data = {
+		{1, "one"}, {2, "two"}, {3, "three"}
+	};
+	auto buf = Serializable<std::vector<std::pair<int, std::string>>>(data).Serialize();
+	auto expected = Serializable<std::vector<std::pair<int, std::string>>>::Deserialize(buf);
+	if (!expected) {
+		std::cerr << expected.error()->what() << std::endl;
+		RETURN_TEST("test_base_nested_vector_of_pairs", 1);
+	}
+	ASSERT_TRUE("test_base_nested_vector_of_pairs", data == expected.value());
+	RETURN_TEST("test_base_nested_vector_of_pairs", 0);
+}
+
+int test_serialize_deep_nested_vector() {
+	using Value = std::vector<std::vector<std::vector<int>>>;
+	const Value data = {
+		{{1, 2}, {3}},
+		{{4, 5, 6}}
+	};
+	auto buffer = Serializable<Value>(data).Serialize();
+	auto expected = Serializable<Value>::Deserialize(buffer);
+	if (!expected) {
+		std::cerr << expected.error()->what() << std::endl;
+		RETURN_TEST("test_serialize_deep_nested_vector", 1);
+	}
+	ASSERT_TRUE("test_serialize_deep_nested_vector", data == expected.value());
+	RETURN_TEST("test_serialize_deep_nested_vector", 0);
+}
+
+// -------------------
+// Optional
+// -------------------
+
+int test_serialize_nested_optional() {
+	using Value = std::optional<std::optional<int>>;
+	const std::vector<Value> values = { std::nullopt, std::optional<int>{std::nullopt}, std::optional<int>{42} };
+	for (const auto& data : values) {
+		auto buffer = Serializable<Value>(data).Serialize();
+		auto expected = Serializable<Value>::Deserialize(buffer);
+		if (!expected || expected.value() != data) {
+			std::cerr << "test_serialize_nested_optional: nested optional mismatch\n";
+			RETURN_TEST("test_serialize_nested_optional", 1);
+		}
+	}
+	RETURN_TEST("test_serialize_nested_optional", 0);
+}
+
+int test_serialize_optional_empty() {
+	std::optional<int> data;
+	Serializable<std::optional<int>> serialization(data);
+	std::vector<std::byte> buffer = serialization.Serialize();
+	if (buffer.size() == 0)
+		RETURN_TEST("test_serialize_optional_empty", 1);
+	auto expected_data = Serializable<std::optional<int>>::Deserialize(buffer);
+	if (!expected_data) {
+		std::cerr << expected_data.error()->what() << std::endl;
+		RETURN_TEST("test_serialize_optional_empty", 1);
+	}
+	ASSERT_FALSE("test_serialize_optional_empty", expected_data.value().has_value());
+	RETURN_TEST("test_serialize_optional_empty", 0);
+}
+
+int test_serialize_optional_notempty() {
+	std::optional<int> data = 42;
+	Serializable<std::optional<int>> serialization(data);
+	std::vector<std::byte> buffer = serialization.Serialize();
+	if (buffer.size() == 0)
+		RETURN_TEST("test_serialize_optional_notempty", 1);
+	auto expected_data = Serializable<std::optional<int>>::Deserialize(buffer);
+	if (!expected_data) {
+		std::cerr << expected_data.error()->what() << std::endl;
+		RETURN_TEST("test_serialize_optional_notempty", 1);
+	}
+	ASSERT_EQUAL("test_serialize_optional_notempty", data.value(), expected_data.value().value());
+	RETURN_TEST("test_serialize_optional_notempty", 0);
+}
+
+int test_serialize_optional_string() {
+	std::optional<std::string> data = "Hello, World!";
+	Serializable<std::optional<std::string>> serialization(data);
+	std::vector<std::byte> buffer = serialization.Serialize();
+	if (buffer.size() == 0)
+		RETURN_TEST("test_serialize_optional_string", 1);
+	auto expected_data = Serializable<std::optional<std::string>>::Deserialize(buffer);
+	if (!expected_data) {
+		std::cerr << expected_data.error()->what() << std::endl;
+		RETURN_TEST("test_serialize_optional_string", 1);
+	}
+	ASSERT_EQUAL("test_serialize_optional_string", data.value(), expected_data.value().value());
+	RETURN_TEST("test_serialize_optional_string", 0);
+}
+
+// -------------------
+// Roundtrip
+// -------------------
+
+int test_serialize_array() {
+	const std::array<int, 3> data = { 10, 20, 30 };
+	auto buffer = Serializable<std::array<int, 3>>(data).Serialize();
+	auto expected = Serializable<std::array<int, 3>>::Deserialize(buffer);
+	if (!expected) {
+		std::cerr << expected.error()->what() << std::endl;
+		RETURN_TEST("test_serialize_array", 1);
+	}
+	ASSERT_TRUE("test_serialize_array", data == expected.value());
+	const auto expected_size = Serializable<std::array<int, 3>>::Size(data);
+	ASSERT_EQUAL("test_serialize_array", expected_size, buffer.size());
+	RETURN_TEST("test_serialize_array", 0);
+}
+
+int test_serialize_array_rejects_wrong_element_count() {
+	const std::vector<int> data = { 10, 20 };
+	auto buffer = Serializable<std::vector<int>>(data).Serialize();
+	auto expected = Serializable<std::array<int, 3>>::Deserialize(buffer);
+	ASSERT_FALSE("test_serialize_array_rejects_wrong_element_count", expected.has_value());
+	RETURN_TEST("test_serialize_array_rejects_wrong_element_count", 0);
+}
+
+int test_serialize_deserialize_big_string() {
+	const std::string fn_name = "test_serialize_deserialize_big_string";
+	const std::string data(10 * 1024 * 1024, 'A');
+	Serializable<std::string> serialization(data);
+	std::vector<std::byte> buffer = serialization.Serialize();
+	ASSERT_FALSE(fn_name, buffer.empty());
+	auto expected_data = Serializable<std::string>::Deserialize(buffer);
+	if (!expected_data) {
+		std::cerr << expected_data.error()->what() << std::endl;
+		RETURN_TEST(fn_name.c_str(), 1);
+	}
+	ASSERT_EQUAL(fn_name, data, expected_data.value());
+	RETURN_TEST(fn_name.c_str(), 0);
+}
+
+int test_serialize_deserialize_with_span() {
+	const std::string fn_name = "test_serialize_deserialize_with_span";
+	int data = 123456;
+	Serializable<int> serialization(data);
+	std::vector<std::byte> buffer = serialization.Serialize();
+	if (buffer.empty())
+		RETURN_TEST(fn_name.c_str(), 1);
+	auto expected_data = Serializable<int>::Deserialize(std::span<const std::byte>(buffer.data(), buffer.size()));
+	if (!expected_data) {
+		std::cerr << expected_data.error()->what() << std::endl;
+		RETURN_TEST(fn_name.c_str(), 1);
+	}
+	ASSERT_EQUAL(fn_name.c_str(), data, expected_data.value());
+	RETURN_TEST(fn_name.c_str(), 0);
+}
+
+int test_serialize_double() {
+	double data = 777.777;
+	Serializable<double> serialization(data);
+	std::vector<std::byte> buffer = serialization.Serialize();
+	if (buffer.size() == 0)
+		RETURN_TEST("test_serialize_double", 1);
+	auto expected_data = Serializable<double>::Deserialize(buffer);
+	if (!expected_data)
+		RETURN_TEST("test_serialize_double", 1);
+	ASSERT_EQUAL("test_serialize_double", data, expected_data.value());
+	RETURN_TEST("test_serialize_double", 0);
+}
+
+int test_serialize_int() {
+	int data = 42;
+	Serializable<int> serialization(data);
+	std::vector<std::byte> buffer = serialization.Serialize();
+	if (buffer.size() == 0)
+		RETURN_TEST("test_serialize_int", 1);
+	auto expected_data = Serializable<int>::Deserialize(buffer);
+	if (!expected_data)
+		RETURN_TEST("test_serialize_int", 1);
+	ASSERT_EQUAL("test_serialize_int", data, expected_data.value());
+	RETURN_TEST("test_serialize_int", 0);
+}
+
+int test_serialize_map() {
+	std::map<int, std::string> data = { { 1, "Hello" }, { 2, "World!" } };
+	Serializable<std::map<int, std::string>> serialization(data);
+	std::vector<std::byte> buffer = serialization.Serialize();
+	if (buffer.size() == 0)
+		RETURN_TEST("test_serialize_map", 1);
+	auto expected_data = Serializable<std::map<int, std::string>>::Deserialize(buffer);
+	if (!expected_data) {
+		std::cerr << expected_data.error()->what() << std::endl;
+		RETURN_TEST("test_serialize_map", 1);
+	}
+	ASSERT_TRUE("test_serialize_map", data == expected_data.value());
+	RETURN_TEST("test_serialize_map", 0);
+}
+
+int test_serialize_pair() {
+	std::pair<int, double> data = { 42, 777.777 };
+	Serializable<std::pair<int, double>> serialization(data);
+	std::vector<std::byte> buffer = serialization.Serialize();
+	if (buffer.size() == 0)
+		RETURN_TEST("test_serialize_pair", 1);
+	auto expected_data = Serializable<std::pair<int, double>>::Deserialize(buffer);
+	if (!expected_data) {
+		std::cerr << expected_data.error()->what() << std::endl;
+		RETURN_TEST("test_serialize_pair", 1);
+	}
+	ASSERT_TRUE("test_serialize_pair", data == expected_data.value());
+	RETURN_TEST("test_serialize_pair", 0);
+}
+
+int test_serialize_size_t() {
+	std::string data = "Hello, World!";
+	std::size_t size = data.size();
+	Serializable<std::size_t> serialization(size);
+	std::vector<std::byte> buffer = serialization.Serialize();
+	if (buffer.size() == 0)
+		RETURN_TEST("test_serialize_size_t", 1);
+	auto expected_data = Serializable<std::size_t>::Deserialize(buffer);
+	if (!expected_data)
+		RETURN_TEST("test_serialize_size_t", 1);
+	ASSERT_EQUAL("test_serialize_size_t", data.size(), expected_data.value());
+	RETURN_TEST("test_serialize_size_t", 0);
+}
+
+int test_serialize_string() {
+	std::string data = "Hello, World!";
+	Serializable<std::string> serialization(data);
+	std::vector<std::byte> buffer = serialization.Serialize();
+	if (buffer.size() == 0)
+		RETURN_TEST("test_serialize_string", 1);
+	auto expected_data = Serializable<std::string>::Deserialize(buffer);
+	if (!expected_data)
+		RETURN_TEST("test_serialize_string", 1);
+	ASSERT_EQUAL("test_serialize_string", data, expected_data.value());
+	RETURN_TEST("test_serialize_string", 0);
+}
+
+int test_serialize_string_vector() {
+	std::vector<std::string> data = { "Hello", "World!" };
+	Serializable<std::vector<std::string>> serialization(data);
+	std::vector<std::byte> buffer = serialization.Serialize();
+	if (buffer.size() == 0)
+		RETURN_TEST("test_serialize_string_vector", 1);
+	auto expected_data = Serializable<std::vector<std::string>>::Deserialize(buffer);
+	if (!expected_data) {
+		std::cerr << expected_data.error()->what() << std::endl;
+		RETURN_TEST("test_serialize_string_vector", 1);
+	}
+	ASSERT_TRUE("test_serialize_string_vector", data == expected_data.value());
+	RETURN_TEST("test_serialize_string_vector", 0);
+}
+
+// -------------------
+// Truncated
+// -------------------
+
+int test_serialize_deserialize_with_span_truncated() {
+	const std::string fn_name = "test_serialize_deserialize_with_span_truncated";
+	int data = 123456;
+	Serializable<int> serialization(data);
+	std::vector<std::byte> buffer = serialization.Serialize();
+	if (buffer.empty())
+		RETURN_TEST(fn_name.c_str(), 1);
+	std::size_t truncated_len = sizeof(int) / 2;
+	std::span<const std::byte> truncated_span(buffer.data(), truncated_len);
+	auto expected_data = Serializable<int>::Deserialize(truncated_span);
+	if (expected_data) {
+		std::cerr << "Expected failure, but got value: " << expected_data.value() << std::endl;
+		RETURN_TEST(fn_name.c_str(), 1);
+	}
+	RETURN_TEST(fn_name.c_str(), 0);
+}
+
+int test_serialize_int_truncated() {
+	int data = 42;
+	Serializable<int> serialization(data);
+	std::vector<std::byte> buffer = serialization.Serialize();
+	if (buffer.size() == 0)
+		RETURN_TEST("test_serialize_int_truncated", 1);
+	std::vector<std::byte> truncated_buffer(buffer.begin(), buffer.begin() + sizeof(int) / 2);
+	auto expected_data = Serializable<int>::Deserialize(truncated_buffer);
+	if (expected_data) {
+		std::cerr << "Expected failure, but got value: " << expected_data.value() << std::endl;
+		RETURN_TEST("test_serialize_int_truncated", 1);
+	}
+	RETURN_TEST("test_serialize_int_truncated", 0);
+}
+
+int test_serialize_pair_truncated() {
+	std::pair<int, double> data = { 42, 777.777 };
+	Serializable<std::pair<int, double>> serialization(data);
+	std::vector<std::byte> buffer = serialization.Serialize();
+	if (buffer.size() == 0)
+		RETURN_TEST("test_serialize_pair_truncated", 1);
+	std::size_t truncated_length = sizeof(int);
+	std::vector<std::byte> truncated_buffer(buffer.begin(), buffer.begin() + truncated_length);
+	auto expected_data = Serializable<std::pair<int, double>>::Deserialize(truncated_buffer);
+	if (expected_data) {
+		std::cerr << "Expected failure, but got value" << std::endl;
+		RETURN_TEST("test_serialize_pair_truncated", 1);
+	}
+	RETURN_TEST("test_serialize_pair_truncated", 0);
+}
+
+int test_serialize_string_vector_truncated() {
+	std::vector<std::string> data = { "Hello", "World!" };
+	Serializable<std::vector<std::string>> serialization(data);
+	std::vector<std::byte> buffer = serialization.Serialize();
+	if (buffer.size() == 0)
+		RETURN_TEST("test_serialize_string_vector_truncated", 1);
+	std::size_t truncated_length = sizeof(std::size_t) + 2;
+	std::vector<std::byte> truncated_buffer(buffer.begin(), buffer.begin() + truncated_length);
+	auto expected_data = Serializable<std::vector<std::string>>::Deserialize(truncated_buffer);
+	if (expected_data) {
+		std::cerr << "Expected failure, but got value" << std::endl;
+		RETURN_TEST("test_serialize_string_vector_truncated", 1);
+	}
+	RETURN_TEST("test_serialize_string_vector_truncated", 0);
+}
+
+// -------------------
 // Unicode
 // -------------------
+
+int test_cstring_shares_string_wire() {
+	const CString owned("StormByte");
+	const std::string text = "StormByte";
+	ASSERT_TRUE("test_cstring_shares_string_wire",
+		Serializable<CString>(owned).Serialize() == Serializable<std::string>(text).Serialize());
+	RETURN_TEST("test_cstring_shares_string_wire", 0);
+}
+
+int test_serialize_cstring() {
+	const CString data("Hello, StormByte!");
+	auto buffer = Serializable<CString>(data).Serialize();
+	if (buffer.empty())
+		RETURN_TEST("test_serialize_cstring", 1);
+	auto expected = Serializable<CString>::Deserialize(buffer);
+	if (!expected) {
+		std::cerr << expected.error()->what() << std::endl;
+		RETURN_TEST("test_serialize_cstring", 1);
+	}
+	ASSERT_TRUE("test_serialize_cstring", data == expected.value());
+	ASSERT_EQUAL("test_serialize_cstring", Serializable<CString>::Size(data), buffer.size());
+	RETURN_TEST("test_serialize_cstring", 0);
+}
+
+int test_serialize_cstring_empty() {
+	const CString data("");
+	auto buffer = Serializable<CString>(data).Serialize();
+	auto expected = Serializable<CString>::Deserialize(buffer);
+	if (!expected) {
+		std::cerr << expected.error()->what() << std::endl;
+		RETURN_TEST("test_serialize_cstring_empty", 1);
+	}
+	ASSERT_TRUE("test_serialize_cstring_empty", expected.value() == "");
+	ASSERT_TRUE("test_serialize_cstring_empty", static_cast<bool>(expected.value()));
+	RETURN_TEST("test_serialize_cstring_empty", 0);
+}
+
+int test_serialize_cstring_null_is_empty_wire() {
+	const CString missing;
+	const CString empty("");
+	auto a = Serializable<CString>(missing).Serialize();
+	auto b = Serializable<CString>(empty).Serialize();
+	auto c = Serializable<std::string>(std::string()).Serialize();
+	ASSERT_TRUE("test_serialize_cstring_null_is_empty_wire", a == b);
+	ASSERT_TRUE("test_serialize_cstring_null_is_empty_wire", a == c);
+	auto expected = Serializable<CString>::Deserialize(a);
+	if (!expected)
+		RETURN_TEST("test_serialize_cstring_null_is_empty_wire", 1);
+	ASSERT_TRUE("test_serialize_cstring_null_is_empty_wire", expected.value() == "");
+	RETURN_TEST("test_serialize_cstring_null_is_empty_wire", 0);
+}
+
+int test_serialize_cstring_truncated() {
+	auto buffer = Serializable<CString>(CString("TruncationTest")).Serialize();
+	for (std::size_t len = 0; len < buffer.size(); ++len) {
+		auto truncated = Truncate(buffer, len);
+		auto result = Serializable<CString>::Deserialize(truncated);
+		if (result) {
+			std::cerr << "test_serialize_cstring_truncated: size " << len << " accepted\n";
+			RETURN_TEST("test_serialize_cstring_truncated", 1);
+		}
+	}
+	RETURN_TEST("test_serialize_cstring_truncated", 0);
+}
 
 int test_serialize_u16string() {
 	std::u16string data = u"Hello, StormByte!";
@@ -748,20 +735,6 @@ int test_serialize_u16string_empty() {
 	}
 	ASSERT_TRUE("test_serialize_u16string_empty", expected.value().empty());
 	RETURN_TEST("test_serialize_u16string_empty", 0);
-}
-
-int test_serialize_u16string_truncated() {
-	std::u16string data = u"TruncationTest";
-	auto buffer = Serializable<std::u16string>(data).Serialize();
-	for (std::size_t len = 0; len < buffer.size(); ++len) {
-		auto truncated = std::vector<std::byte>(buffer.begin(), buffer.begin() + static_cast<std::ptrdiff_t>(len));
-		auto result = Serializable<std::u16string>::Deserialize(truncated);
-		if (result) {
-			std::cerr << "test_serialize_u16string_truncated: size " << len << " accepted\n";
-			RETURN_TEST("test_serialize_u16string_truncated", 1);
-		}
-	}
-	RETURN_TEST("test_serialize_u16string_truncated", 0);
 }
 
 int test_serialize_u16string_huge_size() {
@@ -791,6 +764,20 @@ int test_serialize_u16string_non_bmp() {
 	RETURN_TEST("test_serialize_u16string_non_bmp", 0);
 }
 
+int test_serialize_u16string_truncated() {
+	std::u16string data = u"TruncationTest";
+	auto buffer = Serializable<std::u16string>(data).Serialize();
+	for (std::size_t len = 0; len < buffer.size(); ++len) {
+		auto truncated = std::vector<std::byte>(buffer.begin(), buffer.begin() + static_cast<std::ptrdiff_t>(len));
+		auto result = Serializable<std::u16string>::Deserialize(truncated);
+		if (result) {
+			std::cerr << "test_serialize_u16string_truncated: size " << len << " accepted\n";
+			RETURN_TEST("test_serialize_u16string_truncated", 1);
+		}
+	}
+	RETURN_TEST("test_serialize_u16string_truncated", 0);
+}
+
 int test_serialize_unicode_boundary_codepoints() {
 	const std::u32string data = { U'\0', U'\x7F', U'\x80', U'\x7FF', U'\x800', U'\xFFFF', U'\U00010000', U'\U0010FFFF' };
 	auto buffer = Serializable<std::u32string>(data).Serialize();
@@ -801,6 +788,73 @@ int test_serialize_unicode_boundary_codepoints() {
 	}
 	ASSERT_TRUE("test_serialize_unicode_boundary_codepoints", data == expected.value());
 	RETURN_TEST("test_serialize_unicode_boundary_codepoints", 0);
+}
+
+int test_serialize_wcstring() {
+	const WCString data(L"Hello, StormByte!");
+	auto buffer = Serializable<WCString>(data).Serialize();
+	if (buffer.empty())
+		RETURN_TEST("test_serialize_wcstring", 1);
+	auto expected = Serializable<WCString>::Deserialize(buffer);
+	if (!expected) {
+		std::cerr << expected.error()->what() << std::endl;
+		RETURN_TEST("test_serialize_wcstring", 1);
+	}
+	ASSERT_TRUE("test_serialize_wcstring", data == expected.value());
+	ASSERT_EQUAL("test_serialize_wcstring", Serializable<WCString>::Size(data), buffer.size());
+	RETURN_TEST("test_serialize_wcstring", 0);
+}
+
+int test_serialize_wcstring_empty() {
+	const WCString data(L"");
+	auto buffer = Serializable<WCString>(data).Serialize();
+	auto expected = Serializable<WCString>::Deserialize(buffer);
+	if (!expected) {
+		std::cerr << expected.error()->what() << std::endl;
+		RETURN_TEST("test_serialize_wcstring_empty", 1);
+	}
+	ASSERT_TRUE("test_serialize_wcstring_empty", expected.value() == L"");
+	RETURN_TEST("test_serialize_wcstring_empty", 0);
+}
+
+int test_serialize_wcstring_non_bmp() {
+	const WCString data(L"\U0001F4A9");
+	auto buffer = Serializable<WCString>(data).Serialize();
+	auto expected = Serializable<WCString>::Deserialize(buffer);
+	if (!expected) {
+		std::cerr << expected.error()->what() << std::endl;
+		RETURN_TEST("test_serialize_wcstring_non_bmp", 1);
+	}
+	ASSERT_TRUE("test_serialize_wcstring_non_bmp", data == expected.value());
+	RETURN_TEST("test_serialize_wcstring_non_bmp", 0);
+}
+
+int test_serialize_wcstring_null_is_empty_wire() {
+	const WCString missing;
+	const WCString empty(L"");
+	auto a = Serializable<WCString>(missing).Serialize();
+	auto b = Serializable<WCString>(empty).Serialize();
+	auto c = Serializable<std::wstring>(std::wstring()).Serialize();
+	ASSERT_TRUE("test_serialize_wcstring_null_is_empty_wire", a == b);
+	ASSERT_TRUE("test_serialize_wcstring_null_is_empty_wire", a == c);
+	auto expected = Serializable<WCString>::Deserialize(a);
+	if (!expected)
+		RETURN_TEST("test_serialize_wcstring_null_is_empty_wire", 1);
+	ASSERT_TRUE("test_serialize_wcstring_null_is_empty_wire", expected.value() == L"");
+	RETURN_TEST("test_serialize_wcstring_null_is_empty_wire", 0);
+}
+
+int test_serialize_wcstring_truncated() {
+	auto buffer = Serializable<WCString>(WCString(L"TruncationTest")).Serialize();
+	for (std::size_t len = 0; len < buffer.size(); ++len) {
+		auto truncated = Truncate(buffer, len);
+		auto result = Serializable<WCString>::Deserialize(truncated);
+		if (result) {
+			std::cerr << "test_serialize_wcstring_truncated: size " << len << " accepted\n";
+			RETURN_TEST("test_serialize_wcstring_truncated", 1);
+		}
+	}
+	RETURN_TEST("test_serialize_wcstring_truncated", 0);
 }
 
 int test_serialize_wstring() {
@@ -829,6 +883,14 @@ int test_serialize_wstring_non_bmp() {
 	RETURN_TEST("test_serialize_wstring_non_bmp", 0);
 }
 
+int test_wcstring_shares_wstring_wire() {
+	const WCString owned(L"StormByte");
+	const std::wstring text = L"StormByte";
+	ASSERT_TRUE("test_wcstring_shares_wstring_wire",
+		Serializable<WCString>(owned).Serialize() == Serializable<std::wstring>(text).Serialize());
+	RETURN_TEST("test_wcstring_shares_wstring_wire", 0);
+}
+
 int test_wide_and_u16_share_utf8_wire() {
 	const std::wstring wide = L"StormByte";
 	const std::u16string u16 = u"StormByte";
@@ -839,122 +901,210 @@ int test_wide_and_u16_share_utf8_wire() {
 }
 
 // -------------------
-// Codec
+// Wire
 // -------------------
 
-int test_codec_custom_type() {
-	const Tag original{ 7, "codec" };
-	auto buffer = Serializable<Tag>(original).Serialize();
-	if (buffer.empty())
-		RETURN_TEST("test_codec_custom_type", 1);
-	auto expected = Serializable<Tag>::Deserialize(buffer);
-	if (!expected) {
-		std::cerr << expected.error()->what() << std::endl;
-		RETURN_TEST("test_codec_custom_type", 1);
+int test_base_bool_accepts_0_and_1() {
+	auto z = Serializable<bool>::Deserialize(std::vector<std::byte>{ std::byte{0} });
+	auto o = Serializable<bool>::Deserialize(std::vector<std::byte>{ std::byte{1} });
+	if (!z || z.value() != false) {
+		std::cerr << "test_base_bool_accepts_0_and_1: 0 not decoded as false\n";
+		RETURN_TEST("test_base_bool_accepts_0_and_1", 1);
 	}
-	ASSERT_TRUE("test_codec_custom_type", original == expected.value());
-	ASSERT_EQUAL("test_codec_custom_type", Serializable<Tag>::Size(original), buffer.size());
-	RETURN_TEST("test_codec_custom_type", 0);
+	if (!o || o.value() != true) {
+		std::cerr << "test_base_bool_accepts_0_and_1: 1 not decoded as true\n";
+		RETURN_TEST("test_base_bool_accepts_0_and_1", 1);
+	}
+	RETURN_TEST("test_base_bool_accepts_0_and_1", 0);
 }
 
-int test_codec_custom_type_truncated() {
-	const Tag original{ 7, "codec" };
-	auto buffer = Serializable<Tag>(original).Serialize();
-	for (std::size_t len = 0; len < buffer.size(); ++len) {
-		auto truncated = Truncate(buffer, len);
-		auto result = Serializable<Tag>::Deserialize(truncated);
-		if (result) {
-			std::cerr << "test_codec_custom_type_truncated: size " << len << " accepted\n";
-			RETURN_TEST("test_codec_custom_type_truncated", 1);
-		}
+int test_base_bool_rejects_invalid_byte() {
+	std::vector<std::byte> buf = { std::byte{17} };
+	bool threw = false;
+	bool accepted = false;
+	try {
+		auto result = Serializable<bool>::Deserialize(buf);
+		if (result)
+			accepted = true;
+	} catch (...) {
+		threw = true;
 	}
-	RETURN_TEST("test_codec_custom_type_truncated", 0);
+	if (threw) {
+		std::cerr << "test_base_bool_rejects_invalid_byte: threw instead of returning error\n";
+		RETURN_TEST("test_base_bool_rejects_invalid_byte", 1);
+	}
+	if (accepted) {
+		std::cerr << "test_base_bool_rejects_invalid_byte: invalid byte 17 was accepted\n";
+		RETURN_TEST("test_base_bool_rejects_invalid_byte", 1);
+	}
+	RETURN_TEST("test_base_bool_rejects_invalid_byte", 0);
+}
+
+int test_base_optional_flag_rejects_invalid_bool() {
+	std::vector<std::byte> buf = { std::byte{17} };
+	bool threw = false;
+	bool accepted = false;
+	try {
+		auto result = Serializable<std::optional<int>>::Deserialize(buf);
+		if (result)
+			accepted = true;
+	} catch (...) {
+		threw = true;
+	}
+	if (threw || accepted) {
+		std::cerr << "test_base_optional_flag_rejects_invalid_bool: invalid flag not rejected cleanly\n";
+		RETURN_TEST("test_base_optional_flag_rejects_invalid_bool", 1);
+	}
+	RETURN_TEST("test_base_optional_flag_rejects_invalid_bool", 0);
+}
+
+int test_base_trailing_garbage() {
+	auto clean = MakeStringBuffer();
+	auto dirty = clean;
+	dirty.push_back(std::byte{0xDE});
+	dirty.push_back(std::byte{0xAD});
+	auto result = Serializable<std::string>::Deserialize(dirty);
+	if (!result) {
+		std::cerr << "test_base_trailing_garbage: trailing bytes should be ignored by Read\n";
+		RETURN_TEST("test_base_trailing_garbage", 1);
+	}
+	ASSERT_EQUAL("test_base_trailing_garbage", std::string("StormByte serialization test"), result.value());
+	RETURN_TEST("test_base_trailing_garbage", 0);
+}
+
+int test_wire_int_is_little_endian() {
+	const int data = 0x01020304;
+	auto buffer = Serializable<int>(data).Serialize();
+	if (buffer.size() != sizeof(int)) {
+		std::cerr << "test_wire_int_is_little_endian: unexpected size " << buffer.size() << "\n";
+		RETURN_TEST("test_wire_int_is_little_endian", 1);
+	}
+	const unsigned char b0 = static_cast<unsigned char>(buffer[0]);
+	const unsigned char b1 = static_cast<unsigned char>(buffer[1]);
+	const unsigned char b2 = static_cast<unsigned char>(buffer[2]);
+	const unsigned char b3 = static_cast<unsigned char>(buffer[3]);
+	if (b0 != 0x04 || b1 != 0x03 || b2 != 0x02 || b3 != 0x01) {
+		std::cerr << "test_wire_int_is_little_endian: got "
+			<< static_cast<int>(b0) << " " << static_cast<int>(b1) << " "
+			<< static_cast<int>(b2) << " " << static_cast<int>(b3) << "\n";
+		RETURN_TEST("test_wire_int_is_little_endian", 1);
+	}
+	RETURN_TEST("test_wire_int_is_little_endian", 0);
+}
+
+int test_wire_string_length_is_uint64_le() {
+	const std::string data = "AB";
+	auto buffer = Serializable<std::string>(data).Serialize();
+	if (buffer.size() != sizeof(std::uint64_t) + data.size()) {
+		std::cerr << "test_wire_string_length_is_uint64_le: unexpected size\n";
+		RETURN_TEST("test_wire_string_length_is_uint64_le", 1);
+	}
+	if (static_cast<unsigned char>(buffer[0]) != 2 ||
+			static_cast<unsigned char>(buffer[1]) != 0 ||
+			static_cast<unsigned char>(buffer[7]) != 0 ||
+			static_cast<char>(buffer[8]) != 'A' ||
+			static_cast<char>(buffer[9]) != 'B') {
+		std::cerr << "test_wire_string_length_is_uint64_le: layout mismatch\n";
+		RETURN_TEST("test_wire_string_length_is_uint64_le", 1);
+	}
+	RETURN_TEST("test_wire_string_length_is_uint64_le", 0);
 }
 
 int main() {
 	int result = 0;
 
 	// -------------------
-	// Roundtrip
+	// Codec
 	// -------------------
-	result += test_serialize_int();
-	result += test_serialize_double();
-	result += test_serialize_string();
-	result += test_serialize_size_t();
-	result += test_serialize_string_vector();
-	result += test_serialize_pair();
-	result += test_serialize_map();
-	result += test_serialize_array();
-	result += test_serialize_array_rejects_wrong_element_count();
-	result += test_serialize_deserialize_big_string();
-	result += test_serialize_deserialize_with_span();
-
-	// -------------------
-	// Truncated
-	// -------------------
-	result += test_serialize_int_truncated();
-	result += test_serialize_string_vector_truncated();
-	result += test_serialize_pair_truncated();
-	result += test_serialize_deserialize_with_span_truncated();
-
-	// -------------------
-	// Optional
-	// -------------------
-	result += test_serialize_optional_notempty();
-	result += test_serialize_optional_empty();
-	result += test_serialize_optional_string();
-	result += test_serialize_nested_optional();
-
-	// -------------------
-	// Nested
-	// -------------------
-	result += test_serialize_deep_nested_vector();
-	result += test_base_nested_vector_of_pairs();
-	result += test_base_idempotent_roundtrip_vector();
-	result += test_base_idempotent_roundtrip_pair();
-
-	// -------------------
-	// Wire
-	// -------------------
-	result += test_wire_int_is_little_endian();
-	result += test_wire_string_length_is_uint64_le();
-	result += test_base_bool_accepts_0_and_1();
-	result += test_base_bool_rejects_invalid_byte();
-	result += test_base_optional_flag_rejects_invalid_bool();
-	result += test_base_trailing_garbage();
+	result += test_codec_custom_type();
+	result += test_codec_custom_type_truncated();
 
 	// -------------------
 	// Corruption
 	// -------------------
 	result += test_base_corruption_empty_buffer();
-	result += test_base_corruption_string_truncated_all();
-	result += test_base_corruption_vector_truncated_all();
 	result += test_base_corruption_huge_container_size();
 	result += test_base_corruption_huge_string_size();
 	result += test_base_corruption_no_crash_bit_flip();
 	result += test_base_corruption_no_crash_byte_overwrite();
 	result += test_base_corruption_random_stress();
+	result += test_base_corruption_string_truncated_all();
+	result += test_base_corruption_vector_truncated_all();
 	result += test_base_cross_type_vector_as_string();
 	result += test_base_double_corruption();
 
 	// -------------------
+	// Nested
+	// -------------------
+	result += test_base_idempotent_roundtrip_pair();
+	result += test_base_idempotent_roundtrip_vector();
+	result += test_base_nested_vector_of_pairs();
+	result += test_serialize_deep_nested_vector();
+
+	// -------------------
+	// Optional
+	// -------------------
+	result += test_serialize_nested_optional();
+	result += test_serialize_optional_empty();
+	result += test_serialize_optional_notempty();
+	result += test_serialize_optional_string();
+
+	// -------------------
+	// Roundtrip
+	// -------------------
+	result += test_serialize_array();
+	result += test_serialize_array_rejects_wrong_element_count();
+	result += test_serialize_deserialize_big_string();
+	result += test_serialize_deserialize_with_span();
+	result += test_serialize_double();
+	result += test_serialize_int();
+	result += test_serialize_map();
+	result += test_serialize_pair();
+	result += test_serialize_size_t();
+	result += test_serialize_string();
+	result += test_serialize_string_vector();
+
+	// -------------------
+	// Truncated
+	// -------------------
+	result += test_serialize_deserialize_with_span_truncated();
+	result += test_serialize_int_truncated();
+	result += test_serialize_pair_truncated();
+	result += test_serialize_string_vector_truncated();
+
+	// -------------------
 	// Unicode
 	// -------------------
+	result += test_cstring_shares_string_wire();
+	result += test_serialize_cstring();
+	result += test_serialize_cstring_empty();
+	result += test_serialize_cstring_null_is_empty_wire();
+	result += test_serialize_cstring_truncated();
 	result += test_serialize_u16string();
 	result += test_serialize_u16string_empty();
-	result += test_serialize_u16string_truncated();
 	result += test_serialize_u16string_huge_size();
 	result += test_serialize_u16string_non_bmp();
+	result += test_serialize_u16string_truncated();
 	result += test_serialize_unicode_boundary_codepoints();
+	result += test_serialize_wcstring();
+	result += test_serialize_wcstring_empty();
+	result += test_serialize_wcstring_non_bmp();
+	result += test_serialize_wcstring_null_is_empty_wire();
+	result += test_serialize_wcstring_truncated();
 	result += test_serialize_wstring();
 	result += test_serialize_wstring_non_bmp();
+	result += test_wcstring_shares_wstring_wire();
 	result += test_wide_and_u16_share_utf8_wire();
 
 	// -------------------
-	// Codec
+	// Wire
 	// -------------------
-	result += test_codec_custom_type();
-	result += test_codec_custom_type_truncated();
+	result += test_base_bool_accepts_0_and_1();
+	result += test_base_bool_rejects_invalid_byte();
+	result += test_base_optional_flag_rejects_invalid_bool();
+	result += test_base_trailing_garbage();
+	result += test_wire_int_is_little_endian();
+	result += test_wire_string_length_is_uint64_le();
 
 	if (result == 0)
 		std::cout << "All tests passed!" << std::endl;
