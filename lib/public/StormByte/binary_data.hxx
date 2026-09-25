@@ -291,7 +291,7 @@ namespace StormByte {
 			/**
 			 * @brief Inequality of byte contents.
 			 * @param other Other sequence.
-			 * @return Negation of @ref operator==(const BinaryData&).
+			 * @return Negation of equality with another sequence.
 			 */
 			bool operator!=(const BinaryData& other) const noexcept;
 
@@ -312,7 +312,7 @@ namespace StormByte {
 			/**
 			 * @brief Inequality with a byte span.
 			 * @param bytes View to compare.
-			 * @return Negation of @ref operator==(std::span<const std::byte>).
+			 * @return Negation of equality with a byte span.
 			 */
 			bool operator!=(std::span<const std::byte> bytes) const noexcept;
 
@@ -717,7 +717,7 @@ namespace StormByte {
 			/**
 			 * @brief Hexadecimal dump of the occupied bytes, sixteen bytes per row.
 			 *
-			 * Same as @ref HexDump(Size) with @c 16.
+			 * Same as @ref HexDump() with 16 columns.
 			 *
 			 * @return Dump text owned by Base. Empty when this sequence is empty.
 			 */
@@ -788,11 +788,7 @@ namespace StormByte {
 		return 0 <=> (data <=> bytes);
 	}
 
-	/**
-	 * @brief Copy from an input range of byte-convertible values.
-	 * @tparam R Range type satisfying @ref StormByte::Type::ByteInputRange.
-	 * @param range Source range.
-	 */
+	// Out-of-line template members. Documentation lives on the declarations.
 	template<Type::ByteInputRange R>
 	BinaryData::BinaryData(const R& range)
 		: BinaryData() {
@@ -802,11 +798,6 @@ namespace StormByte {
 			push_back(static_cast<std::byte>(b));
 	}
 
-	/**
-	 * @brief Consume an rvalue range. Moves when @p R is an rvalue @ref BinaryData.
-	 * @tparam R Range type satisfying @ref StormByte::Type::ByteInputRange.
-	 * @param range Source range.
-	 */
 	template<Type::ByteInputRange R>
 	BinaryData::BinaryData(R&& range)
 		: BinaryData() {
@@ -821,12 +812,6 @@ namespace StormByte {
 		}
 	}
 
-	/**
-	 * @brief Replace contents with the range @c [first, last).
-	 * @tparam InputIt Input iterator whose value converts to @c std::byte.
-	 * @param first Start of the source range.
-	 * @param last End of the source range.
-	 */
 	template<typename InputIt>
 	void BinaryData::assign(InputIt first, InputIt last) {
 		clear();
@@ -834,14 +819,6 @@ namespace StormByte {
 			push_back(static_cast<std::byte>(*first));
 	}
 
-	/**
-	 * @brief Insert the range @c [first, last) before @p pos.
-	 * @tparam InputIt Input iterator whose value converts to @c std::byte.
-	 * @param pos Insertion point.
-	 * @param first Start of the source range.
-	 * @param last End of the source range.
-	 * @return Iterator to the first inserted byte, or @p pos when the range is empty.
-	 */
 	template<typename InputIt>
 	BinaryData::iterator BinaryData::insert(const_iterator pos, InputIt first, InputIt last) {
 		const auto start = static_cast<std::size_t>(pos - cbegin());
@@ -853,12 +830,6 @@ namespace StormByte {
 		return begin() + static_cast<difference_type>(start);
 	}
 
-	/**
-	 * @brief Append a byte constructed in place.
-	 * @tparam T Value convertible to the integer stored in @c std::byte.
-	 * @param value Argument forwarded into @c std::byte.
-	 * @return Reference to the appended byte.
-	 */
 	template<typename T>
 	BinaryData::reference BinaryData::emplace_back(T&& value) {
 		push_back(std::byte{ static_cast<unsigned char>(std::forward<T>(value)) });

@@ -826,6 +826,7 @@ namespace StormByte {
 		return stream;
 	}
 
+	/// @cond
 	extern template STORMBYTE_PUBLIC Size::Size(char) noexcept;
 	extern template STORMBYTE_PUBLIC Size::Size(signed char) noexcept;
 	extern template STORMBYTE_PUBLIC Size::Size(unsigned char) noexcept;
@@ -1175,4 +1176,5 @@ namespace StormByte {
 	extern template STORMBYTE_PUBLIC Size operator%(char8_t, Size) noexcept;
 	extern template STORMBYTE_PUBLIC Size operator%(char16_t, Size) noexcept;
 	extern template STORMBYTE_PUBLIC Size operator%(char32_t, Size) noexcept;
+	/// @endcond
 }

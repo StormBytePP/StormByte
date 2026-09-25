@@ -949,6 +949,7 @@ namespace StormByte {
 		return stream;
 	}
 
+	/// @cond
 	extern template STORMBYTE_PUBLIC ByteSize::ByteSize(char) noexcept;
 	extern template STORMBYTE_PUBLIC ByteSize::ByteSize(signed char) noexcept;
 	extern template STORMBYTE_PUBLIC ByteSize::ByteSize(unsigned char) noexcept;
@@ -1266,4 +1267,5 @@ namespace StormByte {
 	extern template STORMBYTE_PUBLIC ByteSize operator%(ByteSize, char8_t) noexcept;
 	extern template STORMBYTE_PUBLIC ByteSize operator%(ByteSize, char16_t) noexcept;
 	extern template STORMBYTE_PUBLIC ByteSize operator%(ByteSize, char32_t) noexcept;
+	/// @endcond
 }
