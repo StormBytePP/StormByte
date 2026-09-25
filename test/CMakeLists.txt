@@ -6,6 +6,10 @@ if(ENABLE_TEST)
 	target_link_libraries(Base64Tests StormByte)
 	add_test(NAME Base64Tests COMMAND Base64Tests)
 
+	add_executable(BinaryDataTests binary_data_test.cxx)
+	target_link_libraries(BinaryDataTests StormByte)
+	add_test(NAME BinaryDataTests COMMAND BinaryDataTests)
+
 	add_executable(BitmaskTests bitmask_test.cxx)
 	target_link_libraries(BitmaskTests StormByte)
 	add_test(NAME BitmaskTests COMMAND BitmaskTests)

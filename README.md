@@ -9,7 +9,7 @@
 
 This repository is **StormByte Base**: the C++26 foundation of the StormByte suite.
 
-It is the module every other StormByte library links. Public headers live under `StormByte/` and cover exceptions, `Expected`, little-endian serialization, `CString` / `WCString`, `Size`, UUID v4, bitmasks, clonable types, a reentrant `ThreadLock`, and the `StormByte::Type` concepts.
+It is the module every other StormByte library links. Public headers live under `StormByte/` and cover exceptions, `Expected`, little-endian serialization, `CString` / `WCString`, `BinaryData`, `Size`, UUID v4, bitmasks, clonable types, a reentrant `ThreadLock`, and the `StormByte::Type` concepts.
 
 The suite is split on purpose. Buffer, Config, Crypto, Database, Logger, Multimedia, Network, String and System are **other repositories**. They depend on this one; this one does not implement them.
 
@@ -20,6 +20,7 @@ The suite is split on purpose. Buffer, Config, Crypto, Database, Logger, Multime
 - **Expected** — `Expected<T, E>` on top of `std::expected`, references via `reference_wrapper`, errors as `shared_ptr<E>`, plus `Unexpected`.
 - **Serialization** — `Serializable<T>` to `vector<byte>`, always little-endian, no BOM and no version tag. Optional / pair / container / trivial / `Detail::Codec<T>`.
 - **CString / WCString** — owned NUL-terminated narrow and wide buffers, safe to use across a DLL boundary. Not `std::string` / `std::wstring`. Content equality, `<=>`, `swap` and `std::hash`.
+- **BinaryData** — owned contiguous `std::byte` sequence, safe to use across a DLL boundary. Same kind of API as `std::vector<std::byte>`. Lengths use `Size`.
 - **Size** — `uint64_t` byte count, same width on every host and safe across a DLL. IEC and SI units, `*` / `/` / `%`, IEC text as `CString`.
 - **UUID** — RFC 4122 version 4 (`GenerateUUIDv4`).
 - **Bitmask** — CRTP flags over `Type::UnsignedEnum`.
@@ -53,6 +54,7 @@ The suite is split on purpose. Buffer, Config, Crypto, Database, Logger, Multime
 - [Expected](#expected)
 - [Error](#error)
 - [CString / WCString](#cstring--wcstring)
+- [BinaryData](#binarydata)
 - [Size](#size)
 - [Serialization](#serialization)
 - [UUID](#uuid)
@@ -179,6 +181,71 @@ int main() {
 }
 ```
 
+### BinaryData
+
+`BinaryData` is the suite’s owned raw-byte container. Use it wherever a module would otherwise put `std::vector<std::byte>` in a public signature.
+
+`std::vector` is not a safe ABI type between two copies of a C++ runtime. A vector allocated in the application and grown, returned or destroyed inside a StormByte shared library (or the other way around) uses two heaps. On Windows that is a hard crash when CRTs differ; on Unix it fails when libc++ and libstdc++ mix.
+
+`BinaryData` owns its storage on StormByte Base’s heap. Construction, growth and destruction always run in this library. Other suite modules can carry payloads, encoded blobs, file images or wire fragments without exporting `std::vector<std::byte>`.
+
+It is not text (`CString`) and not a structured document. Lengths are `StormByte::Size`. Member names stay lowercase to match the STL.
+
+For `<algorithm>` and `std::ranges` it supports everything `std::vector<std::byte>` supports on a contiguous sequence of bytes: copy / transform / sort / reverse / rotate / unique / remove / replace / partition / heap / set operations / binary search / permutations, plus iterators, `std::span` and insert / erase / assign. `std::iota` is the exception that is *also* true of `std::vector<std::byte>`: `std::byte` is an enum class and has no `operator++`.
+
+`at()` throws `OutOfBoundsError`. `operator[]` is unchecked, like `std::vector`.
+
+`Serializable<BinaryData>` uses the container path. The wire is the same as `std::vector<std::byte>`: `uint64` little-endian count, then the payload.
+
+```cpp
+#include <StormByte/binary_data.hxx>
+#include <StormByte/serializable.hxx>
+#include <StormByte/size.hxx>
+#include <algorithm>
+#include <iostream>
+#include <ranges>
+#include <span>
+
+using namespace StormByte;
+
+int main() {
+	BinaryData payload{std::byte{0xDE}, std::byte{0xAD}, std::byte{0xBE}, std::byte{0xEF}};
+	payload.push_back(std::byte{0x00});
+	payload.append(std::span<const std::byte>(payload.span().first(2)));
+
+	std::ranges::reverse(payload);
+	std::sort(payload.begin(), payload.end());
+
+	if (!payload.empty())
+		payload.front() = std::byte{0x01};
+
+	const Size n = payload.size();
+	std::cout << static_cast<unsigned long long>(n.Value()) << std::endl;
+
+	auto blob = Serializable<BinaryData>(payload).Serialize();
+	auto back = Serializable<BinaryData>::Deserialize(blob);
+	if (back)
+		std::cout << (back.value() == payload) << std::endl;
+}
+```
+
+```cpp
+#include <StormByte/binary_data.hxx>
+#include <StormByte/size.hxx>
+#include <algorithm>
+#include <array>
+
+using namespace StormByte;
+
+BinaryData from_range() {
+	const std::array<unsigned char, 4> raw{1, 2, 3, 4};
+	BinaryData data(raw);
+	data.insert(data.begin() + 1, std::byte{9});
+	data.erase(data.begin() + 2);
+	return data;
+}
+```
+
 ### Size
 
 `Size` is a `uint64_t` byte count. It is the same width on 32-bit and 64-bit hosts and safe to return across a DLL. It is not a `std::size_t`.
@@ -209,6 +276,8 @@ int main() {
 ### Serialization
 
 Wire is little-endian. `Deserialize` reads a prefix; leftover bytes stay with the caller. Custom types specialize `StormByte::Detail::Codec<T>` (`Size` / `Write` / `Read`), not `Serializable<T>`.
+
+`BinaryData` is a `Type::Container` of `std::byte`. No `Codec` specialization is required; the container path writes the same layout as `std::vector<std::byte>`.
 
 ```cpp
 #include <StormByte/serializable.hxx>
@@ -271,6 +340,7 @@ public:
 ### Type concepts
 
 ```cpp
+#include <StormByte/binary_data.hxx>
 #include <StormByte/type_traits.hxx>
 #include <string>
 #include <vector>
@@ -280,6 +350,8 @@ using namespace StormByte;
 
 static_assert(Type::String<std::string>);
 static_assert(Type::Container<std::vector<int>>);
+static_assert(Type::Container<BinaryData>);
+static_assert(Type::Sized<BinaryData>);
 static_assert(Type::Optional<std::optional<int>>);
 ```
 

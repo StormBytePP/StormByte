@@ -37,6 +37,7 @@
  * SPDX-License-Identifier: LGPL-3.0-or-later OR LicenseRef-StormByte-Commercial
  */
 
+#include <StormByte/binary_data.hxx>
 #include <StormByte/helpers.hxx>
 #include <StormByte/serializable.hxx>
 #include <StormByte/test_handlers.h>
@@ -79,6 +80,19 @@ namespace {
 		return Serializable<std::string>("StormByte serialization test").Serialize();
 	}
 
+	BinaryData MakeBinaryPayload() {
+		BinaryData data;
+		data.push_back(std::byte{0});
+		data.push_back(std::byte{1});
+		data.push_back(std::byte{255});
+		data.push_back(std::byte{128});
+		return data;
+	}
+
+	std::vector<std::byte> MakeBinaryDataBuffer() {
+		return Serializable<BinaryData>(MakeBinaryPayload()).Serialize();
+	}
+
 	struct Tag {
 		int a;
 		std::string b;
@@ -114,6 +128,156 @@ struct StormByte::Detail::Codec<Tag> {
 		return Tag{ expected_a.value(), expected_b.value() };
 	}
 };
+
+// -------------------
+// BinaryData
+// -------------------
+
+int test_serialize_binary_data() {
+	const BinaryData data = MakeBinaryPayload();
+	auto buffer = Serializable<BinaryData>(data).Serialize();
+	if (buffer.empty())
+		RETURN_TEST("test_serialize_binary_data", 1);
+	auto expected = Serializable<BinaryData>::Deserialize(buffer);
+	if (!expected) {
+		std::cerr << expected.error()->what() << std::endl;
+		RETURN_TEST("test_serialize_binary_data", 1);
+	}
+	ASSERT_TRUE("test_serialize_binary_data", data == expected.value());
+	ASSERT_EQUAL("test_serialize_binary_data", Serializable<BinaryData>::Size(data), buffer.size());
+	RETURN_TEST("test_serialize_binary_data", 0);
+}
+
+int test_serialize_binary_data_empty() {
+	const BinaryData data;
+	auto buffer = Serializable<BinaryData>(data).Serialize();
+	auto expected = Serializable<BinaryData>::Deserialize(buffer);
+	if (!expected) {
+		std::cerr << expected.error()->what() << std::endl;
+		RETURN_TEST("test_serialize_binary_data_empty", 1);
+	}
+	ASSERT_TRUE("test_serialize_binary_data_empty", expected.value().empty());
+	RETURN_TEST("test_serialize_binary_data_empty", 0);
+}
+
+int test_serialize_binary_data_shares_vector_byte_wire() {
+	const BinaryData owned = MakeBinaryPayload();
+	std::vector<std::byte> as_vector;
+	as_vector.assign(owned.begin(), owned.end());
+	ASSERT_TRUE("test_serialize_binary_data_shares_vector_byte_wire",
+		Serializable<BinaryData>(owned).Serialize() == Serializable<std::vector<std::byte>>(as_vector).Serialize());
+	RETURN_TEST("test_serialize_binary_data_shares_vector_byte_wire", 0);
+}
+
+int test_serialize_binary_data_trailing_garbage() {
+	auto clean = MakeBinaryDataBuffer();
+	auto dirty = clean;
+	dirty.push_back(std::byte{0xDE});
+	dirty.push_back(std::byte{0xAD});
+	auto result = Serializable<BinaryData>::Deserialize(dirty);
+	if (!result) {
+		std::cerr << "test_serialize_binary_data_trailing_garbage: trailing bytes should be ignored by Read\n";
+		RETURN_TEST("test_serialize_binary_data_trailing_garbage", 1);
+	}
+	ASSERT_TRUE("test_serialize_binary_data_trailing_garbage", result.value() == MakeBinaryPayload());
+	RETURN_TEST("test_serialize_binary_data_trailing_garbage", 0);
+}
+
+int test_serialize_binary_data_truncated() {
+	auto clean = MakeBinaryDataBuffer();
+	for (std::size_t len = 0; len < clean.size(); ++len) {
+		auto truncated = Truncate(clean, len);
+		auto result = Serializable<BinaryData>::Deserialize(truncated);
+		if (result) {
+			std::cerr << "test_serialize_binary_data_truncated: size " << len << " accepted\n";
+			RETURN_TEST("test_serialize_binary_data_truncated", 1);
+		}
+	}
+	RETURN_TEST("test_serialize_binary_data_truncated", 0);
+}
+
+int test_serialize_optional_binary_data() {
+	std::optional<BinaryData> empty;
+	auto empty_buf = Serializable<std::optional<BinaryData>>(empty).Serialize();
+	auto empty_got = Serializable<std::optional<BinaryData>>::Deserialize(empty_buf);
+	if (!empty_got) {
+		std::cerr << empty_got.error()->what() << std::endl;
+		RETURN_TEST("test_serialize_optional_binary_data", 1);
+	}
+	ASSERT_FALSE("test_serialize_optional_binary_data", empty_got.value().has_value());
+
+	std::optional<BinaryData> filled = MakeBinaryPayload();
+	auto filled_buf = Serializable<std::optional<BinaryData>>(filled).Serialize();
+	auto filled_got = Serializable<std::optional<BinaryData>>::Deserialize(filled_buf);
+	if (!filled_got) {
+		std::cerr << filled_got.error()->what() << std::endl;
+		RETURN_TEST("test_serialize_optional_binary_data", 1);
+	}
+	ASSERT_TRUE("test_serialize_optional_binary_data", filled_got.value().has_value());
+	ASSERT_TRUE("test_serialize_optional_binary_data", filled_got.value().value() == filled.value());
+	RETURN_TEST("test_serialize_optional_binary_data", 0);
+}
+
+int test_binary_data_corruption_huge_size() {
+	auto clean = MakeBinaryDataBuffer();
+	int accepted = 0;
+	if (clean.size() >= sizeof(std::uint64_t)) {
+		auto buf = clean;
+		std::uint64_t huge = static_cast<std::uint64_t>(-1);
+		std::memcpy(buf.data(), &huge, sizeof(huge));
+		auto result = Serializable<BinaryData>::Deserialize(buf);
+		if (result)
+			++accepted;
+	}
+	if (accepted > 0) {
+		std::cerr << "test_binary_data_corruption_huge_size: huge size field was accepted\n";
+		RETURN_TEST("test_binary_data_corruption_huge_size", 1);
+	}
+	RETURN_TEST("test_binary_data_corruption_huge_size", 0);
+}
+
+int test_binary_data_corruption_no_crash_bit_flip() {
+	auto clean = MakeBinaryDataBuffer();
+	for (std::size_t i = 0; i < clean.size(); ++i) {
+		for (unsigned bit = 0; bit < 8; ++bit) {
+			auto buf = clean;
+			FlipBit(buf, i, bit);
+			auto result = Serializable<BinaryData>::Deserialize(buf);
+			(void)result;
+		}
+	}
+	RETURN_TEST("test_binary_data_corruption_no_crash_bit_flip", 0);
+}
+
+int test_binary_data_corruption_no_crash_byte_overwrite() {
+	auto clean = MakeBinaryDataBuffer();
+	for (std::size_t i = 0; i < clean.size(); ++i) {
+		for (int v = 0; v < 256; v += 31) {
+			auto buf = clean;
+			CorruptByte(buf, i, static_cast<std::byte>(v));
+			auto result = Serializable<BinaryData>::Deserialize(buf);
+			(void)result;
+		}
+	}
+	RETURN_TEST("test_binary_data_corruption_no_crash_byte_overwrite", 0);
+}
+
+int test_binary_data_corruption_random_stress() {
+	auto clean = MakeBinaryDataBuffer();
+	std::mt19937 rng(0xB10A);
+	std::uniform_int_distribution<std::size_t> pos_dist(0, clean.size() - 1);
+	std::uniform_int_distribution<int> val_dist(0, 255);
+	constexpr int ITERATIONS = 400;
+	for (int i = 0; i < ITERATIONS; ++i) {
+		auto buf = clean;
+		int count = 1 + (i % 4);
+		for (int c = 0; c < count; ++c)
+			CorruptByte(buf, pos_dist(rng), static_cast<std::byte>(val_dist(rng)));
+		auto result = Serializable<BinaryData>::Deserialize(buf);
+		(void)result;
+	}
+	RETURN_TEST("test_binary_data_corruption_random_stress", 0);
+}
 
 // -------------------
 // Codec
@@ -157,7 +321,8 @@ int test_base_corruption_empty_buffer() {
 	auto r2 = Serializable<std::string>::Deserialize(std::vector<std::byte>{});
 	auto r3 = Serializable<std::vector<std::string>>::Deserialize(std::vector<std::byte>{});
 	auto r4 = Serializable<std::pair<int, double>>::Deserialize(std::vector<std::byte>{});
-	if (r1 || r2 || r3 || r4) {
+	auto r5 = Serializable<BinaryData>::Deserialize(std::vector<std::byte>{});
+	if (r1 || r2 || r3 || r4 || r5) {
 		std::cerr << "test_base_corruption_empty_buffer: empty buffer was accepted\n";
 		RETURN_TEST("test_base_corruption_empty_buffer", 1);
 	}
@@ -1012,6 +1177,20 @@ int test_wire_string_length_is_uint64_le() {
 
 int main() {
 	int result = 0;
+
+	// -------------------
+	// BinaryData
+	// -------------------
+	result += test_serialize_binary_data();
+	result += test_serialize_binary_data_empty();
+	result += test_serialize_binary_data_shares_vector_byte_wire();
+	result += test_serialize_binary_data_trailing_garbage();
+	result += test_serialize_binary_data_truncated();
+	result += test_serialize_optional_binary_data();
+	result += test_binary_data_corruption_huge_size();
+	result += test_binary_data_corruption_no_crash_bit_flip();
+	result += test_binary_data_corruption_no_crash_byte_overwrite();
+	result += test_binary_data_corruption_random_stress();
 
 	// -------------------
 	// Codec
