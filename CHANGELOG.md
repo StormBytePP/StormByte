@@ -21,6 +21,10 @@ If you landed here from a release link and have not read the tree:
 
 ## [Unreleased]
 
+### Fixed
+
+- **`FindStormByte`.** `Buffer` pulls `Logger`, `String` and `System`. `Logger` and `System` pull `String`. `Database` pulls `Logger`. `Multimedia` pulls `Buffer`, same as `Crypto` and `Network`. `Config` and `String` still link only the core.
+
 [Unreleased]: https://github.com/StormBytePP/StormByte/compare/2.0.0...HEAD
 
 ## [2.0.0] - 2026-09-25
