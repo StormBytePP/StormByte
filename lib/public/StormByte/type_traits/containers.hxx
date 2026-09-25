@@ -49,6 +49,8 @@
  * @brief Root namespace of the StormByte suite.
  */
 namespace StormByte {
+	class Size;	///< Byte count. Defined in size.hxx. Forwarded so Type::Sized can name it.
+
 	/**
 	 * @namespace String
 	 * @brief Suite text types. Defined by StormByte-String.
@@ -162,8 +164,13 @@ namespace StormByte {
 			requires { typename std::remove_cvref_t<C>::mapped_type; };
 
 		/**
-		 * @brief @ref StormByte::Type::Container that publishes `size()` convertible to `std::size_t`.
+		 * @brief @ref StormByte::Type::Container that publishes `size()`.
 		 * @tparam C Container type (cv/ref ignored).
+		 *
+		 * The return type of `size()` is either implicitly convertible
+		 * to `std::size_t` (STL containers) or @ref StormByte::Size
+		 * (octet lengths in the suite). @ref StormByte::Size does not
+		 * convert to an integer implicitly; that exit stays explicit.
 		 *
 		 * @code
 		 * static_assert(Type::Sized<std::vector<int>>);
@@ -173,8 +180,20 @@ namespace StormByte {
 		concept Sized =
 			Container<std::remove_cvref_t<C>> &&
 			requires(std::remove_cvref_t<C> const& c) {
-				{ c.size() } -> std::convertible_to<std::size_t>;
-			};
+				c.size();
+			} &&
+			(
+				std::convertible_to<
+					decltype(std::declval<std::remove_cvref_t<C> const&>().size()),
+					std::size_t
+				> ||
+				std::same_as<
+					std::remove_cvref_t<
+						decltype(std::declval<std::remove_cvref_t<C> const&>().size())
+					>,
+					Size
+				>
+			);
 
 		/** @} */
 
@@ -275,6 +294,9 @@ namespace StormByte {
 		 * @brief @ref StormByte::Type::Container that supports `operator[]` with key/index @p U.
 		 * @tparam C Container type as written (no cv/ref strip — historical).
 		 * @tparam U Key or index type passed to `operator[]`.
+		 *
+		 * @p U is the caller's index or key (`std::size_t`, `int`,
+		 * @ref StormByte::Size, …).
 		 *
 		 * @code
 		 * static_assert(Type::HasSubscript<std::vector<int>, std::size_t>);

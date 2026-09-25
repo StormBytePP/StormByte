@@ -1,3 +1,10 @@
+# Changelog
+
+All notable changes to this project are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
 ## [Summary]
 
 StormByte Base is the C++26 foundation of the StormByte suite.
@@ -16,7 +23,7 @@ If you landed here from a release link and have not read the tree:
 
 [Unreleased]: https://github.com/StormBytePP/StormByte/compare/2.0.0...HEAD
 
-## [2.0.0] - 2026-09-24
+## [2.0.0] - 2026-09-25
 
 ### Added
 
@@ -32,9 +39,10 @@ If you landed here from a release link and have not read the tree:
 - **Visibility** — `STORMBYTE_PUBLIC` comes first on a function declaration (`STORMBYTE_PUBLIC CString Foo();`). clang-cl rejects `__declspec` after a reference return. `class STORMBYTE_PUBLIC` stays on the type. Exported templates are declared `extern template STORMBYTE_PUBLIC` / `extern template class STORMBYTE_PUBLIC` in the header and instantiated in the `.cxx` with `STORMBYTE_INSTANTIATE` (`dllexport` on Windows, empty on ELF so GCC does not warn `-Wattributes`). The `extern` line in the header is what ELF uses to export; do not put `STORMBYTE_INSTANTIATE` on that line.
 - **Exception** — the message is stored in a `CString`. Copy, move, assign and the destructor are defaulted. The change is transparent: `what()` and the constructors are unchanged, consumers do not rebuild against a new layout contract, and the DLL boundary is the same (`const char*` owned by the exception).
 - **Type::String** — also matches `StormByte::String::String` and `StormByte::String::WString` (forward-declared in Base). They stay out of `Type::Container`.
+- **Type::Sized** — `size()` may be implicitly convertible to `std::size_t` (STL containers) **or** be `StormByte::Size` (suite octet lengths). `Size` still has no implicit conversion to an integer. `std::vector` still matches. Covered by `TypeTraitsTests`.
 - **GenerateUUIDv4** — returns `CString` instead of `std::string`.
 - **Base64Encode** — both overloads return `CString` instead of `std::string`. `Base64Decode` still returns `std::vector<std::byte>` and still takes `std::string_view`.
-- **Tests** — suite section headers (`// -------------------`) match in the body and in `main`. UUID, Base64, Bitmask, Clonable, Exception, Expected, ThreadLock, TestHandlers, Iterable, Serialization, TypeTraits and Size cover the public surface (format, padding, invalid input, clone independence, non-owner unlock, bounds, wire, corruption, units, `*` / `/` / `%`). `Base64Decode` of an encode result uses an explicit `std::string_view`.
+- **Tests** — suite section headers (`// -------------------`) match in the body and in `main`. UUID, Base64, Bitmask, Clonable, Exception, Expected, ThreadLock, TestHandlers, Iterable, Serialization, TypeTraits and Size cover the public surface (format, padding, invalid input, clone independence, non-owner unlock, bounds, wire, corruption, units, `*` / `/` / `%`). `Type::Sized` covers a container whose `size()` returns `StormByte::Size`; `HasSubscript` covers a `Size` index. `Base64Decode` of an encode result uses an explicit `std::string_view`.
 
 ### Removed
 

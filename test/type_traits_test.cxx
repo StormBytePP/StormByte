@@ -37,6 +37,7 @@
  * SPDX-License-Identifier: LGPL-3.0-or-later OR LicenseRef-StormByte-Commercial
  */
 
+#include <StormByte/size.hxx>
 #include <StormByte/test_handlers.h>
 #include <StormByte/type_traits.hxx>
 
@@ -68,6 +69,16 @@ struct MoveOnlyValue {
 	MoveOnlyValue() = default;
 	MoveOnlyValue(const MoveOnlyValue&) = delete;
 	MoveOnlyValue(MoveOnlyValue&&) = default;
+};
+
+struct SizeCounted {
+	using value_type = std::byte;
+	std::byte* begin();
+	std::byte* end();
+	const std::byte* begin() const;
+	const std::byte* end() const;
+	Size size() const;
+	std::byte& operator[](const Size& index);
 };
 
 template<typename T>
@@ -239,9 +250,19 @@ int test_has_subscript() {
 	ASSERT_TRUE("test_has_subscript", (has_subscript_v<std::vector<int>, std::size_t>));
 	ASSERT_TRUE("test_has_subscript", (has_subscript_v<std::deque<int>, std::size_t>));
 	ASSERT_TRUE("test_has_subscript", (has_subscript_v<std::map<int, int>, int>));
+	ASSERT_TRUE("test_has_subscript", (has_subscript_v<SizeCounted, Size>));
 	ASSERT_FALSE("test_has_subscript", (has_subscript_v<std::list<int>, std::size_t>));
 	ASSERT_FALSE("test_has_subscript", (has_subscript_v<std::set<int>, int>));
 	RETURN_TEST("test_has_subscript", result);
+}
+
+int test_sized_accepts_size_and_size_t() {
+	int result = 0;
+	ASSERT_TRUE("test_sized_accepts_size_and_size_t", Type::Sized<std::vector<int>>);
+	ASSERT_TRUE("test_sized_accepts_size_and_size_t", Type::Sized<SizeCounted>);
+	ASSERT_TRUE("test_sized_accepts_size_and_size_t", Type::Container<SizeCounted>);
+	ASSERT_FALSE("test_sized_accepts_size_and_size_t", Type::Sized<int>);
+	RETURN_TEST("test_sized_accepts_size_and_size_t", result);
 }
 
 // -------------------
@@ -421,6 +442,7 @@ int test_trivially_copyable() {
 int test_extended_type_concepts() {
 	int result = 0;
 	ASSERT_TRUE("test_extended_type_concepts", Type::Sized<std::vector<int>>);
+	ASSERT_TRUE("test_extended_type_concepts", Type::Sized<SizeCounted>);
 	ASSERT_FALSE("test_extended_type_concepts", Type::Sized<int>);
 	ASSERT_TRUE("test_extended_type_concepts", Type::SmartPointer<std::unique_ptr<int>>);
 	ASSERT_TRUE("test_extended_type_concepts", Type::SmartPointer<std::shared_ptr<int>>);
@@ -460,6 +482,7 @@ int main() {
 	result += test_deque_may_have_both_push_apis();
 	result += test_has_key_and_mapped_type();
 	result += test_has_subscript();
+	result += test_sized_accepts_size_and_size_t();
 
 	// -------------------
 	// Wrappers
