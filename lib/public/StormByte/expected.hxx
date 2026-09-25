@@ -115,7 +115,7 @@ namespace StormByte {
 	{
 		using DerivedT = std::decay_t<Derived>;
 		return std::unexpected<Shared<Base>>(
-			Shared<Base>::MakePointer<DerivedT>(std::forward<Derived>(error))
+			Shared<Base>::template MakePointer<DerivedT>(std::forward<Derived>(error))
 		);
 	}
 
