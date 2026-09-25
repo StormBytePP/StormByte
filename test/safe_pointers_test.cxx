@@ -217,10 +217,15 @@ int test_static_pointer_cast_keeps_derived() {
 	RETURN_TEST("test_static_pointer_cast_keeps_derived", result);
 }
 
+template<class T, class Target>
+concept UniqueDefaultMake = requires {
+	Unique<T>::template MakePointer<Target>();
+};
+
 int test_unique_make_pointer_requires_virtual_destructor() {
 	int result = 0;
-	static_assert(requires { Unique<Plain>::MakePointer<Plain>(); });
-	static_assert(!requires { Unique<Plain>::MakePointer<PlainChild>(); });
+	static_assert(UniqueDefaultMake<Plain, Plain>);
+	static_assert(!UniqueDefaultMake<Plain, PlainChild>);
 	static_assert(requires { Unique<Base>::MakePointer<Derived>(1); });
 	ASSERT_TRUE("test_unique_make_pointer_requires_virtual_destructor", true);
 	RETURN_TEST("test_unique_make_pointer_requires_virtual_destructor", result);

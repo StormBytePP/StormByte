@@ -65,15 +65,18 @@ namespace StormByte {
 
 	/**
 	 * @class Clonable
-	 * @brief Polymorphic clone/move into a smart pointer of type @p T.
-	 * @tparam T Most-derived interface stored in the pointer.
+	 * @brief Polymorphic copy and move through a base.
+	 * @tparam T Interface stored in the pointer.
 	 * @tparam SmartPointer @ref Shared (default) or @ref Unique.
 	 *
-	 * Write `Clonable<T, Shared<T>>` or `Clonable<T, Unique<T>>`.
-	 * `Clonable<T>` is `Clonable<T, Shared<T>>`.
+	 * Not an owner. @ref Shared and @ref Unique own the object on Base's heap.
+	 * @ref Clonable is the interface: `Clone` and `Move` return that owner for
+	 * the dynamic type, so the caller does not name the derived class.
+	 * `MakePointer` forwards to `Shared::MakePointer` or `Unique::MakePointer`.
 	 *
-	 * `MakePointer` allocates @p Target on Base's heap. Destroying the
-	 * pointer in another module frees that storage in Base.
+	 * `Clonable<T>` is `Clonable<T, Shared<T>>`. Unique ownership is
+	 * `Clonable<T, Unique<T>>`. `std::shared_ptr` and `std::unique_ptr` are
+	 * not a `PointerType`.
 	 */
 	template<class T, typename SmartPointer = Shared<T>>
 	requires ValidSmartPointer<SmartPointer, T> class Clonable {

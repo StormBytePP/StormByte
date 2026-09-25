@@ -49,12 +49,6 @@ namespace StormByte {
 	requires ValidSmartPointer<SmartPointer, T>
 	template<class Target, typename... Args>
 	typename Clonable<T, SmartPointer>::PointerType Clonable<T, SmartPointer>::MakePointer(Args&&... args) {
-		if constexpr (Type::SameAs<PointerType, Shared<T>>) {
-			return Shared<T>::template MakePointer<Target>(std::forward<Args>(args)...);
-		} else if constexpr (Type::SameAs<PointerType, Unique<T>>) {
-			return Unique<T>::template MakePointer<Target>(std::forward<Args>(args)...);
-		} else {
-			static_assert(false, "Unsupported smart pointer type");
-		}
+		return PointerType::template MakePointer<Target>(std::forward<Args>(args)...);
 	}
 }

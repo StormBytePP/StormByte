@@ -26,7 +26,7 @@ The suite is split on purpose. Buffer, Config, Crypto, Database, Logger, Multime
 - **UUID** — RFC 4122 version 4 (`GenerateUUIDv4`).
 - **Bitmask** — CRTP flags over `Type::UnsignedEnum`.
 - **Safe pointers** — `Shared<T>`, `Unique<T>` and `Weak<T>` complement `std::shared_ptr`, `std::unique_ptr` and `std::weak_ptr`. They do not replace them: use the standard pointers unless the object must be freed on Base's heap. `Shared` converts implicitly to `std::shared_ptr<T>` (deleter stays Base). `Unique` converts on move only to `std::unique_ptr<T, Heap::ObjectDeleter>`. No `release`, and no constructor from a raw or standard pointer. `Heap` is not installed.
-- **Clonable** — virtual `Clone` / `Move` into `Shared<T>` or `Unique<T>`.
+- **Clonable** — polymorphic `Clone` / `Move`. Not an owner: the result is a `Shared` or `Unique`.
 - **ThreadLock** — owner-thread reentry; `Unlock` from a non-owner is a no-op.
 - **Type concepts** — `StormByte::Type::*` (`String`, `Container`, `Optional`, `Pair`, `Numeral`, `Array`, …). `Numeral` includes `Size` and `ByteSize`. No `enable_if` / `void_t` next to them.
 - **Platform / visibility** — `WINDOWS` / `LINUX` / `MACOS`, `BIT32` / `BIT64`, `CLANG` / `GCC` / `MSVC` (clang-cl is `CLANG`, not `MSVC`).
@@ -433,9 +433,9 @@ The daily operations match the standard ones, so a port is a signature change. `
 
 ### Clonable
 
-`Clone` / `Move` / `MakePointer` allocate on Base's heap. Construct owners only that way (`Heap::MakeShared` / `Heap::MakeUnique`). Do not pass `std::shared_ptr` or `std::unique_ptr` as the second template argument.
+`Clonable` is not an owner and it is not a smart pointer. `Shared` and `Unique` own the object. `Clonable` is the polymorphic interface: from a base you can `Clone` or `Move` and get the dynamic type back, without naming the derived class. `MakePointer` forwards to `Shared::MakePointer` or `Unique::MakePointer`, so the allocation is written once.
 
-`PointerType` is `Shared<T>` (default) or `Unique<T>`. Overrides that return `PointerType` from `MakePointer` stay as they are. After construction, `Shared` converts implicitly to `std::shared_ptr<T>` (same control block). `Unique` converts on move to `std::unique_ptr<T, Heap::ObjectDeleter>`, not to `std::unique_ptr<T>`.
+`Clonable<T>` stores a `Shared<T>`. `Clonable<T, Unique<T>>` stores a `Unique<T>`. `std::shared_ptr` and `std::unique_ptr` are not accepted as that parameter. `~T` is virtual because `Clone` and `Move` are.
 
 ```cpp
 #include <StormByte/clonable.hxx>
