@@ -40,7 +40,7 @@ set(_STORMBYTE_AVAILABLE_COMPONENTS
 # need only that. Taken from each module's buildmaster_link.
 set(_STORMBYTE_COMPONENT_DEPS_Buffer     "Logger" "String" "System")
 set(_STORMBYTE_COMPONENT_DEPS_Crypto     "Buffer")
-set(_STORMBYTE_COMPONENT_DEPS_Database   "Logger")
+set(_STORMBYTE_COMPONENT_DEPS_Database   "Logger" "String")
 set(_STORMBYTE_COMPONENT_DEPS_Logger     "String")
 set(_STORMBYTE_COMPONENT_DEPS_Multimedia "Buffer")
 set(_STORMBYTE_COMPONENT_DEPS_Network    "Buffer")

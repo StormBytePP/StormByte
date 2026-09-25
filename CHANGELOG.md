@@ -23,7 +23,7 @@ If you landed here from a release link and have not read the tree:
 
 ### Fixed
 
-- **`FindStormByte`.** `Buffer` pulls `Logger`, `String` and `System`. `Logger` and `System` pull `String`. `Database` pulls `Logger`. `Multimedia` pulls `Buffer`, same as `Crypto` and `Network`. `Config` and `String` still link only the core.
+- **`FindStormByte`.** `Buffer` pulls `Logger`, `String` and `System`. `Logger` and `System` pull `String`. `Database` pulls `Logger` and `String`. `Crypto`, `Multimedia` and `Network` name only `Buffer`; the closure still finds `Logger`, `String` and `System`. `Config` and `String` still link only the core.
 
 [Unreleased]: https://github.com/StormBytePP/StormByte/compare/2.0.0...HEAD
 
