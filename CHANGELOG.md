@@ -21,10 +21,6 @@ If you landed here from a release link and have not read the tree:
 
 ## [Unreleased]
 
-### Fixed
-
-- **`FindStormByte`.** `Buffer` pulls `Logger`, `String` and `System`. `Logger` and `System` pull `String`. `Database` pulls `Logger` and `String`. `Crypto`, `Multimedia` and `Network` name only `Buffer`; the closure still finds `Logger`, `String` and `System`. `Config` and `String` still link only the core.
-
 [Unreleased]: https://github.com/StormBytePP/StormByte/compare/2.0.0...HEAD
 
 ## [2.0.0] - 2026-09-26
@@ -65,6 +61,10 @@ If you landed here from a release link and have not read the tree:
 - **System** (`StormByte::System` in Base: `TempFileName`, `CurrentPath`, `ExecutablePath`, `Sleep`) — leaves Base. Absorbed by the existing StormByte-System module.
 - **UTF8Error** / **SystemError** — leave Base with String and System. Derived exceptions that remain are `DeserializeError`, `OutOfBoundsError` and `Base64Error`.
 - **CoreApiTests** — coverage lives in `ClonableTests` and `ErrorTests`.
+
+### Fixed
+
+- **`FindStormByte`.** `Buffer` pulls `Logger`, `String` and `System`. `Logger` and `System` pull `String`. `Database` pulls `Logger` and `String`. `Crypto`, `Multimedia` and `Network` name only `Buffer`; the closure still finds `Logger`, `String` and `System`. `Config` and `String` still link only the core.
 
 [2.0.0]: https://github.com/StormBytePP/StormByte/compare/1.2.0...2.0.0
 
