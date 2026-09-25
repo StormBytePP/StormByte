@@ -109,14 +109,15 @@ void CString::Reset(const char* str) noexcept {
 	m_data = Duplicate(str);
 }
 
-std::size_t CString::Length() const noexcept {
-	return m_data ? std::strlen(m_data) : 0;
+Size CString::Length() const noexcept {
+	return m_data ? Size{std::strlen(m_data)} : Size{};
 }
 
-char CString::operator[](std::size_t index) const noexcept {
+char CString::operator[](const Size& index) const noexcept {
 	assert(m_data != nullptr);
-	assert(index <= std::strlen(m_data));
-	return m_data[index];
+	const Size length{std::strlen(m_data)};
+	assert(index <= length);
+	return m_data[static_cast<std::size_t>(index)];
 }
 
 void CString::swap(CString& other) noexcept {

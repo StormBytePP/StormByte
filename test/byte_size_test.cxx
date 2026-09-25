@@ -37,9 +37,12 @@
  * SPDX-License-Identifier: LGPL-3.0-or-later OR LicenseRef-StormByte-Commercial
  */
 
+#include <StormByte/byte_size.hxx>
+#include <StormByte/cstring.hxx>
 #include <StormByte/size.hxx>
 #include <StormByte/test_handlers.h>
 #include <StormByte/type_traits.hxx>
+#include <StormByte/wcstring.hxx>
 
 #include <cstdint>
 #include <iostream>
@@ -48,7 +51,7 @@
 using namespace StormByte;
 
 namespace {
-	std::uint64_t U64(Size size) {
+	std::uint64_t U64(const ByteSize& size) {
 		return static_cast<std::uint64_t>(size);
 	}
 }
@@ -59,38 +62,38 @@ namespace {
 
 int test_arithmetic_add_sub() {
 	int result = 0;
-	const Size left{100};
-	const Size right{40};
+	const ByteSize left{100};
+	const ByteSize right{40};
 	ASSERT_EQUAL("test_arithmetic_add_sub", 140ull, U64(left + right));
 	ASSERT_EQUAL("test_arithmetic_add_sub", 60ull, U64(left - right));
-	Size acc{10};
-	acc += Size{5};
+	ByteSize acc{10};
+	acc += ByteSize{5};
 	ASSERT_EQUAL("test_arithmetic_add_sub", 15ull, U64(acc));
-	acc -= Size{3};
+	acc -= ByteSize{3};
 	ASSERT_EQUAL("test_arithmetic_add_sub", 12ull, U64(acc));
 	RETURN_TEST("test_arithmetic_add_sub", result);
 }
 
 int test_arithmetic_expression_to_size_t() {
 	int result = 0;
-	const Size size1{10};
-	const Size size2{4};
-	const std::size_t calc = size1 + 3 * size2;
+	const ByteSize size1{10};
+	const ByteSize size2{4};
+	const std::size_t calc = size1 + size2 + size2 + size2;
 	ASSERT_EQUAL("test_arithmetic_expression_to_size_t", static_cast<std::size_t>(22), calc);
 	RETURN_TEST("test_arithmetic_expression_to_size_t", result);
 }
 
 int test_arithmetic_increment() {
 	int result = 0;
-	Size size{10};
+	ByteSize size{10};
 	++size;
 	ASSERT_EQUAL("test_arithmetic_increment", 11ull, U64(size));
-	const Size post = size++;
+	const ByteSize post = size++;
 	ASSERT_EQUAL("test_arithmetic_increment", 11ull, U64(post));
 	ASSERT_EQUAL("test_arithmetic_increment", 12ull, U64(size));
 	--size;
 	ASSERT_EQUAL("test_arithmetic_increment", 11ull, U64(size));
-	const Size posted = size--;
+	const ByteSize posted = size--;
 	ASSERT_EQUAL("test_arithmetic_increment", 11ull, U64(posted));
 	ASSERT_EQUAL("test_arithmetic_increment", 10ull, U64(size));
 	RETURN_TEST("test_arithmetic_increment", result);
@@ -98,7 +101,7 @@ int test_arithmetic_increment() {
 
 int test_arithmetic_mixed_integer() {
 	int result = 0;
-	const Size size{10};
+	const ByteSize size{10};
 	ASSERT_EQUAL("test_arithmetic_mixed_integer", 26ull, U64(size + 16));
 	ASSERT_EQUAL("test_arithmetic_mixed_integer", 26ull, U64(16 + size));
 	ASSERT_EQUAL("test_arithmetic_mixed_integer", 26ull, U64(size + 16u));
@@ -114,7 +117,7 @@ int test_arithmetic_mixed_integer() {
 	ASSERT_EQUAL("test_arithmetic_mixed_integer", 0ull, U64(size - 10));
 	ASSERT_EQUAL("test_arithmetic_mixed_integer", 11ull, U64(size + static_cast<std::ptrdiff_t>(-(-1))));
 	ASSERT_EQUAL("test_arithmetic_mixed_integer", 9ull, U64(size + static_cast<std::ptrdiff_t>(-1)));
-	Size acc = 10;
+	ByteSize acc = 10;
 	acc += 5;
 	ASSERT_EQUAL("test_arithmetic_mixed_integer", 15ull, U64(acc));
 	acc += 5u;
@@ -125,44 +128,34 @@ int test_arithmetic_mixed_integer() {
 	ASSERT_EQUAL("test_arithmetic_mixed_integer", 16ull, U64(acc));
 	acc += static_cast<char>(1);
 	ASSERT_EQUAL("test_arithmetic_mixed_integer", 17ull, U64(acc));
-	acc *= 2;
-	ASSERT_EQUAL("test_arithmetic_mixed_integer", 34ull, U64(acc));
-	acc /= 2;
-	ASSERT_EQUAL("test_arithmetic_mixed_integer", 17ull, U64(acc));
-	acc %= 5;
-	ASSERT_EQUAL("test_arithmetic_mixed_integer", 2ull, U64(acc));
 	RETURN_TEST("test_arithmetic_mixed_integer", result);
 }
 
-int test_arithmetic_mul_div_mod() {
+int test_arithmetic_scale_not_area() {
 	int result = 0;
-	const Size left{10};
-	const Size right{4};
-	ASSERT_EQUAL("test_arithmetic_mul_div_mod", 40ull, U64(left * right));
-	ASSERT_EQUAL("test_arithmetic_mul_div_mod", 40ull, U64(left * 4));
-	ASSERT_EQUAL("test_arithmetic_mul_div_mod", 40ull, U64(4 * left));
-	ASSERT_EQUAL("test_arithmetic_mul_div_mod", 2ull, U64(left / right));
-	ASSERT_EQUAL("test_arithmetic_mul_div_mod", 2ull, U64(left / 4));
-	ASSERT_EQUAL("test_arithmetic_mul_div_mod", 2ull, U64(10 / right));
-	ASSERT_EQUAL("test_arithmetic_mul_div_mod", 2ull, U64(left % right));
-	ASSERT_EQUAL("test_arithmetic_mul_div_mod", 2ull, U64(left % 4));
-	ASSERT_EQUAL("test_arithmetic_mul_div_mod", 2ull, U64(10 % right));
-	Size acc{10};
-	acc *= Size{3};
-	ASSERT_EQUAL("test_arithmetic_mul_div_mod", 30ull, U64(acc));
-	acc /= Size{5};
-	ASSERT_EQUAL("test_arithmetic_mul_div_mod", 6ull, U64(acc));
-	acc %= Size{4};
-	ASSERT_EQUAL("test_arithmetic_mul_div_mod", 2ull, U64(acc));
-	RETURN_TEST("test_arithmetic_mul_div_mod", result);
+	const ByteSize left{10};
+	ASSERT_EQUAL("test_arithmetic_scale_not_area", 40ull, U64(static_cast<ByteSize>(left * Size{4})));
+	ASSERT_EQUAL("test_arithmetic_scale_not_area", 40ull, U64(static_cast<ByteSize>(Size{4} * left)));
+	ASSERT_EQUAL("test_arithmetic_scale_not_area", 2ull, U64(static_cast<ByteSize>(left / Size{4})));
+	ASSERT_EQUAL("test_arithmetic_scale_not_area", 2ull, U64(static_cast<ByteSize>(left % Size{4})));
+	ByteSize acc{10};
+	acc = static_cast<ByteSize>(acc * Size{3});
+	ASSERT_EQUAL("test_arithmetic_scale_not_area", 30ull, U64(acc));
+	acc = static_cast<ByteSize>(acc / Size{5});
+	ASSERT_EQUAL("test_arithmetic_scale_not_area", 6ull, U64(acc));
+	acc = static_cast<ByteSize>(acc % Size{4});
+	ASSERT_EQUAL("test_arithmetic_scale_not_area", 2ull, U64(acc));
+	RETURN_TEST("test_arithmetic_scale_not_area", result);
 }
 
 int test_arithmetic_zero() {
 	int result = 0;
-	const Size empty;
-	ASSERT_EQUAL("test_arithmetic_zero", 0ull, U64(empty / 4));
-	ASSERT_EQUAL("test_arithmetic_zero", 0ull, U64(empty % 4));
-	ASSERT_EQUAL("test_arithmetic_zero", 0ull, U64(empty * 8));
+	const ByteSize empty;
+	ASSERT_EQUAL("test_arithmetic_zero", 0ull, U64(static_cast<ByteSize>(empty / Size{4})));
+	ASSERT_EQUAL("test_arithmetic_zero", 0ull, U64(static_cast<ByteSize>(empty % Size{4})));
+	ASSERT_EQUAL("test_arithmetic_zero", 0ull, U64(static_cast<ByteSize>(empty * Size{8})));
+	ASSERT_EQUAL("test_arithmetic_zero", 0ull, U64(empty + ByteSize{0}));
+	ASSERT_EQUAL("test_arithmetic_zero", 4ull, U64(ByteSize{4} + empty));
 	RETURN_TEST("test_arithmetic_zero", result);
 }
 
@@ -172,48 +165,56 @@ int test_arithmetic_zero() {
 
 int test_compare_equal_and_order() {
 	int result = 0;
-	const Size a{10};
-	const Size b{10};
-	const Size c{11};
+	const ByteSize a{10};
+	const ByteSize b{10};
+	const ByteSize c{11};
 	ASSERT_TRUE("test_compare_equal_and_order", a == b);
 	ASSERT_TRUE("test_compare_equal_and_order", a != c);
 	ASSERT_TRUE("test_compare_equal_and_order", a < c);
 	ASSERT_TRUE("test_compare_equal_and_order", c > a);
 	ASSERT_TRUE("test_compare_equal_and_order", a <= b);
 	ASSERT_TRUE("test_compare_equal_and_order", c >= a);
+	ASSERT_TRUE("test_compare_equal_and_order", (a <=> b) == std::strong_ordering::equal);
+	ASSERT_TRUE("test_compare_equal_and_order", (a <=> c) == std::strong_ordering::less);
 	RETURN_TEST("test_compare_equal_and_order", result);
 }
 
 int test_compare_mixed_integer() {
 	int result = 0;
-	const Size size{5};
-	ASSERT_TRUE("test_compare_mixed_integer", size == 5);
-	ASSERT_TRUE("test_compare_mixed_integer", 5 == size);
-	ASSERT_TRUE("test_compare_mixed_integer", size == 5u);
-	ASSERT_TRUE("test_compare_mixed_integer", 5u == size);
-	ASSERT_TRUE("test_compare_mixed_integer", size == 5ull);
-	ASSERT_TRUE("test_compare_mixed_integer", 5ull == size);
-	ASSERT_TRUE("test_compare_mixed_integer", size != 6);
-	ASSERT_TRUE("test_compare_mixed_integer", 6 != size);
-	ASSERT_TRUE("test_compare_mixed_integer", size != 6u);
-	ASSERT_TRUE("test_compare_mixed_integer", 6u != size);
-	ASSERT_TRUE("test_compare_mixed_integer", size < 6);
-	ASSERT_TRUE("test_compare_mixed_integer", 4 < size);
-	ASSERT_TRUE("test_compare_mixed_integer", size < 6u);
-	ASSERT_TRUE("test_compare_mixed_integer", 4u < size);
-	ASSERT_TRUE("test_compare_mixed_integer", size > 0);
-	ASSERT_TRUE("test_compare_mixed_integer", 10 > size);
-	ASSERT_TRUE("test_compare_mixed_integer", size > 0u);
-	ASSERT_TRUE("test_compare_mixed_integer", 10u > size);
-	ASSERT_TRUE("test_compare_mixed_integer", size <= 5);
-	ASSERT_TRUE("test_compare_mixed_integer", 5 <= size);
-	ASSERT_TRUE("test_compare_mixed_integer", size >= 5);
-	ASSERT_TRUE("test_compare_mixed_integer", 5 >= size);
-	const Size empty;
-	ASSERT_TRUE("test_compare_mixed_integer", empty == 0);
-	ASSERT_TRUE("test_compare_mixed_integer", 0 == empty);
-	ASSERT_TRUE("test_compare_mixed_integer", empty != 1);
-	ASSERT_TRUE("test_compare_mixed_integer", empty < 1);
+	const ByteSize size{5};
+	ASSERT_TRUE("test_compare_mixed_integer", U64(size) == 5ull);
+	ASSERT_TRUE("test_compare_mixed_integer", 5ull == U64(size));
+	ASSERT_TRUE("test_compare_mixed_integer", U64(size) == 5u);
+	ASSERT_TRUE("test_compare_mixed_integer", size == ByteSize{5});
+	ASSERT_TRUE("test_compare_mixed_integer", ByteSize{5} == size);
+	ASSERT_TRUE("test_compare_mixed_integer", size == ByteSize{5u});
+	ASSERT_TRUE("test_compare_mixed_integer", ByteSize{5u} == size);
+	ASSERT_TRUE("test_compare_mixed_integer", size == ByteSize{5ull});
+	ASSERT_TRUE("test_compare_mixed_integer", ByteSize{5ull} == size);
+	ASSERT_TRUE("test_compare_mixed_integer", U64(size) != 6ull);
+	ASSERT_TRUE("test_compare_mixed_integer", 6ull != U64(size));
+	ASSERT_TRUE("test_compare_mixed_integer", size != ByteSize{6});
+	ASSERT_TRUE("test_compare_mixed_integer", ByteSize{6} != size);
+	ASSERT_TRUE("test_compare_mixed_integer", size != ByteSize{6u});
+	ASSERT_TRUE("test_compare_mixed_integer", ByteSize{6u} != size);
+	ASSERT_TRUE("test_compare_mixed_integer", size < ByteSize{6});
+	ASSERT_TRUE("test_compare_mixed_integer", ByteSize{4} < size);
+	ASSERT_TRUE("test_compare_mixed_integer", size < ByteSize{6u});
+	ASSERT_TRUE("test_compare_mixed_integer", ByteSize{4u} < size);
+	ASSERT_TRUE("test_compare_mixed_integer", size > ByteSize{0});
+	ASSERT_TRUE("test_compare_mixed_integer", ByteSize{10} > size);
+	ASSERT_TRUE("test_compare_mixed_integer", size > ByteSize{0u});
+	ASSERT_TRUE("test_compare_mixed_integer", ByteSize{10u} > size);
+	ASSERT_TRUE("test_compare_mixed_integer", size <= ByteSize{5});
+	ASSERT_TRUE("test_compare_mixed_integer", ByteSize{5} <= size);
+	ASSERT_TRUE("test_compare_mixed_integer", size >= ByteSize{5});
+	ASSERT_TRUE("test_compare_mixed_integer", ByteSize{5} >= size);
+	const ByteSize empty;
+	ASSERT_TRUE("test_compare_mixed_integer", empty == ByteSize{0});
+	ASSERT_TRUE("test_compare_mixed_integer", ByteSize{0} == empty);
+	ASSERT_TRUE("test_compare_mixed_integer", empty != ByteSize{1});
+	ASSERT_TRUE("test_compare_mixed_integer", empty < ByteSize{1});
+	ASSERT_TRUE("test_compare_mixed_integer", U64(empty) == 0ull);
 	RETURN_TEST("test_compare_mixed_integer", result);
 }
 
@@ -223,7 +224,7 @@ int test_compare_mixed_integer() {
 
 int test_construct_assign_integer() {
 	int result = 0;
-	Size size;
+	ByteSize size;
 	size = 0;
 	ASSERT_EQUAL("test_construct_assign_integer", 0ull, U64(size));
 	size = 16;
@@ -243,9 +244,9 @@ int test_construct_assign_integer() {
 
 int test_construct_copy_move() {
 	int result = 0;
-	const Size original{64};
-	const Size copied{original};
-	Size moved{Size{32}};
+	const ByteSize original{64};
+	const ByteSize copied{original};
+	ByteSize moved{ByteSize{32}};
 	ASSERT_EQUAL("test_construct_copy_move", 64ull, U64(copied));
 	ASSERT_EQUAL("test_construct_copy_move", 32ull, U64(moved));
 	RETURN_TEST("test_construct_copy_move", result);
@@ -253,24 +254,35 @@ int test_construct_copy_move() {
 
 int test_construct_implicit_from_int() {
 	int result = 0;
-	const Size from_zero = 0;
+	const ByteSize from_zero = 0;
 	ASSERT_EQUAL("test_construct_implicit_from_int", 0ull, U64(from_zero));
-	const Size from_int = 100;
+	const ByteSize from_int = 100;
 	ASSERT_EQUAL("test_construct_implicit_from_int", 100ull, U64(from_int));
-	const Size from_unsigned = 100u;
+	const ByteSize from_unsigned = 100u;
 	ASSERT_EQUAL("test_construct_implicit_from_int", 100ull, U64(from_unsigned));
-	const Size from_ull = 100ull;
+	const ByteSize from_ull = 100ull;
 	ASSERT_EQUAL("test_construct_implicit_from_int", 100ull, U64(from_ull));
-	const Size from_long = 100L;
+	const ByteSize from_long = 100L;
 	ASSERT_EQUAL("test_construct_implicit_from_int", 100ull, U64(from_long));
-	const Size from_char = static_cast<char>(7);
+	const ByteSize from_char = static_cast<char>(7);
 	ASSERT_EQUAL("test_construct_implicit_from_int", 7ull, U64(from_char));
 	RETURN_TEST("test_construct_implicit_from_int", result);
 }
 
+int test_construct_units() {
+	int result = 0;
+	ASSERT_EQUAL("test_construct_units", 1024ull, U64(1 * KiB));
+	ASSERT_EQUAL("test_construct_units", 2048ull, U64(2 * KiB));
+	ASSERT_EQUAL("test_construct_units", 1048576ull, U64(1 * MiB));
+	ASSERT_EQUAL("test_construct_units", 1073741824ull, U64(1 * GiB));
+	ASSERT_TRUE("test_construct_units", (1 * KiB) == ByteSize{1024});
+	ASSERT_TRUE("test_construct_units", (2 * KiB) == ByteSize{2048});
+	RETURN_TEST("test_construct_units", result);
+}
+
 int test_construct_zero() {
 	int result = 0;
-	const Size empty;
+	const ByteSize empty;
 	ASSERT_EQUAL("test_construct_zero", 0ull, U64(empty));
 	RETURN_TEST("test_construct_zero", result);
 }
@@ -279,22 +291,25 @@ int test_construct_zero() {
 // Convert
 // -------------------
 
-int test_convert_cstring_wcstring_decimal() {
+int test_convert_cstring_wcstring_human() {
 	int result = 0;
-	const Size size{1024};
-	const CString owned = static_cast<CString>(size);
-	const WCString wide = static_cast<WCString>(size);
-	const std::string text = size;
-	ASSERT_EQUAL("test_convert_cstring_wcstring_decimal", "1024", std::string(owned));
-	ASSERT_EQUAL("test_convert_cstring_wcstring_decimal", "1024", text);
-	ASSERT_TRUE("test_convert_cstring_wcstring_decimal", wide == L"1024");
-	ASSERT_EQUAL("test_convert_cstring_wcstring_decimal", "0", std::string(Size{}));
-	RETURN_TEST("test_convert_cstring_wcstring_decimal", result);
+	ASSERT_EQUAL("test_convert_cstring_wcstring_human", std::string("0 B"), std::string(static_cast<CString>(ByteSize{})));
+	ASSERT_EQUAL("test_convert_cstring_wcstring_human", std::string("1023 B"), std::string(static_cast<CString>(ByteSize{1023})));
+	const ByteSize kib = 1 * KiB;
+	const CString owned = static_cast<CString>(kib);
+	const WCString wide = static_cast<WCString>(kib);
+	ASSERT_EQUAL("test_convert_cstring_wcstring_human", std::string("1.00 KiB"), std::string(owned));
+	ASSERT_TRUE("test_convert_cstring_wcstring_human", wide == L"1.00 KiB");
+	const CString mib = static_cast<CString>((1 * MiB) + (512 * KiB));
+	ASSERT_EQUAL("test_convert_cstring_wcstring_human", std::string("1.50 MiB"), std::string(mib));
+	const std::string text = kib;
+	ASSERT_EQUAL("test_convert_cstring_wcstring_human", std::string("1.00 KiB"), text);
+	RETURN_TEST("test_convert_cstring_wcstring_human", result);
 }
 
 int test_convert_explicit_integrals() {
 	int result = 0;
-	const Size size{42};
+	const ByteSize size{42};
 	ASSERT_EQUAL("test_convert_explicit_integrals", static_cast<int>(42), static_cast<int>(size));
 	ASSERT_EQUAL("test_convert_explicit_integrals", static_cast<unsigned>(42), static_cast<unsigned>(size));
 	ASSERT_EQUAL("test_convert_explicit_integrals", static_cast<short>(42), static_cast<short>(size));
@@ -305,17 +320,17 @@ int test_convert_explicit_integrals() {
 	ASSERT_EQUAL("test_convert_explicit_integrals", 42ull, static_cast<unsigned long long>(size));
 	ASSERT_EQUAL("test_convert_explicit_integrals", static_cast<std::ptrdiff_t>(42), static_cast<std::ptrdiff_t>(size));
 	ASSERT_EQUAL("test_convert_explicit_integrals", static_cast<std::uint8_t>(42), static_cast<std::uint8_t>(size));
-	const Size wide{300};
+	const ByteSize wide{300};
 	ASSERT_EQUAL("test_convert_explicit_integrals", static_cast<std::uint8_t>(255), static_cast<std::uint8_t>(wide));
 	RETURN_TEST("test_convert_explicit_integrals", result);
 }
 
 int test_convert_implicit_size_t() {
 	int result = 0;
-	const Size size{42};
+	const ByteSize size{42};
 	const std::size_t n = size;
 	ASSERT_EQUAL("test_convert_implicit_size_t", static_cast<std::size_t>(42), n);
-	const std::size_t empty = Size{};
+	const std::size_t empty = ByteSize{};
 	ASSERT_EQUAL("test_convert_implicit_size_t", static_cast<std::size_t>(0), empty);
 	RETURN_TEST("test_convert_implicit_size_t", result);
 }
@@ -328,10 +343,11 @@ int test_traits_numeral() {
 	int result = 0;
 	static_assert(Type::Numeral<int>);
 	static_assert(Type::Numeral<std::size_t>);
+	static_assert(Type::Numeral<ByteSize>);
+	static_assert(Type::Numeral<const ByteSize&>);
 	static_assert(Type::Numeral<Size>);
-	static_assert(Type::Numeral<const Size&>);
 	static_assert(!Type::Numeral<double>);
-	ASSERT_TRUE("test_traits_numeral", Type::Numeral<Size>);
+	ASSERT_TRUE("test_traits_numeral", Type::Numeral<ByteSize>);
 	RETURN_TEST("test_traits_numeral", result);
 }
 
@@ -345,7 +361,7 @@ int main() {
 	result += test_arithmetic_expression_to_size_t();
 	result += test_arithmetic_increment();
 	result += test_arithmetic_mixed_integer();
-	result += test_arithmetic_mul_div_mod();
+	result += test_arithmetic_scale_not_area();
 	result += test_arithmetic_zero();
 
 	// -------------------
@@ -360,12 +376,13 @@ int main() {
 	result += test_construct_assign_integer();
 	result += test_construct_copy_move();
 	result += test_construct_implicit_from_int();
+	result += test_construct_units();
 	result += test_construct_zero();
 
 	// -------------------
 	// Convert
 	// -------------------
-	result += test_convert_cstring_wcstring_decimal();
+	result += test_convert_cstring_wcstring_human();
 	result += test_convert_explicit_integrals();
 	result += test_convert_implicit_size_t();
 

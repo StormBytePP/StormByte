@@ -235,7 +235,7 @@ namespace StormByte {
 			const std::uint64_t size = static_cast<std::uint64_t>(payload.size());
 			BinaryData buffer = Serializable<std::uint64_t>(size).Serialize();
 			const auto* ptr = reinterpret_cast<const std::byte*>(payload.data());
-			buffer.append(ptr, StormByte::Size{ size });
+			buffer.append(ptr, ByteSize{size});
 			return buffer;
 		}
 
@@ -258,8 +258,8 @@ namespace StormByte {
 		}
 	}
 
-	std::size_t Detail::Codec<std::string>::Size(const std::string& data) noexcept {
-		return sizeof(std::uint64_t) + data.size();
+	ByteSize Detail::Codec<std::string>::Size(const std::string& data) noexcept {
+		return ByteSize{sizeof(std::uint64_t)} + ByteSize{data.size()};
 	}
 
 	BinaryData Detail::Codec<std::string>::Write(const std::string& data) noexcept {
@@ -270,8 +270,8 @@ namespace StormByte {
 		return read_byte_string(data);
 	}
 
-	std::size_t Detail::Codec<std::wstring>::Size(const std::wstring& data) noexcept {
-		return sizeof(std::uint64_t) + wstring_to_utf8(data).size();
+	ByteSize Detail::Codec<std::wstring>::Size(const std::wstring& data) noexcept {
+		return ByteSize{sizeof(std::uint64_t)} + ByteSize{wstring_to_utf8(data).size()};
 	}
 
 	BinaryData Detail::Codec<std::wstring>::Write(const std::wstring& data) noexcept {
@@ -285,8 +285,8 @@ namespace StormByte {
 		return utf8_to_wstring(payload.value());
 	}
 
-	std::size_t Detail::Codec<std::u16string>::Size(const std::u16string& data) noexcept {
-		return sizeof(std::uint64_t) + u16_to_utf8(data).size();
+	ByteSize Detail::Codec<std::u16string>::Size(const std::u16string& data) noexcept {
+		return ByteSize{sizeof(std::uint64_t)} + ByteSize{u16_to_utf8(data).size()};
 	}
 
 	BinaryData Detail::Codec<std::u16string>::Write(const std::u16string& data) noexcept {
@@ -300,8 +300,8 @@ namespace StormByte {
 		return utf8_to_u16(payload.value());
 	}
 
-	std::size_t Detail::Codec<std::u32string>::Size(const std::u32string& data) noexcept {
-		return sizeof(std::uint64_t) + u32_to_utf8(data).size();
+	ByteSize Detail::Codec<std::u32string>::Size(const std::u32string& data) noexcept {
+		return ByteSize{sizeof(std::uint64_t)} + ByteSize{u32_to_utf8(data).size()};
 	}
 
 	BinaryData Detail::Codec<std::u32string>::Write(const std::u32string& data) noexcept {
@@ -315,7 +315,7 @@ namespace StormByte {
 		return utf8_to_u32(payload.value());
 	}
 
-	std::size_t Detail::Codec<CString>::Size(const CString& data) noexcept {
+	ByteSize Detail::Codec<CString>::Size(const CString& data) noexcept {
 		return Detail::Codec<std::string>::Size(static_cast<std::string>(data));
 	}
 
@@ -330,7 +330,7 @@ namespace StormByte {
 		return CString(payload.value().c_str());
 	}
 
-	std::size_t Detail::Codec<WCString>::Size(const WCString& data) noexcept {
+	ByteSize Detail::Codec<WCString>::Size(const WCString& data) noexcept {
 		return Detail::Codec<std::wstring>::Size(static_cast<std::wstring>(data));
 	}
 

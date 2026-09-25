@@ -14,6 +14,10 @@ if(ENABLE_TEST)
 	target_link_libraries(BitmaskTests StormByte)
 	add_test(NAME BitmaskTests COMMAND BitmaskTests)
 
+	add_executable(ByteSizeTests byte_size_test.cxx)
+	target_link_libraries(ByteSizeTests StormByte)
+	add_test(NAME ByteSizeTests COMMAND ByteSizeTests)
+
 	add_executable(ClonableTests clonable_test.cxx)
 	target_link_libraries(ClonableTests StormByte)
 	add_test(NAME ClonableTests COMMAND ClonableTests)

@@ -79,7 +79,7 @@ namespace StormByte {
 	}
 
 	template<typename T>
-	std::size_t Serializable<T>::Size(const DecayedT& data) noexcept {
+	ByteSize Serializable<T>::Size(const DecayedT& data) noexcept {
 		if constexpr (Type::Optional<T>) {
 			return SizeOptional(data);
 		} else if constexpr (Type::Pair<T>) {
@@ -87,7 +87,7 @@ namespace StormByte {
 		} else if constexpr (Type::Container<T>) {
 			return SizeContainer(data);
 		} else if constexpr (Type::TriviallyCopyable<T>) {
-			return sizeof(data);
+			return ByteSize{sizeof(data)};
 		} else {
 			return Detail::Codec<DecayedT>::Size(data);
 		}
@@ -99,13 +99,13 @@ namespace StormByte {
 	requires Type::TriviallyCopyable<U> {
 		DecayedT value = m_data;
 
-		if constexpr (!std::is_same_v<DecayedT, bool> &&
+		if constexpr (!Type::SameAs<DecayedT, bool> &&
 				std::endian::native != std::endian::little) {
 			value = Type::Detail::swap_endian(value);
 		}
 
 		const auto* raw = reinterpret_cast<const std::byte*>(&value);
-		return BinaryData(raw, StormByte::Size{ static_cast<std::uint64_t>(sizeof(value)) });
+		return BinaryData(raw, ByteSize{sizeof(value)});
 	}
 
 	template<typename T>
@@ -114,10 +114,9 @@ namespace StormByte {
 	requires Type::Container<U> {
 		const std::uint64_t size = static_cast<std::uint64_t>(m_data.size());
 		BinaryData buffer = Serializable<std::uint64_t>(size).Serialize();
-		buffer.reserve(StormByte::Size{ static_cast<std::uint64_t>(
-			static_cast<std::size_t>(buffer.size()) + SizeContainer(m_data)) });
+		buffer.reserve(ByteSize{static_cast<std::size_t>(buffer.size())} + SizeContainer(m_data));
 		for (const auto& element : m_data) {
-			Serializable<std::decay_t<decltype(element)>> element_serial(element);
+			Serializable<std::remove_cvref_t<decltype(element)>> element_serial(element);
 			append_bytes(buffer, element_serial.Serialize());
 		}
 		return buffer;
@@ -127,10 +126,10 @@ namespace StormByte {
 	template<typename U>
 	BinaryData Serializable<T>::SerializePair() const noexcept
 	requires Type::Pair<U> {
-		Serializable<std::decay_t<typename T::first_type>> first_serial(m_data.first);
-		Serializable<std::decay_t<typename T::second_type>> second_serial(m_data.second);
+		Serializable<std::remove_cvref_t<typename T::first_type>> first_serial(m_data.first);
+		Serializable<std::remove_cvref_t<typename T::second_type>> second_serial(m_data.second);
 		BinaryData buffer;
-		buffer.reserve(StormByte::Size{ static_cast<std::uint64_t>(SizePair(m_data)) });
+		buffer.reserve(SizePair(m_data));
 		append_bytes(buffer, first_serial.Serialize());
 		append_bytes(buffer, second_serial.Serialize());
 		return buffer;
@@ -142,10 +141,10 @@ namespace StormByte {
 	requires Type::Optional<U> {
 		const bool has_value = m_data.has_value();
 		BinaryData buffer;
-		buffer.reserve(StormByte::Size{ static_cast<std::uint64_t>(SizeOptional(m_data)) });
+		buffer.reserve(SizeOptional(m_data));
 		append_bytes(buffer, Serializable<bool>(has_value).Serialize());
 		if (m_data.has_value()) {
-			Serializable<std::decay_t<decltype(m_data.value())>> value_serial(m_data.value());
+			Serializable<std::remove_cvref_t<decltype(m_data.value())>> value_serial(m_data.value());
 			append_bytes(buffer, value_serial.Serialize());
 		}
 		return buffer;
@@ -153,31 +152,31 @@ namespace StormByte {
 
 	template<typename T>
 	template<typename U>
-	std::size_t Serializable<T>::SizeContainer(const DecayedT& data) noexcept
+	ByteSize Serializable<T>::SizeContainer(const DecayedT& data) noexcept
 	requires Type::Container<U> {
-		std::size_t size = sizeof(std::uint64_t);
+		ByteSize size{sizeof(std::uint64_t)};
 		for (const auto& element : data) {
-			size += Serializable<std::decay_t<decltype(element)>>::Size(element);
+			size += Serializable<std::remove_cvref_t<decltype(element)>>::Size(element);
 		}
 		return size;
 	}
 
 	template<typename T>
 	template<typename U>
-	std::size_t Serializable<T>::SizePair(const DecayedT& data) noexcept
+	ByteSize Serializable<T>::SizePair(const DecayedT& data) noexcept
 	requires Type::Pair<U> {
 		return
-			Serializable<std::decay_t<typename T::first_type>>::Size(data.first) +
-			Serializable<std::decay_t<typename T::second_type>>::Size(data.second);
+			Serializable<std::remove_cvref_t<typename T::first_type>>::Size(data.first) +
+			Serializable<std::remove_cvref_t<typename T::second_type>>::Size(data.second);
 	}
 
 	template<typename T>
 	template<typename U>
-	std::size_t Serializable<T>::SizeOptional(const DecayedT& data) noexcept
+	ByteSize Serializable<T>::SizeOptional(const DecayedT& data) noexcept
 	requires Type::Optional<U> {
-		std::size_t size = sizeof(bool);
+		ByteSize size{sizeof(bool)};
 		if (data.has_value()) {
-			size += Serializable<std::decay_t<decltype(data.value())>>::Size(data.value());
+			size += Serializable<std::remove_cvref_t<decltype(data.value())>>::Size(data.value());
 		}
 		return size;
 	}
@@ -186,7 +185,7 @@ namespace StormByte {
 	template<typename U>
 	Expected<T, DeserializeError> Serializable<T>::DeserializeTrivial(std::span<const std::byte> data) noexcept
 	requires Type::TriviallyCopyable<U> {
-		if constexpr (std::is_same_v<T, bool>) {
+		if constexpr (Type::SameAs<T, bool>) {
 			if (data.empty())
 				return Unexpected<DeserializeError>("Insufficient data for bool");
 
@@ -229,14 +228,14 @@ namespace StormByte {
 
 		if (size > static_cast<std::uint64_t>(data.size() - offset))
 			return Unexpected<DeserializeError>("Claimed container size exceeds remaining buffer");
-		if constexpr (Detail::is_std_array_v<T>) {
+		if constexpr (Type::Array<T>) {
 			if (size != static_cast<std::uint64_t>(std::tuple_size_v<T>))
 				return Unexpected<DeserializeError>("Array size does not match serialized element count");
 		}
 
 		T container;
 		for (std::uint64_t i = 0; i < size; ++i) {
-			using ElementT = std::decay_t<typename T::value_type>;
+			using ElementT = std::remove_cvref_t<typename T::value_type>;
 
 			if (offset >= data.size())
 				return Unexpected<DeserializeError>("Insufficient data for container element");
@@ -245,13 +244,13 @@ namespace StormByte {
 			if (!expected_element)
 				return Unexpected(expected_element.error());
 
-			const std::size_t element_size = Serializable<ElementT>::Size(expected_element.value());
-			if constexpr (Detail::is_std_array_v<T>) {
+			const ByteSize element_size = Serializable<ElementT>::Size(expected_element.value());
+			if constexpr (Type::Array<T>) {
 				container[static_cast<std::size_t>(i)] = std::move(expected_element.value());
 			} else {
 				container.insert(container.end(), std::move(expected_element.value()));
 			}
-			offset += element_size;
+			offset += static_cast<std::size_t>(element_size);
 		}
 		return container;
 	}
@@ -260,18 +259,18 @@ namespace StormByte {
 	template<typename U>
 	Expected<T, DeserializeError> Serializable<T>::DeserializePair(std::span<const std::byte> data) noexcept
 	requires Type::Pair<U> {
-		using FirstT = std::decay_t<typename T::first_type>;
-		using SecondT = std::decay_t<typename T::second_type>;
+		using FirstT = std::remove_cvref_t<typename T::first_type>;
+		using SecondT = std::remove_cvref_t<typename T::second_type>;
 
 		auto expected_first = Serializable<FirstT>::Deserialize(data);
 		if (!expected_first)
 			return Unexpected(expected_first.error());
 
-		const std::size_t first_size = Serializable<FirstT>::Size(expected_first.value());
-		if (first_size > data.size())
+		const ByteSize first_size = Serializable<FirstT>::Size(expected_first.value());
+		if (static_cast<std::size_t>(first_size) > data.size())
 			return Unexpected<DeserializeError>("Insufficient data for pair second");
 
-		auto expected_second = Serializable<SecondT>::Deserialize(data.subspan(first_size));
+		auto expected_second = Serializable<SecondT>::Deserialize(data.subspan(static_cast<std::size_t>(first_size)));
 		if (!expected_second)
 			return Unexpected(expected_second.error());
 
@@ -289,12 +288,12 @@ namespace StormByte {
 		if (!expected_has.value())
 			return T{};
 
-		const std::size_t flag_size = Serializable<bool>::Size(true);
-		if (flag_size > data.size())
+		const ByteSize flag_size = Serializable<bool>::Size(true);
+		if (static_cast<std::size_t>(flag_size) > data.size())
 			return Unexpected<DeserializeError>("Insufficient data for optional value");
 
-		using ValueT = std::decay_t<typename T::value_type>;
-		auto expected_value = Serializable<ValueT>::Deserialize(data.subspan(flag_size));
+		using ValueT = std::remove_cvref_t<typename T::value_type>;
+		auto expected_value = Serializable<ValueT>::Deserialize(data.subspan(static_cast<std::size_t>(flag_size)));
 		if (!expected_value)
 			return Unexpected(expected_value.error());
 

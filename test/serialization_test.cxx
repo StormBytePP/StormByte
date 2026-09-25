@@ -38,6 +38,7 @@
  */
 
 #include <StormByte/binary_data.hxx>
+#include <StormByte/byte_size.hxx>
 #include <StormByte/helpers.hxx>
 #include <StormByte/serializable.hxx>
 #include <StormByte/size.hxx>
@@ -57,25 +58,25 @@ using namespace StormByte;
 
 namespace {
 	std::size_t ByteCount(const BinaryData& buf) {
-		return static_cast<std::size_t>(static_cast<std::uint64_t>(buf.size()));
+		return static_cast<std::size_t>(buf.size());
 	}
 
 	void CorruptByte(BinaryData& buf, std::size_t index, std::byte value) {
 		if (index < ByteCount(buf))
-			buf[Size{ static_cast<std::uint64_t>(index) }] = value;
+			buf[ByteSize{ static_cast<std::uint64_t>(index) }] = value;
 	}
 
 	void FlipBit(BinaryData& buf, std::size_t byte_index, unsigned bit) {
 		if (byte_index >= ByteCount(buf) || bit > 7)
 			return;
-		auto& b = reinterpret_cast<unsigned char&>(buf[Size{ static_cast<std::uint64_t>(byte_index) }]);
+		auto& b = reinterpret_cast<unsigned char&>(buf[ByteSize{ static_cast<std::uint64_t>(byte_index) }]);
 		b ^= static_cast<unsigned char>(1u << bit);
 	}
 
 	BinaryData Truncate(const BinaryData& buf, std::size_t new_size) {
 		if (new_size >= ByteCount(buf))
 			return buf;
-		return BinaryData(buf.data(), Size{ static_cast<std::uint64_t>(new_size) });
+		return BinaryData(buf.data(), ByteSize{ static_cast<std::uint64_t>(new_size) });
 	}
 
 	BinaryData MakeStringVectorBuffer() {
@@ -470,9 +471,9 @@ int test_base_double_corruption() {
 		RETURN_TEST("test_base_double_corruption", 0);
 	auto buf = clean;
 	for (std::size_t i = 0; i < 4; ++i)
-		buf[Size{ static_cast<std::uint64_t>(i) }] = std::byte{0xFF};
+		buf[ByteSize{ static_cast<std::uint64_t>(i) }] = std::byte{0xFF};
 	for (std::size_t i = 0; i < 4; ++i)
-		buf[Size{ static_cast<std::uint64_t>(ByteCount(buf) - 1 - i) }] = std::byte{0xAA};
+		buf[ByteSize{ static_cast<std::uint64_t>(ByteCount(buf) - 1 - i) }] = std::byte{0xAA};
 	auto result = Serializable<std::vector<std::string>>::Deserialize(buf);
 	(void)result;
 	RETURN_TEST("test_base_double_corruption", 0);
@@ -1161,10 +1162,10 @@ int test_wire_int_is_little_endian() {
 		std::cerr << "test_wire_int_is_little_endian: unexpected size\n";
 		RETURN_TEST("test_wire_int_is_little_endian", 1);
 	}
-	const unsigned char b0 = static_cast<unsigned char>(buffer[Size{0}]);
-	const unsigned char b1 = static_cast<unsigned char>(buffer[Size{1}]);
-	const unsigned char b2 = static_cast<unsigned char>(buffer[Size{2}]);
-	const unsigned char b3 = static_cast<unsigned char>(buffer[Size{3}]);
+	const unsigned char b0 = static_cast<unsigned char>(buffer[ByteSize{0}]);
+	const unsigned char b1 = static_cast<unsigned char>(buffer[ByteSize{1}]);
+	const unsigned char b2 = static_cast<unsigned char>(buffer[ByteSize{2}]);
+	const unsigned char b3 = static_cast<unsigned char>(buffer[ByteSize{3}]);
 	if (b0 != 0x04 || b1 != 0x03 || b2 != 0x02 || b3 != 0x01) {
 		std::cerr << "test_wire_int_is_little_endian: got "
 			<< static_cast<int>(b0) << " " << static_cast<int>(b1) << " "
@@ -1181,11 +1182,11 @@ int test_wire_string_length_is_uint64_le() {
 		std::cerr << "test_wire_string_length_is_uint64_le: unexpected size\n";
 		RETURN_TEST("test_wire_string_length_is_uint64_le", 1);
 	}
-	if (static_cast<unsigned char>(buffer[Size{0}]) != 2 ||
-			static_cast<unsigned char>(buffer[Size{1}]) != 0 ||
-			static_cast<unsigned char>(buffer[Size{7}]) != 0 ||
-			static_cast<char>(buffer[Size{8}]) != 'A' ||
-			static_cast<char>(buffer[Size{9}]) != 'B') {
+	if (static_cast<unsigned char>(buffer[ByteSize{0}]) != 2 ||
+			static_cast<unsigned char>(buffer[ByteSize{1}]) != 0 ||
+			static_cast<unsigned char>(buffer[ByteSize{7}]) != 0 ||
+			static_cast<char>(buffer[ByteSize{8}]) != 'A' ||
+			static_cast<char>(buffer[ByteSize{9}]) != 'B') {
 		std::cerr << "test_wire_string_length_is_uint64_le: layout mismatch\n";
 		RETURN_TEST("test_wire_string_length_is_uint64_le", 1);
 	}

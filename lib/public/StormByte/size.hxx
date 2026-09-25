@@ -42,6 +42,7 @@
 #include <StormByte/cstring.hxx>
 #include <StormByte/type_traits.hxx>
 #include <StormByte/visibility.h>
+#include <StormByte/wcstring.hxx>
 
 #include <cassert>
 #include <compare>
@@ -50,55 +51,54 @@
 #include <limits>
 #include <ostream>
 #include <string>
+#include <type_traits>
+#include <utility>
+
+/**
+ * @file StormByte/size.hxx
+ * @brief Host-width-stable count (`uint64_t`), implicit only to `std::size_t`.
+ */
 
 /**
  * @namespace StormByte
  * @brief Root namespace of the StormByte suite.
  */
 namespace StormByte {
+	class ByteSize;
+
 	/**
 	 * @class Size
-	 * @brief Byte count that is the same width on every host.
+	 * @brief Count of abstract units (`uint64_t` storage).
 	 *
-	 * Stored as `std::uint64_t`. Safe to return across a DLL boundary
-	 * and between 32-bit and 64-bit modules. Not a replacement for
-	 * `std::size_t` inside a single translation unit.
+	 * Not a byte length. Not `std::size_t`. Not `std::ptrdiff_t`.
+	 * The value that crosses a DLL is always 64-bit unsigned.
 	 *
-	 * Construction from a non-negative integer is implicit and
-	 * `constexpr`: `Size s = 0`, `s = 16`, `{ Status::Ok, 0 }`,
-	 * `constexpr Size MinWindow{16ull * 1024ull}`. A negative
-	 * integer is undefined and `assert`s when assertions are on.
+	 * Arithmetic always yields @ref Size. Integer operands are absorbed.
+	 * `std::size_t calc = size1 + 3 * size2` does the math in `uint64_t`
+	 * and converts once at the end.
 	 *
-	 * Mixed comparisons and addition/subtraction with integers work
-	 * on both sides (`5 == s`, `s == 5`, `16 + s`, `s + 16`) via
-	 * hidden friends. There is no implicit conversion *to* an
-	 * integer. `Value()`, `explicit operator uint64_t`,
-	 * `explicit operator size_t` (only when `size_t` is not
-	 * `uint64_t`) and `explicit operator ptrdiff_t` are the numeric
-	 * exits. A value that does not fit the target type is undefined
-	 * and `assert`s when assertions are on.
+	 * Overflow of `uint64_t` and a negative result: `assert` when
+	 * assertions are on; wrap modulo 2⁶⁴ when they are not.
+	 * Division by zero: `assert` when assertions are on; undefined otherwise.
 	 *
-	 * Addition, subtraction and unit scale (`4 * MiB`, `s * 4`,
-	 * `s / 4`, `s % 4`) are `constexpr`. Overflow, a negative
-	 * integer or a zero divisor is undefined and `assert`s when
-	 * assertions are on. There is no `Size * Size` and no
-	 * floating-point scale of a @ref Size.
+	 * Implicit conversion exists only to `std::size_t` (clamp to
+	 * `size_t::max`). Every other integral destination is `explicit`
+	 * and clamps to `T::max`. There is no `operator bool` and no `Value()`.
 	 *
-	 * Units are IEC (`KiB`, `MiB`, …) and SI (`KB`, `MB`, …). A
-	 * fractional factor rounds to the nearest byte.
+	 * On hosts where `std::size_t` is `unsigned long` or
+	 * `unsigned long long`, that conversion is the implicit
+	 * `operator std::size_t`. Those two names are not given a second
+	 * `extern template` of `operator T()`.
 	 *
-	 * `operator CString` and `operator std::string` are the IEC
-	 * human-readable form (`B`, `KiB`, …). `CString` is built in the
-	 * StormByte DLL. `std::string` is built in the caller’s heap from
-	 * that `CString`.
+	 * Mixed comparison with any @ref Type::Integral is a hidden friend
+	 * so `s == 5`, `5u == s` and `ASSERT_EQUAL` are not ambiguous
+	 * with the built-in candidates. Comparison with
+	 * @ref StormByte::ByteSize lives in `byte_size.hxx`.
+	 *
+	 * `operator CString` / `operator WCString` print decimal digits.
 	 */
-	class STORMBYTE_PUBLIC Size {
+	class STORMBYTE_PUBLIC Size final {
 		public:
-			/**
-			 * @name Life
-			 * @{
-			 */
-
 			/**
 			 * @brief Zero.
 			 */
@@ -107,25 +107,20 @@ namespace StormByte {
 			/**
 			 * @brief From an integer count.
 			 * @tparam T Integral type.
-			 * @param value Byte count.
-			 * @note A negative @p value is undefined. Checked with `assert` when assertions are on.
+			 * @param value Count. Negative is undefined (`assert` when on).
 			 */
 			template<Type::Integral T>
-			constexpr Size(T value) noexcept: m_value(0) {
-				if constexpr (Type::Signed<T>)
-					assert(value >= static_cast<T>(0));
-				m_value = static_cast<std::uint64_t>(value);
-			}
+			constexpr Size(T value) noexcept: m_value(FromIntegral(value)) {}
 
 			/**
 			 * @brief Copy constructor.
-			 * @param other Size to copy.
+			 * @param other Count to copy.
 			 */
 			constexpr Size(const Size& other) noexcept = default;
 
 			/**
 			 * @brief Move constructor.
-			 * @param other Size to take.
+			 * @param other Count to take.
 			 */
 			constexpr Size(Size&& other) noexcept = default;
 
@@ -136,106 +131,70 @@ namespace StormByte {
 
 			/**
 			 * @brief Copy assignment.
-			 * @param other Size to copy.
-			 * @return *this.
+			 * @param other Count to copy.
+			 * @return @c *this.
 			 */
 			constexpr Size& operator=(const Size& other) noexcept = default;
 
 			/**
 			 * @brief Move assignment.
-			 * @param other Size to take.
-			 * @return *this.
+			 * @param other Count to take.
+			 * @return @c *this.
 			 */
 			constexpr Size& operator=(Size&& other) noexcept = default;
 
 			/**
 			 * @brief Assign an integer count.
 			 * @tparam T Integral type.
-			 * @param value Byte count.
-			 * @return *this.
-			 * @note A negative @p value is undefined. Checked with `assert` when assertions are on.
+			 * @param value Count. Negative is undefined (`assert` when on).
+			 * @return @c *this.
 			 */
 			template<Type::Integral T>
 			constexpr Size& operator=(T value) noexcept {
-				*this = Size(value);
+				m_value = FromIntegral(value);
 				return *this;
 			}
 
-			/** @} */
-
 			/**
-			 * @name Observers
-			 * @{
+			 * @brief Implicit host `size_t` (clamped).
+			 * @return Count as `std::size_t`.
 			 */
-
-			/**
-			 * @brief Stored count.
-			 * @return Value as `uint64_t`.
-			 */
-			constexpr std::uint64_t Value() const noexcept {
-				return m_value;
-			}
-
-			/** @} */
-
-			/**
-			 * @name Conversions
-			 * @{
-			 */
-
-			/**
-			 * @brief Stored count.
-			 * @return Value as `uint64_t`.
-			 */
-			constexpr explicit operator std::uint64_t() const noexcept {
-				return m_value;
+			constexpr operator std::size_t() const noexcept {
+				constexpr auto max = static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max());
+				return static_cast<std::size_t>(m_value > max ? max : m_value);
 			}
 
 			/**
-			 * @brief Stored count as host `size_t`.
-			 * @tparam T Must be `std::size_t` and a different type from `uint64_t`.
-			 * @return Value as `std::size_t`.
-			 * @note Ill-formed when `size_t` and `uint64_t` are the same type;
-			 *       `static_cast<std::size_t>` then uses `operator uint64_t`.
-			 *       A count above `size_t` is undefined. Checked with `assert` when assertions are on.
+			 * @brief Explicit conversion to an integral other than `std::size_t`.
+			 * @tparam T Integral type, not `std::size_t`.
+			 * @return Count clamped to `std::numeric_limits<T>::max()`.
 			 */
-			template<typename T>
-			requires Type::SameAs<T, std::size_t> && (!Type::SameAs<std::size_t, std::uint64_t>)
+			template<Type::Integral T>
+			requires (!Type::SameAs<T, std::size_t>)
 			constexpr explicit operator T() const noexcept {
-				assert(m_value <= static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max()));
-				return static_cast<std::size_t>(m_value);
+				constexpr auto max = static_cast<std::uint64_t>(std::numeric_limits<T>::max());
+				return static_cast<T>(m_value > max ? max : m_value);
 			}
 
 			/**
-			 * @brief Stored count as `ptrdiff_t` (non-negative offsets).
-			 * @return Value as `std::ptrdiff_t`.
-			 * @note A count above `ptrdiff_t` is undefined. Checked with `assert` when assertions are on.
-			 */
-			constexpr explicit operator std::ptrdiff_t() const noexcept {
-				assert(m_value <= static_cast<std::uint64_t>(std::numeric_limits<std::ptrdiff_t>::max()));
-				return static_cast<std::ptrdiff_t>(m_value);
-			}
-
-			/**
-			 * @brief IEC text owned by StormByte.
-			 * @return Human-readable size (`B`, `KiB`, `MiB`, `GiB`, `TiB`, `PiB`, `EiB`).
+			 * @brief Decimal text owned by Base.
+			 * @return Digits, no unit suffix.
 			 */
 			explicit operator CString() const noexcept;
 
 			/**
-			 * @brief IEC text in the caller’s heap.
-			 * @return Human-readable size.
+			 * @brief Decimal wide text owned by Base.
+			 * @return Digits, no unit suffix.
+			 */
+			explicit operator WCString() const noexcept;
+
+			/**
+			 * @brief Decimal text on the caller heap.
+			 * @return Digits, no unit suffix.
 			 */
 			inline operator std::string() const {
 				return static_cast<std::string>(static_cast<CString>(*this));
 			}
-
-			/** @} */
-
-			/**
-			 * @name Comparison
-			 * @{
-			 */
 
 			/**
 			 * @brief Numeric equality.
@@ -248,6 +207,20 @@ namespace StormByte {
 			}
 
 			/**
+			 * @brief Mixed equality.
+			 * @tparam T Integral type.
+			 */
+			template<Type::Integral T>
+			friend constexpr bool operator==(Size lhs, T rhs) noexcept;
+
+			/**
+			 * @brief Mixed equality.
+			 * @tparam T Integral type.
+			 */
+			template<Type::Integral T>
+			friend constexpr bool operator==(T lhs, Size rhs) noexcept;
+
+			/**
 			 * @brief Numeric order.
 			 * @param lhs Left count.
 			 * @param rhs Right count.
@@ -257,227 +230,949 @@ namespace StormByte {
 				return lhs.m_value <=> rhs.m_value;
 			}
 
-			/** @} */
+			/**
+			 * @brief Mixed order.
+			 * @tparam T Integral type.
+			 */
+			template<Type::Integral T>
+			friend constexpr std::strong_ordering operator<=>(Size lhs, T rhs) noexcept;
 
 			/**
-			 * @name Arithmetic
-			 * @{
+			 * @brief Mixed order.
+			 * @tparam T Integral type.
 			 */
+			template<Type::Integral T>
+			friend constexpr std::strong_ordering operator<=>(T lhs, Size rhs) noexcept;
+
+			/**
+			 * @brief Prefix increment.
+			 * @return @c *this after adding one.
+			 */
+			constexpr Size& operator++() noexcept {
+				*this += Size{1u};
+				return *this;
+			}
+
+			/**
+			 * @brief Postfix increment.
+			 * @return Copy before adding one.
+			 */
+			constexpr Size operator++(int) noexcept {
+				const Size old = *this;
+				++*this;
+				return old;
+			}
+
+			/**
+			 * @brief Prefix decrement.
+			 * @return @c *this after subtracting one.
+			 */
+			constexpr Size& operator--() noexcept {
+				*this -= Size{1u};
+				return *this;
+			}
+
+			/**
+			 * @brief Postfix decrement.
+			 * @return Copy before subtracting one.
+			 */
+			constexpr Size operator--(int) noexcept {
+				const Size old = *this;
+				--*this;
+				return old;
+			}
 
 			/**
 			 * @brief Sum.
 			 * @param lhs Left addend.
 			 * @param rhs Right addend.
-			 * @return Sum.
-			 * @note Overflow of `uint64_t` is undefined. Checked with `assert` when assertions are on.
+			 * @return Sum as @ref Size.
 			 */
 			friend constexpr Size operator+(Size lhs, Size rhs) noexcept {
-				assert(lhs.m_value <= std::numeric_limits<std::uint64_t>::max() - rhs.m_value);
-				return Size(static_cast<std::uint64_t>(lhs.m_value + rhs.m_value));
+				return Size(Raw{}, Add(lhs.m_value, rhs.m_value));
 			}
 
 			/**
 			 * @brief Difference.
 			 * @param lhs Minuend.
 			 * @param rhs Subtrahend.
-			 * @return Difference.
-			 * @note `lhs < rhs` is undefined. Checked with `assert` when assertions are on.
+			 * @return Difference as @ref Size.
 			 */
 			friend constexpr Size operator-(Size lhs, Size rhs) noexcept {
-				assert(lhs.m_value >= rhs.m_value);
-				return Size(static_cast<std::uint64_t>(lhs.m_value - rhs.m_value));
+				return Size(Raw{}, Sub(lhs.m_value, rhs.m_value));
 			}
 
 			/**
-			 * @brief Adds @p other to this size.
+			 * @brief Product.
+			 * @param lhs Left factor.
+			 * @param rhs Right factor.
+			 * @return Product as @ref Size.
+			 */
+			friend constexpr Size operator*(Size lhs, Size rhs) noexcept {
+				return Size(Raw{}, Mul(lhs.m_value, rhs.m_value));
+			}
+
+			/**
+			 * @brief Quotient.
+			 * @param lhs Dividend.
+			 * @param rhs Divisor.
+			 * @return Quotient as @ref Size.
+			 */
+			friend constexpr Size operator/(Size lhs, Size rhs) noexcept {
+				return Size(Raw{}, Div(lhs.m_value, rhs.m_value));
+			}
+
+			/**
+			 * @brief Remainder.
+			 * @param lhs Dividend.
+			 * @param rhs Divisor.
+			 * @return Remainder as @ref Size.
+			 */
+			friend constexpr Size operator%(Size lhs, Size rhs) noexcept {
+				return Size(Raw{}, Mod(lhs.m_value, rhs.m_value));
+			}
+
+			/**
+			 * @brief Add @p other.
 			 * @param other Addend.
-			 * @return *this.
-			 * @note Overflow of `uint64_t` is undefined. Checked with `assert` when assertions are on.
+			 * @return @c *this.
 			 */
 			constexpr Size& operator+=(Size other) noexcept {
-				*this = *this + other;
+				m_value = Add(m_value, other.m_value);
 				return *this;
 			}
 
 			/**
-			 * @brief Subtracts @p other from this size.
+			 * @brief Subtract @p other.
 			 * @param other Subtrahend.
-			 * @return *this.
-			 * @note `*this < other` is undefined. Checked with `assert` when assertions are on.
+			 * @return @c *this.
 			 */
 			constexpr Size& operator-=(Size other) noexcept {
-				*this = *this - other;
+				m_value = Sub(m_value, other.m_value);
 				return *this;
 			}
 
-			/** @} */
+			/**
+			 * @brief Multiply by @p other.
+			 * @param other Factor.
+			 * @return @c *this.
+			 */
+			constexpr Size& operator*=(Size other) noexcept {
+				m_value = Mul(m_value, other.m_value);
+				return *this;
+			}
+
+			/**
+			 * @brief Divide by @p other.
+			 * @param other Divisor.
+			 * @return @c *this.
+			 */
+			constexpr Size& operator/=(Size other) noexcept {
+				m_value = Div(m_value, other.m_value);
+				return *this;
+			}
+
+			/**
+			 * @brief Remainder with @p other.
+			 * @param other Divisor.
+			 * @return @c *this.
+			 */
+			constexpr Size& operator%=(Size other) noexcept {
+				m_value = Mod(m_value, other.m_value);
+				return *this;
+			}
+
+			/**
+			 * @brief Mixed sum.
+			 * @tparam T Integral type.
+			 */
+			template<Type::Integral T>
+			friend constexpr Size operator+(Size lhs, T rhs) noexcept;
+
+			/**
+			 * @brief Mixed sum.
+			 * @tparam T Integral type.
+			 */
+			template<Type::Integral T>
+			friend constexpr Size operator+(T lhs, Size rhs) noexcept;
+
+			/**
+			 * @brief Mixed difference.
+			 * @tparam T Integral type.
+			 */
+			template<Type::Integral T>
+			friend constexpr Size operator-(Size lhs, T rhs) noexcept;
+
+			/**
+			 * @brief Mixed difference.
+			 * @tparam T Integral type.
+			 */
+			template<Type::Integral T>
+			friend constexpr Size operator-(T lhs, Size rhs) noexcept;
+
+			/**
+			 * @brief Mixed product.
+			 * @tparam T Integral type.
+			 */
+			template<Type::Integral T>
+			friend constexpr Size operator*(Size lhs, T rhs) noexcept;
+
+			/**
+			 * @brief Mixed product.
+			 * @tparam T Integral type.
+			 */
+			template<Type::Integral T>
+			friend constexpr Size operator*(T lhs, Size rhs) noexcept;
+
+			/**
+			 * @brief Mixed quotient.
+			 * @tparam T Integral type.
+			 */
+			template<Type::Integral T>
+			friend constexpr Size operator/(Size lhs, T rhs) noexcept;
+
+			/**
+			 * @brief Mixed quotient.
+			 * @tparam T Integral type.
+			 */
+			template<Type::Integral T>
+			friend constexpr Size operator/(T lhs, Size rhs) noexcept;
+
+			/**
+			 * @brief Mixed remainder.
+			 * @tparam T Integral type.
+			 */
+			template<Type::Integral T>
+			friend constexpr Size operator%(Size lhs, T rhs) noexcept;
+
+			/**
+			 * @brief Mixed remainder.
+			 * @tparam T Integral type.
+			 */
+			template<Type::Integral T>
+			friend constexpr Size operator%(T lhs, Size rhs) noexcept;
+
+			/**
+			 * @brief Add an integer.
+			 * @tparam T Integral type.
+			 * @param value Addend.
+			 * @return @c *this.
+			 */
+			template<Type::Integral T>
+			constexpr Size& operator+=(T value) noexcept {
+				*this = *this + value;
+				return *this;
+			}
+
+			/**
+			 * @brief Subtract an integer.
+			 * @tparam T Integral type.
+			 * @param value Subtrahend.
+			 * @return @c *this.
+			 */
+			template<Type::Integral T>
+			constexpr Size& operator-=(T value) noexcept {
+				*this = *this - value;
+				return *this;
+			}
+
+			/**
+			 * @brief Multiply by an integer.
+			 * @tparam T Integral type.
+			 * @param value Factor.
+			 * @return @c *this.
+			 */
+			template<Type::Integral T>
+			constexpr Size& operator*=(T value) noexcept {
+				*this = *this * value;
+				return *this;
+			}
+
+			/**
+			 * @brief Divide by an integer.
+			 * @tparam T Integral type.
+			 * @param value Divisor.
+			 * @return @c *this.
+			 */
+			template<Type::Integral T>
+			constexpr Size& operator/=(T value) noexcept {
+				*this = *this / value;
+				return *this;
+			}
+
+			/**
+			 * @brief Remainder with an integer.
+			 * @tparam T Integral type.
+			 * @param value Divisor.
+			 * @return @c *this.
+			 */
+			template<Type::Integral T>
+			constexpr Size& operator%=(T value) noexcept {
+				*this = *this % value;
+				return *this;
+			}
 
 		private:
-			std::uint64_t m_value;	///< Byte count
+			std::uint64_t m_value;	///< Unit count
+
+			/**
+			 * @brief Tag for a pre-normalized store.
+			 */
+			struct Raw {
+				explicit constexpr Raw() noexcept = default;
+			};
+
+			/**
+			 * @brief Private raw store.
+			 * @param value Already-normalized count.
+			 */
+			explicit constexpr Size(Raw, std::uint64_t value) noexcept: m_value(value) {}
+
+			/**
+			 * @brief Convert a construction operand.
+			 * @tparam T Integral type.
+			 * @param value Operand.
+			 * @return Non-negative `uint64_t`.
+			 */
+			template<Type::Integral T>
+			static constexpr std::uint64_t FromIntegral(T value) noexcept {
+				if constexpr (Type::Signed<T>)
+					assert(value >= T{0});
+				return static_cast<std::uint64_t>(value);
+			}
+
+			/**
+			 * @brief Saturated-debug add.
+			 * @param lhs Left.
+			 * @param rhs Right.
+			 * @return Sum or wrap.
+			 */
+			static constexpr std::uint64_t Add(std::uint64_t lhs, std::uint64_t rhs) noexcept {
+				assert(lhs <= std::numeric_limits<std::uint64_t>::max() - rhs);
+				return lhs + rhs;
+			}
+
+			/**
+			 * @brief Saturated-debug sub.
+			 * @param lhs Left.
+			 * @param rhs Right.
+			 * @return Difference or wrap.
+			 */
+			static constexpr std::uint64_t Sub(std::uint64_t lhs, std::uint64_t rhs) noexcept {
+				assert(lhs >= rhs);
+				return lhs - rhs;
+			}
+
+			/**
+			 * @brief Saturated-debug mul.
+			 * @param lhs Left.
+			 * @param rhs Right.
+			 * @return Product or wrap.
+			 */
+			static constexpr std::uint64_t Mul(std::uint64_t lhs, std::uint64_t rhs) noexcept {
+				assert(rhs == 0 || lhs <= std::numeric_limits<std::uint64_t>::max() / rhs);
+				return lhs * rhs;
+			}
+
+			/**
+			 * @brief Quotient.
+			 * @param lhs Dividend.
+			 * @param rhs Divisor.
+			 * @return Quotient.
+			 */
+			static constexpr std::uint64_t Div(std::uint64_t lhs, std::uint64_t rhs) noexcept {
+				assert(rhs != 0);
+				return lhs / rhs;
+			}
+
+			/**
+			 * @brief Remainder.
+			 * @param lhs Dividend.
+			 * @param rhs Divisor.
+			 * @return Remainder.
+			 */
+			static constexpr std::uint64_t Mod(std::uint64_t lhs, std::uint64_t rhs) noexcept {
+				assert(rhs != 0);
+				return lhs % rhs;
+			}
+
+			/**
+			 * @brief Add a possibly signed operand.
+			 * @tparam T Integral type.
+			 * @param lhs Left count.
+			 * @param rhs Operand.
+			 * @return @ref Size.
+			 */
+			template<Type::Integral T>
+			static constexpr Size MixAdd(std::uint64_t lhs, T rhs) noexcept {
+				if constexpr (Type::Signed<T>) {
+					if (rhs < T{0}) {
+						const auto mag = static_cast<std::uint64_t>(0) - static_cast<std::uint64_t>(rhs);
+						return Size(Raw{}, Sub(lhs, mag));
+					}
+				}
+				return Size(Raw{}, Add(lhs, static_cast<std::uint64_t>(rhs)));
+			}
+
+			/**
+			 * @brief Subtract a possibly signed operand.
+			 * @tparam T Integral type.
+			 * @param lhs Left count.
+			 * @param rhs Operand.
+			 * @return @ref Size.
+			 */
+			template<Type::Integral T>
+			static constexpr Size MixSub(std::uint64_t lhs, T rhs) noexcept {
+				if constexpr (Type::Signed<T>) {
+					if (rhs < T{0}) {
+						const auto mag = static_cast<std::uint64_t>(0) - static_cast<std::uint64_t>(rhs);
+						return Size(Raw{}, Add(lhs, mag));
+					}
+				}
+				return Size(Raw{}, Sub(lhs, static_cast<std::uint64_t>(rhs)));
+			}
+
+			/**
+			 * @brief Multiply by a possibly signed operand.
+			 * @tparam T Integral type.
+			 * @param lhs Left count.
+			 * @param rhs Operand.
+			 * @return @ref Size.
+			 */
+			template<Type::Integral T>
+			static constexpr Size MixMul(std::uint64_t lhs, T rhs) noexcept {
+				if constexpr (Type::Signed<T>)
+					assert(rhs >= T{0});
+				return Size(Raw{}, Mul(lhs, static_cast<std::uint64_t>(rhs)));
+			}
 	};
 
 	/**
-	 * @struct Unit
-	 * @brief Scale factor for @ref Size (`KiB`, `KB`, …).
-	 */
-	struct Unit {
-		std::uint64_t factor;	///< Bytes in one unit
-	};
-
-	/**
-	 * @name IEC units
-	 * @{
-	 */
-	inline constexpr Unit B{1};				///< 2^0 bytes
-	inline constexpr Unit KiB{1024};			///< 2^10 bytes
-	inline constexpr Unit MiB{1024ull * 1024};		///< 2^20 bytes
-	inline constexpr Unit GiB{1024ull * 1024 * 1024};	///< 2^30 bytes
-	inline constexpr Unit TiB{1024ull * 1024 * 1024 * 1024};			///< 2^40 bytes
-	inline constexpr Unit PiB{1024ull * 1024 * 1024 * 1024 * 1024};		///< 2^50 bytes
-	inline constexpr Unit EiB{1024ull * 1024 * 1024 * 1024 * 1024 * 1024};	///< 2^60 bytes
-	/** @} */
-
-	/**
-	 * @name SI units
-	 * @{
-	 */
-	inline constexpr Unit KB{1000};				///< 10^3 bytes
-	inline constexpr Unit MB{1000ull * 1000};		///< 10^6 bytes
-	inline constexpr Unit GB{1000ull * 1000 * 1000};	///< 10^9 bytes
-	inline constexpr Unit TB{1000ull * 1000 * 1000 * 1000};			///< 10^12 bytes
-	inline constexpr Unit PB{1000ull * 1000 * 1000 * 1000 * 1000};		///< 10^15 bytes
-	inline constexpr Unit EB{1000ull * 1000 * 1000 * 1000 * 1000 * 1000};	///< 10^18 bytes
-	/** @} */
-
-	/**
-	 * @brief Scale @p unit by an integer count.
+	 * @brief Mixed equality.
 	 * @tparam T Integral type.
-	 * @param count Multiplier.
-	 * @param unit Unit.
-	 * @return `count * unit` as @ref Size.
-	 * @note A negative @p count or overflow of `uint64_t` is undefined. Checked with `assert` when assertions are on.
+	 * @param lhs Left count.
+	 * @param rhs Right integer.
+	 * @return Whether the numeric values match.
 	 */
 	template<Type::Integral T>
-	constexpr Size operator*(T count, Unit unit) noexcept {
-		if constexpr (Type::Signed<T>)
-			assert(count >= T{0});
-		const std::uint64_t factor = static_cast<std::uint64_t>(count);
-		assert(unit.factor == 0 || factor <= std::numeric_limits<std::uint64_t>::max() / unit.factor);
-		return Size(factor * unit.factor);
+	constexpr bool operator==(Size lhs, T rhs) noexcept {
+		return lhs == Size(rhs);
 	}
 
 	/**
-	 * @brief Scale @p unit by an integer count.
+	 * @brief Mixed equality.
 	 * @tparam T Integral type.
-	 * @param unit Unit.
-	 * @param count Multiplier.
-	 * @return `unit * count` as @ref Size.
+	 * @param lhs Left integer.
+	 * @param rhs Right count.
+	 * @return Whether the numeric values match.
 	 */
 	template<Type::Integral T>
-	constexpr Size operator*(Unit unit, T count) noexcept {
-		return count * unit;
+	constexpr bool operator==(T lhs, Size rhs) noexcept {
+		return Size(lhs) == rhs;
 	}
 
 	/**
-	 * @brief Scale @p unit by a non-negative real factor.
-	 * @tparam T Floating-point type.
-	 * @param count Multiplier.
-	 * @param unit Unit.
-	 * @return Nearest byte count as @ref Size.
-	 * @note A negative factor or a result above `uint64_t` is undefined. Checked with `assert` when assertions are on.
-	 */
-	template<Type::FloatingPoint T>
-	constexpr Size operator*(T count, Unit unit) noexcept {
-		assert(count >= T{0});
-		const long double product = static_cast<long double>(count) * static_cast<long double>(unit.factor);
-		assert(product <= static_cast<long double>(std::numeric_limits<std::uint64_t>::max()));
-		return Size(static_cast<std::uint64_t>(product + 0.5L));
-	}
-
-	/**
-	 * @brief Scale @p unit by a non-negative real factor.
-	 * @tparam T Floating-point type.
-	 * @param unit Unit.
-	 * @param count Multiplier.
-	 * @return Nearest byte count as @ref Size.
-	 */
-	template<Type::FloatingPoint T>
-	constexpr Size operator*(Unit unit, T count) noexcept {
-		return count * unit;
-	}
-
-	/**
-	 * @brief Scale @p size by a positive integer.
+	 * @brief Mixed order.
 	 * @tparam T Integral type.
-	 * @param count Multiplier (`> 0`).
-	 * @param size Size.
-	 * @return `count * size`.
-	 * @note `@p count <= 0` or overflow of `uint64_t` is undefined. Checked with `assert` when assertions are on.
+	 * @param lhs Left count.
+	 * @param rhs Right integer.
+	 * @return Ordering.
 	 */
 	template<Type::Integral T>
-	constexpr Size operator*(T count, const Size& size) noexcept {
-		if constexpr (Type::Signed<T>)
-			assert(count > T{0});
-		else
-			assert(count != T{0});
-		const std::uint64_t factor = static_cast<std::uint64_t>(count);
-		assert(size.Value() == 0 || factor <= std::numeric_limits<std::uint64_t>::max() / size.Value());
-		return Size(factor * size.Value());
+	constexpr std::strong_ordering operator<=>(Size lhs, T rhs) noexcept {
+		return lhs <=> Size(rhs);
 	}
 
 	/**
-	 * @brief Scale @p size by a positive integer.
+	 * @brief Mixed order.
 	 * @tparam T Integral type.
-	 * @param size Size.
-	 * @param count Multiplier (`> 0`).
-	 * @return `size * count`.
+	 * @param lhs Left integer.
+	 * @param rhs Right count.
+	 * @return Ordering.
 	 */
 	template<Type::Integral T>
-	constexpr Size operator*(const Size& size, T count) noexcept {
-		return count * size;
+	constexpr std::strong_ordering operator<=>(T lhs, Size rhs) noexcept {
+		return Size(lhs) <=> rhs;
 	}
 
 	/**
-	 * @brief How many pieces of @p count bytes fit in @p size.
+	 * @brief Mixed sum.
 	 * @tparam T Integral type.
-	 * @param size Size.
-	 * @param count Piece size in bytes (`> 0`).
-	 * @return Quotient.
-	 * @note `@p count <= 0` is undefined. Checked with `assert` when assertions are on.
+	 * @param lhs Left addend.
+	 * @param rhs Right addend.
+	 * @return Sum as @ref Size.
 	 */
 	template<Type::Integral T>
-	constexpr std::uint64_t operator/(const Size& size, T count) noexcept {
-		if constexpr (Type::Signed<T>)
-			assert(count > T{0});
-		else
-			assert(count != T{0});
-		return size.Value() / static_cast<std::uint64_t>(count);
+	constexpr Size operator+(Size lhs, T rhs) noexcept {
+		return Size::MixAdd(lhs.m_value, rhs);
 	}
 
 	/**
-	 * @brief Leftover bytes after splitting @p size into pieces of @p count bytes.
+	 * @brief Mixed sum.
 	 * @tparam T Integral type.
-	 * @param size Size.
-	 * @param count Piece size in bytes (`> 0`).
-	 * @return Remainder.
-	 * @note `@p count <= 0` is undefined. Checked with `assert` when assertions are on.
+	 * @param lhs Left addend.
+	 * @param rhs Right addend.
+	 * @return Sum as @ref Size.
 	 */
 	template<Type::Integral T>
-	constexpr std::uint64_t operator%(const Size& size, T count) noexcept {
-		if constexpr (Type::Signed<T>)
-			assert(count > T{0});
-		else
-			assert(count != T{0});
-		return size.Value() % static_cast<std::uint64_t>(count);
+	constexpr Size operator+(T lhs, Size rhs) noexcept {
+		return Size::MixAdd(rhs.m_value, lhs);
 	}
 
 	/**
-	 * @brief Writes the IEC text of @p size.
+	 * @brief Mixed difference.
+	 * @tparam T Integral type.
+	 * @param lhs Minuend.
+	 * @param rhs Subtrahend.
+	 * @return Difference as @ref Size.
+	 */
+	template<Type::Integral T>
+	constexpr Size operator-(Size lhs, T rhs) noexcept {
+		return Size::MixSub(lhs.m_value, rhs);
+	}
+
+	/**
+	 * @brief Mixed difference.
+	 * @tparam T Integral type.
+	 * @param lhs Minuend.
+	 * @param rhs Subtrahend.
+	 * @return Difference as @ref Size.
+	 */
+	template<Type::Integral T>
+	constexpr Size operator-(T lhs, Size rhs) noexcept {
+		return Size(lhs) - rhs;
+	}
+
+	/**
+	 * @brief Mixed product.
+	 * @tparam T Integral type.
+	 * @param lhs Left factor.
+	 * @param rhs Right factor.
+	 * @return Product as @ref Size.
+	 */
+	template<Type::Integral T>
+	constexpr Size operator*(Size lhs, T rhs) noexcept {
+		return Size::MixMul(lhs.m_value, rhs);
+	}
+
+	/**
+	 * @brief Mixed product.
+	 * @tparam T Integral type.
+	 * @param lhs Left factor.
+	 * @param rhs Right factor.
+	 * @return Product as @ref Size.
+	 */
+	template<Type::Integral T>
+	constexpr Size operator*(T lhs, Size rhs) noexcept {
+		return Size::MixMul(rhs.m_value, lhs);
+	}
+
+	/**
+	 * @brief Mixed quotient.
+	 * @tparam T Integral type.
+	 * @param lhs Dividend.
+	 * @param rhs Divisor.
+	 * @return Quotient as @ref Size.
+	 */
+	template<Type::Integral T>
+	constexpr Size operator/(Size lhs, T rhs) noexcept {
+		return lhs / Size(rhs);
+	}
+
+	/**
+	 * @brief Mixed quotient.
+	 * @tparam T Integral type.
+	 * @param lhs Dividend.
+	 * @param rhs Divisor.
+	 * @return Quotient as @ref Size.
+	 */
+	template<Type::Integral T>
+	constexpr Size operator/(T lhs, Size rhs) noexcept {
+		return Size(lhs) / rhs;
+	}
+
+	/**
+	 * @brief Mixed remainder.
+	 * @tparam T Integral type.
+	 * @param lhs Dividend.
+	 * @param rhs Divisor.
+	 * @return Remainder as @ref Size.
+	 */
+	template<Type::Integral T>
+	constexpr Size operator%(Size lhs, T rhs) noexcept {
+		return lhs % Size(rhs);
+	}
+
+	/**
+	 * @brief Mixed remainder.
+	 * @tparam T Integral type.
+	 * @param lhs Dividend.
+	 * @param rhs Divisor.
+	 * @return Remainder as @ref Size.
+	 */
+	template<Type::Integral T>
+	constexpr Size operator%(T lhs, Size rhs) noexcept {
+		return Size(lhs) % rhs;
+	}
+
+	/**
+	 * @brief Writes the decimal count.
 	 * @param stream Destination.
-	 * @param size Value.
+	 * @param size Count.
 	 * @return @p stream.
 	 */
-	inline std::ostream& operator<<(std::ostream& stream, const Size& size) {
-		return stream << static_cast<std::string>(size);
+	inline std::ostream& operator<<(std::ostream& stream, Size size) {
+		stream << static_cast<std::string>(size);
+		return stream;
 	}
+
+	extern template STORMBYTE_PUBLIC Size::Size(char) noexcept;
+	extern template STORMBYTE_PUBLIC Size::Size(signed char) noexcept;
+	extern template STORMBYTE_PUBLIC Size::Size(unsigned char) noexcept;
+	extern template STORMBYTE_PUBLIC Size::Size(short) noexcept;
+	extern template STORMBYTE_PUBLIC Size::Size(unsigned short) noexcept;
+	extern template STORMBYTE_PUBLIC Size::Size(int) noexcept;
+	extern template STORMBYTE_PUBLIC Size::Size(unsigned int) noexcept;
+	extern template STORMBYTE_PUBLIC Size::Size(long) noexcept;
+	extern template STORMBYTE_PUBLIC Size::Size(unsigned long) noexcept;
+	extern template STORMBYTE_PUBLIC Size::Size(long long) noexcept;
+	extern template STORMBYTE_PUBLIC Size::Size(unsigned long long) noexcept;
+	extern template STORMBYTE_PUBLIC Size::Size(wchar_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size::Size(char8_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size::Size(char16_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size::Size(char32_t) noexcept;
+
+	extern template STORMBYTE_PUBLIC Size& Size::operator=(char) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator=(signed char) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator=(unsigned char) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator=(short) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator=(unsigned short) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator=(int) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator=(unsigned int) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator=(long) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator=(unsigned long) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator=(long long) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator=(unsigned long long) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator=(wchar_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator=(char8_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator=(char16_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator=(char32_t) noexcept;
+
+	extern template STORMBYTE_PUBLIC Size& Size::operator+=(char) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator+=(signed char) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator+=(unsigned char) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator+=(short) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator+=(unsigned short) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator+=(int) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator+=(unsigned int) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator+=(long) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator+=(unsigned long) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator+=(long long) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator+=(unsigned long long) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator+=(wchar_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator+=(char8_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator+=(char16_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator+=(char32_t) noexcept;
+
+	extern template STORMBYTE_PUBLIC Size& Size::operator-=(char) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator-=(signed char) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator-=(unsigned char) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator-=(short) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator-=(unsigned short) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator-=(int) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator-=(unsigned int) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator-=(long) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator-=(unsigned long) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator-=(long long) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator-=(unsigned long long) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator-=(wchar_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator-=(char8_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator-=(char16_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator-=(char32_t) noexcept;
+
+	extern template STORMBYTE_PUBLIC Size& Size::operator*=(char) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator*=(signed char) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator*=(unsigned char) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator*=(short) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator*=(unsigned short) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator*=(int) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator*=(unsigned int) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator*=(long) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator*=(unsigned long) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator*=(long long) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator*=(unsigned long long) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator*=(wchar_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator*=(char8_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator*=(char16_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator*=(char32_t) noexcept;
+
+	extern template STORMBYTE_PUBLIC Size& Size::operator/=(char) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator/=(signed char) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator/=(unsigned char) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator/=(short) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator/=(unsigned short) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator/=(int) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator/=(unsigned int) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator/=(long) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator/=(unsigned long) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator/=(long long) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator/=(unsigned long long) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator/=(wchar_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator/=(char8_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator/=(char16_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator/=(char32_t) noexcept;
+
+	extern template STORMBYTE_PUBLIC Size& Size::operator%=(char) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator%=(signed char) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator%=(unsigned char) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator%=(short) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator%=(unsigned short) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator%=(int) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator%=(unsigned int) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator%=(long) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator%=(unsigned long) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator%=(long long) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator%=(unsigned long long) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator%=(wchar_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator%=(char8_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator%=(char16_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size& Size::operator%=(char32_t) noexcept;
+
+	extern template STORMBYTE_PUBLIC Size::operator char() const noexcept;
+	extern template STORMBYTE_PUBLIC Size::operator signed char() const noexcept;
+	extern template STORMBYTE_PUBLIC Size::operator unsigned char() const noexcept;
+	extern template STORMBYTE_PUBLIC Size::operator short() const noexcept;
+	extern template STORMBYTE_PUBLIC Size::operator unsigned short() const noexcept;
+	extern template STORMBYTE_PUBLIC Size::operator int() const noexcept;
+	extern template STORMBYTE_PUBLIC Size::operator unsigned int() const noexcept;
+	extern template STORMBYTE_PUBLIC Size::operator long() const noexcept;
+	extern template STORMBYTE_PUBLIC Size::operator long long() const noexcept;
+	extern template STORMBYTE_PUBLIC Size::operator wchar_t() const noexcept;
+	extern template STORMBYTE_PUBLIC Size::operator char8_t() const noexcept;
+	extern template STORMBYTE_PUBLIC Size::operator char16_t() const noexcept;
+	extern template STORMBYTE_PUBLIC Size::operator char32_t() const noexcept;
+
+	extern template STORMBYTE_PUBLIC bool operator==(Size, char) noexcept;
+	extern template STORMBYTE_PUBLIC bool operator==(Size, signed char) noexcept;
+	extern template STORMBYTE_PUBLIC bool operator==(Size, unsigned char) noexcept;
+	extern template STORMBYTE_PUBLIC bool operator==(Size, short) noexcept;
+	extern template STORMBYTE_PUBLIC bool operator==(Size, unsigned short) noexcept;
+	extern template STORMBYTE_PUBLIC bool operator==(Size, int) noexcept;
+	extern template STORMBYTE_PUBLIC bool operator==(Size, unsigned int) noexcept;
+	extern template STORMBYTE_PUBLIC bool operator==(Size, long) noexcept;
+	extern template STORMBYTE_PUBLIC bool operator==(Size, unsigned long) noexcept;
+	extern template STORMBYTE_PUBLIC bool operator==(Size, long long) noexcept;
+	extern template STORMBYTE_PUBLIC bool operator==(Size, unsigned long long) noexcept;
+	extern template STORMBYTE_PUBLIC bool operator==(Size, wchar_t) noexcept;
+	extern template STORMBYTE_PUBLIC bool operator==(Size, char8_t) noexcept;
+	extern template STORMBYTE_PUBLIC bool operator==(Size, char16_t) noexcept;
+	extern template STORMBYTE_PUBLIC bool operator==(Size, char32_t) noexcept;
+
+	extern template STORMBYTE_PUBLIC bool operator==(char, Size) noexcept;
+	extern template STORMBYTE_PUBLIC bool operator==(signed char, Size) noexcept;
+	extern template STORMBYTE_PUBLIC bool operator==(unsigned char, Size) noexcept;
+	extern template STORMBYTE_PUBLIC bool operator==(short, Size) noexcept;
+	extern template STORMBYTE_PUBLIC bool operator==(unsigned short, Size) noexcept;
+	extern template STORMBYTE_PUBLIC bool operator==(int, Size) noexcept;
+	extern template STORMBYTE_PUBLIC bool operator==(unsigned int, Size) noexcept;
+	extern template STORMBYTE_PUBLIC bool operator==(long, Size) noexcept;
+	extern template STORMBYTE_PUBLIC bool operator==(unsigned long, Size) noexcept;
+	extern template STORMBYTE_PUBLIC bool operator==(long long, Size) noexcept;
+	extern template STORMBYTE_PUBLIC bool operator==(unsigned long long, Size) noexcept;
+	extern template STORMBYTE_PUBLIC bool operator==(wchar_t, Size) noexcept;
+	extern template STORMBYTE_PUBLIC bool operator==(char8_t, Size) noexcept;
+	extern template STORMBYTE_PUBLIC bool operator==(char16_t, Size) noexcept;
+	extern template STORMBYTE_PUBLIC bool operator==(char32_t, Size) noexcept;
+
+	extern template STORMBYTE_PUBLIC std::strong_ordering operator<=>(Size, char) noexcept;
+	extern template STORMBYTE_PUBLIC std::strong_ordering operator<=>(Size, signed char) noexcept;
+	extern template STORMBYTE_PUBLIC std::strong_ordering operator<=>(Size, unsigned char) noexcept;
+	extern template STORMBYTE_PUBLIC std::strong_ordering operator<=>(Size, short) noexcept;
+	extern template STORMBYTE_PUBLIC std::strong_ordering operator<=>(Size, unsigned short) noexcept;
+	extern template STORMBYTE_PUBLIC std::strong_ordering operator<=>(Size, int) noexcept;
+	extern template STORMBYTE_PUBLIC std::strong_ordering operator<=>(Size, unsigned int) noexcept;
+	extern template STORMBYTE_PUBLIC std::strong_ordering operator<=>(Size, long) noexcept;
+	extern template STORMBYTE_PUBLIC std::strong_ordering operator<=>(Size, unsigned long) noexcept;
+	extern template STORMBYTE_PUBLIC std::strong_ordering operator<=>(Size, long long) noexcept;
+	extern template STORMBYTE_PUBLIC std::strong_ordering operator<=>(Size, unsigned long long) noexcept;
+	extern template STORMBYTE_PUBLIC std::strong_ordering operator<=>(Size, wchar_t) noexcept;
+	extern template STORMBYTE_PUBLIC std::strong_ordering operator<=>(Size, char8_t) noexcept;
+	extern template STORMBYTE_PUBLIC std::strong_ordering operator<=>(Size, char16_t) noexcept;
+	extern template STORMBYTE_PUBLIC std::strong_ordering operator<=>(Size, char32_t) noexcept;
+
+	extern template STORMBYTE_PUBLIC std::strong_ordering operator<=>(char, Size) noexcept;
+	extern template STORMBYTE_PUBLIC std::strong_ordering operator<=>(signed char, Size) noexcept;
+	extern template STORMBYTE_PUBLIC std::strong_ordering operator<=>(unsigned char, Size) noexcept;
+	extern template STORMBYTE_PUBLIC std::strong_ordering operator<=>(short, Size) noexcept;
+	extern template STORMBYTE_PUBLIC std::strong_ordering operator<=>(unsigned short, Size) noexcept;
+	extern template STORMBYTE_PUBLIC std::strong_ordering operator<=>(int, Size) noexcept;
+	extern template STORMBYTE_PUBLIC std::strong_ordering operator<=>(unsigned int, Size) noexcept;
+	extern template STORMBYTE_PUBLIC std::strong_ordering operator<=>(long, Size) noexcept;
+	extern template STORMBYTE_PUBLIC std::strong_ordering operator<=>(unsigned long, Size) noexcept;
+	extern template STORMBYTE_PUBLIC std::strong_ordering operator<=>(long long, Size) noexcept;
+	extern template STORMBYTE_PUBLIC std::strong_ordering operator<=>(unsigned long long, Size) noexcept;
+	extern template STORMBYTE_PUBLIC std::strong_ordering operator<=>(wchar_t, Size) noexcept;
+	extern template STORMBYTE_PUBLIC std::strong_ordering operator<=>(char8_t, Size) noexcept;
+	extern template STORMBYTE_PUBLIC std::strong_ordering operator<=>(char16_t, Size) noexcept;
+	extern template STORMBYTE_PUBLIC std::strong_ordering operator<=>(char32_t, Size) noexcept;
+
+	extern template STORMBYTE_PUBLIC Size operator+(Size, char) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator+(Size, signed char) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator+(Size, unsigned char) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator+(Size, short) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator+(Size, unsigned short) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator+(Size, int) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator+(Size, unsigned int) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator+(Size, long) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator+(Size, unsigned long) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator+(Size, long long) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator+(Size, unsigned long long) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator+(Size, wchar_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator+(Size, char8_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator+(Size, char16_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator+(Size, char32_t) noexcept;
+
+	extern template STORMBYTE_PUBLIC Size operator+(char, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator+(signed char, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator+(unsigned char, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator+(short, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator+(unsigned short, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator+(int, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator+(unsigned int, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator+(long, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator+(unsigned long, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator+(long long, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator+(unsigned long long, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator+(wchar_t, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator+(char8_t, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator+(char16_t, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator+(char32_t, Size) noexcept;
+
+	extern template STORMBYTE_PUBLIC Size operator-(Size, char) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator-(Size, signed char) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator-(Size, unsigned char) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator-(Size, short) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator-(Size, unsigned short) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator-(Size, int) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator-(Size, unsigned int) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator-(Size, long) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator-(Size, unsigned long) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator-(Size, long long) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator-(Size, unsigned long long) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator-(Size, wchar_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator-(Size, char8_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator-(Size, char16_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator-(Size, char32_t) noexcept;
+
+	extern template STORMBYTE_PUBLIC Size operator-(char, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator-(signed char, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator-(unsigned char, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator-(short, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator-(unsigned short, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator-(int, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator-(unsigned int, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator-(long, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator-(unsigned long, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator-(long long, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator-(unsigned long long, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator-(wchar_t, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator-(char8_t, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator-(char16_t, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator-(char32_t, Size) noexcept;
+
+	extern template STORMBYTE_PUBLIC Size operator*(Size, char) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator*(Size, signed char) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator*(Size, unsigned char) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator*(Size, short) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator*(Size, unsigned short) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator*(Size, int) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator*(Size, unsigned int) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator*(Size, long) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator*(Size, unsigned long) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator*(Size, long long) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator*(Size, unsigned long long) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator*(Size, wchar_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator*(Size, char8_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator*(Size, char16_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator*(Size, char32_t) noexcept;
+
+	extern template STORMBYTE_PUBLIC Size operator*(char, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator*(signed char, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator*(unsigned char, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator*(short, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator*(unsigned short, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator*(int, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator*(unsigned int, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator*(long, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator*(unsigned long, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator*(long long, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator*(unsigned long long, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator*(wchar_t, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator*(char8_t, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator*(char16_t, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator*(char32_t, Size) noexcept;
+
+	extern template STORMBYTE_PUBLIC Size operator/(Size, char) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator/(Size, signed char) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator/(Size, unsigned char) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator/(Size, short) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator/(Size, unsigned short) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator/(Size, int) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator/(Size, unsigned int) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator/(Size, long) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator/(Size, unsigned long) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator/(Size, long long) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator/(Size, unsigned long long) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator/(Size, wchar_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator/(Size, char8_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator/(Size, char16_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator/(Size, char32_t) noexcept;
+
+	extern template STORMBYTE_PUBLIC Size operator/(char, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator/(signed char, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator/(unsigned char, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator/(short, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator/(unsigned short, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator/(int, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator/(unsigned int, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator/(long, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator/(unsigned long, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator/(long long, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator/(unsigned long long, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator/(wchar_t, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator/(char8_t, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator/(char16_t, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator/(char32_t, Size) noexcept;
+
+	extern template STORMBYTE_PUBLIC Size operator%(Size, char) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator%(Size, signed char) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator%(Size, unsigned char) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator%(Size, short) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator%(Size, unsigned short) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator%(Size, int) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator%(Size, unsigned int) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator%(Size, long) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator%(Size, unsigned long) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator%(Size, long long) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator%(Size, unsigned long long) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator%(Size, wchar_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator%(Size, char8_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator%(Size, char16_t) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator%(Size, char32_t) noexcept;
+
+	extern template STORMBYTE_PUBLIC Size operator%(char, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator%(signed char, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator%(unsigned char, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator%(short, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator%(unsigned short, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator%(int, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator%(unsigned int, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator%(long, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator%(unsigned long, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator%(long long, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator%(unsigned long long, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator%(wchar_t, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator%(char8_t, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator%(char16_t, Size) noexcept;
+	extern template STORMBYTE_PUBLIC Size operator%(char32_t, Size) noexcept;
 }

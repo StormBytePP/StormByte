@@ -40,6 +40,7 @@
 #pragma once
 
 #include <StormByte/type_traits/conversions.hxx>
+#include <StormByte/type_traits/relations.hxx>
 
 #include <type_traits>
 
@@ -48,6 +49,9 @@
  * @brief Root namespace of the StormByte suite.
  */
 namespace StormByte {
+	class Size;		///< Unit count. Defined in size.hxx. Forwarded so Type::Numeral can name it.
+	class ByteSize;	///< Octet count. Defined in byte_size.hxx. Forwarded so Type::Numeral can name it.
+
 	/**
 	 * @namespace Type
 	 * @brief Named concepts and small type utilities used across the suite.
@@ -229,6 +233,31 @@ namespace StormByte {
 		 */
 		template<typename T>
 		concept Unsigned = std::is_unsigned_v<T>;
+
+		/**
+		 * @brief Host integer or suite count type.
+		 * @tparam T Type to test (cv/ref stripped).
+		 *
+		 * Matches every @ref StormByte::Type::Integral,
+		 * @ref StormByte::Size (abstract units) and
+		 * @ref StormByte::ByteSize (octets). Both suite types store a
+		 * `uint64_t` and convert implicitly only to `std::size_t`.
+		 *
+		 * Does not match floating-point types.
+		 *
+		 * @code
+		 * static_assert(Type::Numeral<int>);
+		 * static_assert(Type::Numeral<std::size_t>);
+		 * static_assert(Type::Numeral<Size>);
+		 * static_assert(Type::Numeral<ByteSize>);
+		 * static_assert(!Type::Numeral<double>);
+		 * @endcode
+		 */
+		template<typename T>
+		concept Numeral =
+			Integral<std::remove_cvref_t<T>> ||
+			SameAs<std::remove_cvref_t<T>, Size> ||
+			SameAs<std::remove_cvref_t<T>, ByteSize>;
 
 		/** @} */
 

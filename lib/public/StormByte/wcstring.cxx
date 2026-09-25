@@ -109,14 +109,15 @@ void WCString::Reset(const wchar_t* str) noexcept {
 	m_data = Duplicate(str);
 }
 
-std::size_t WCString::Length() const noexcept {
-	return m_data ? std::wcslen(m_data) : 0;
+Size WCString::Length() const noexcept {
+	return m_data ? Size{std::wcslen(m_data)} : Size{};
 }
 
-wchar_t WCString::operator[](std::size_t index) const noexcept {
+wchar_t WCString::operator[](const Size& index) const noexcept {
 	assert(m_data != nullptr);
-	assert(index <= std::wcslen(m_data));
-	return m_data[index];
+	const Size length{std::wcslen(m_data)};
+	assert(index <= length);
+	return m_data[static_cast<std::size_t>(index)];
 }
 
 void WCString::swap(WCString& other) noexcept {

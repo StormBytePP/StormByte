@@ -38,6 +38,7 @@
  */
 
 #include <StormByte/cstring.hxx>
+#include <StormByte/size.hxx>
 #include <StormByte/test_handlers.h>
 
 #include <compare>
@@ -65,7 +66,7 @@ int test_default_is_null() {
 	int result = 0;
 	CString text;
 	ASSERT_TRUE("test_default_is_null", View(text) == nullptr);
-	ASSERT_EQUAL("test_default_is_null", 0u, text.Length());
+	ASSERT_EQUAL("test_default_is_null", Size{0}, text.Length());
 	ASSERT_FALSE("test_default_is_null", static_cast<bool>(text));
 	RETURN_TEST("test_default_is_null", result);
 }
@@ -84,7 +85,7 @@ int test_construct_from_empty() {
 	ASSERT_TRUE("test_construct_from_empty", View(text) != nullptr);
 	ASSERT_TRUE("test_construct_from_empty", static_cast<bool>(text));
 	ASSERT_EQUAL("test_construct_from_empty", 0, std::strcmp(View(text), ""));
-	ASSERT_EQUAL("test_construct_from_empty", 0u, text.Length());
+	ASSERT_EQUAL("test_construct_from_empty", Size{0}, text.Length());
 	RETURN_TEST("test_construct_from_empty", result);
 }
 
@@ -94,7 +95,7 @@ int test_construct_copies_text() {
 	CString text(raw);
 	ASSERT_TRUE("test_construct_copies_text", View(text) != raw);
 	ASSERT_EQUAL("test_construct_copies_text", 0, std::strcmp(View(text), "hello"));
-	ASSERT_EQUAL("test_construct_copies_text", 5u, text.Length());
+	ASSERT_EQUAL("test_construct_copies_text", Size{5}, text.Length());
 	ASSERT_TRUE("test_construct_copies_text", static_cast<bool>(text));
 	RETURN_TEST("test_construct_copies_text", result);
 }
@@ -103,7 +104,7 @@ int test_construct_stops_at_embedded_nul() {
 	int result = 0;
 	const char raw[] = { 'a', 'b', '\0', 'c', '\0' };
 	CString text(raw);
-	ASSERT_EQUAL("test_construct_stops_at_embedded_nul", 2u, text.Length());
+	ASSERT_EQUAL("test_construct_stops_at_embedded_nul", Size{2}, text.Length());
 	ASSERT_EQUAL("test_construct_stops_at_embedded_nul", 0, std::strcmp(View(text), "ab"));
 	RETURN_TEST("test_construct_stops_at_embedded_nul", result);
 }
@@ -112,7 +113,7 @@ int test_construct_long() {
 	int result = 0;
 	const std::string raw(4096, 'X');
 	CString text(raw.c_str());
-	ASSERT_EQUAL("test_construct_long", raw.size(), text.Length());
+	ASSERT_EQUAL("test_construct_long", Size{raw.size()}, text.Length());
 	ASSERT_EQUAL("test_construct_long", 0, std::strcmp(View(text), raw.c_str()));
 	RETURN_TEST("test_construct_long", result);
 }
@@ -233,8 +234,8 @@ int test_swap_exchanges() {
 int test_subscript_characters() {
 	int result = 0;
 	CString text("ab");
-	ASSERT_EQUAL("test_subscript_characters", 'a', text[0]);
-	ASSERT_EQUAL("test_subscript_characters", 'b', text[1]);
+	ASSERT_EQUAL("test_subscript_characters", 'a', text[Size{0}]);
+	ASSERT_EQUAL("test_subscript_characters", 'b', text[Size{1}]);
 	RETURN_TEST("test_subscript_characters", result);
 }
 
@@ -248,7 +249,7 @@ int test_subscript_nul_at_length() {
 int test_subscript_empty() {
 	int result = 0;
 	CString text("");
-	ASSERT_EQUAL("test_subscript_empty", '\0', text[0]);
+	ASSERT_EQUAL("test_subscript_empty", '\0', text[Size{0}]);
 	ASSERT_EQUAL("test_subscript_empty", '\0', text[text.Length()]);
 	RETURN_TEST("test_subscript_empty", result);
 }

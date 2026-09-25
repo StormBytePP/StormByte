@@ -46,6 +46,7 @@
 #include <vector>
 
 using StormByte::BinaryData;
+using StormByte::ByteSize;
 using StormByte::CString;
 using StormByte::OutOfBoundsError;
 using StormByte::Size;
@@ -54,23 +55,23 @@ struct BinaryData::Storage {
 	std::vector<std::byte> bytes;
 };
 
-static std::size_t AsIndex(const Size& n) {
-	return static_cast<std::size_t>(n.Value());
+static std::size_t AsIndex(const ByteSize& n) {
+	return static_cast<std::size_t>(n);
 }
 
-static Size AsSize(std::size_t n) {
-	return Size{ static_cast<std::uint64_t>(n) };
+static ByteSize AsByteSize(std::size_t n) {
+	return ByteSize{n};
 }
 
 BinaryData::BinaryData() noexcept
 	: m_storage(std::make_unique<Storage>()) {}
 
-BinaryData::BinaryData(const Size& count, std::byte value)
+BinaryData::BinaryData(const ByteSize& count, std::byte value)
 	: m_storage(std::make_unique<Storage>()) {
 	m_storage->bytes.assign(AsIndex(count), value);
 }
 
-BinaryData::BinaryData(const Size& count)
+BinaryData::BinaryData(const ByteSize& count)
 	: BinaryData(count, std::byte{0}) {}
 
 BinaryData::BinaryData(std::span<const std::byte> bytes)
@@ -78,11 +79,11 @@ BinaryData::BinaryData(std::span<const std::byte> bytes)
 	m_storage->bytes.assign(bytes.begin(), bytes.end());
 }
 
-BinaryData::BinaryData(const std::byte* bytes, const Size& count)
+BinaryData::BinaryData(const std::byte* bytes, const ByteSize& count)
 	: m_storage(std::make_unique<Storage>()) {
-	if (bytes == nullptr && count.Value() != 0)
+	if (bytes == nullptr && count != ByteSize{0})
 		throw OutOfBoundsError(StormByte::Component("BinaryData"), "null source with non-zero count");
-	if (count.Value() == 0)
+	if (count == ByteSize{0})
 		return;
 	m_storage->bytes.assign(bytes, bytes + AsIndex(count));
 }
@@ -218,31 +219,31 @@ BinaryData::const_reverse_iterator BinaryData::crend() const noexcept {
 	return rend();
 }
 
-Size BinaryData::size() const noexcept {
-	return AsSize(m_storage->bytes.size());
+ByteSize BinaryData::size() const noexcept {
+	return AsByteSize(m_storage->bytes.size());
 }
 
-Size BinaryData::max_size() const noexcept {
-	return AsSize(m_storage->bytes.max_size());
+ByteSize BinaryData::max_size() const noexcept {
+	return AsByteSize(m_storage->bytes.max_size());
 }
 
-Size BinaryData::capacity() const noexcept {
-	return AsSize(m_storage->bytes.capacity());
+ByteSize BinaryData::capacity() const noexcept {
+	return AsByteSize(m_storage->bytes.capacity());
 }
 
 bool BinaryData::empty() const noexcept {
 	return m_storage->bytes.empty();
 }
 
-void BinaryData::reserve(const Size& new_cap) {
+void BinaryData::reserve(const ByteSize& new_cap) {
 	m_storage->bytes.reserve(AsIndex(new_cap));
 }
 
-void BinaryData::resize(const Size& new_size) {
+void BinaryData::resize(const ByteSize& new_size) {
 	m_storage->bytes.resize(AsIndex(new_size));
 }
 
-void BinaryData::resize(const Size& new_size, std::byte value) {
+void BinaryData::resize(const ByteSize& new_size, std::byte value) {
 	m_storage->bytes.resize(AsIndex(new_size), value);
 }
 
@@ -254,21 +255,21 @@ void BinaryData::clear() noexcept {
 	m_storage->bytes.clear();
 }
 
-std::byte& BinaryData::operator[](const Size& index) noexcept {
+std::byte& BinaryData::operator[](const ByteSize& index) noexcept {
 	return m_storage->bytes[AsIndex(index)];
 }
 
-const std::byte& BinaryData::operator[](const Size& index) const noexcept {
+const std::byte& BinaryData::operator[](const ByteSize& index) const noexcept {
 	return m_storage->bytes[AsIndex(index)];
 }
 
-std::byte& BinaryData::at(const Size& index) {
+std::byte& BinaryData::at(const ByteSize& index) {
 	if (index >= size())
 		throw OutOfBoundsError(StormByte::Component("BinaryData"), "index out of range");
 	return m_storage->bytes[AsIndex(index)];
 }
 
-const std::byte& BinaryData::at(const Size& index) const {
+const std::byte& BinaryData::at(const ByteSize& index) const {
 	if (index >= size())
 		throw OutOfBoundsError(StormByte::Component("BinaryData"), "index out of range");
 	return m_storage->bytes[AsIndex(index)];
@@ -325,7 +326,7 @@ BinaryData::operator std::vector<std::byte>() && {
 	return out;
 }
 
-void BinaryData::assign(const Size& count, std::byte value) {
+void BinaryData::assign(const ByteSize& count, std::byte value) {
 	m_storage->bytes.assign(AsIndex(count), value);
 }
 
@@ -341,10 +342,10 @@ void BinaryData::append(std::span<const std::byte> bytes) {
 	m_storage->bytes.insert(m_storage->bytes.end(), bytes.begin(), bytes.end());
 }
 
-void BinaryData::append(const std::byte* bytes, const Size& count) {
-	if (bytes == nullptr && count.Value() != 0)
+void BinaryData::append(const std::byte* bytes, const ByteSize& count) {
+	if (bytes == nullptr && count != ByteSize{0})
 		throw OutOfBoundsError(StormByte::Component("BinaryData"), "null source with non-zero count");
-	if (count.Value() == 0)
+	if (count == ByteSize{0})
 		return;
 	append(std::span<const std::byte>(bytes, AsIndex(count)));
 }
@@ -399,7 +400,7 @@ BinaryData::iterator BinaryData::insert(const_iterator pos, std::byte value) {
 	return m_storage->bytes.data() + (it - m_storage->bytes.begin());
 }
 
-BinaryData::iterator BinaryData::insert(const_iterator pos, const Size& count, std::byte value) {
+BinaryData::iterator BinaryData::insert(const_iterator pos, const ByteSize& count, std::byte value) {
 	const auto off = static_cast<std::size_t>(pos - cbegin());
 	auto it = m_storage->bytes.insert(m_storage->bytes.begin() + static_cast<std::ptrdiff_t>(off), AsIndex(count), value);
 	return m_storage->bytes.data() + (it - m_storage->bytes.begin());
@@ -439,16 +440,16 @@ void StormByte::swap(BinaryData& lhs, BinaryData& rhs) noexcept {
 }
 
 CString BinaryData::HexDump() const {
-	return HexDump(static_cast<std::size_t>(16));
+	return HexDump(Size{16});
 }
 
-CString BinaryData::HexDump(std::size_t columns) const {
+CString BinaryData::HexDump(Size columns) const {
 	if (empty())
 		return CString();
 
 	const auto* raw = m_storage->bytes.data();
 	const std::size_t total = m_storage->bytes.size();
-	const std::size_t width = (columns == 0) ? total : columns;
+	const std::size_t width = (columns == Size{0}) ? total : static_cast<std::size_t>(columns);
 
 	std::ostringstream out;
 	out << std::hex << std::setfill('0');

@@ -39,10 +39,12 @@
 
 #include <StormByte/base64.hxx>
 #include <StormByte/binary_data.hxx>
+#include <StormByte/byte_size.hxx>
 #include <StormByte/exception.hxx>
 #include <StormByte/size.hxx>
 #include <StormByte/test_handlers.h>
 
+#include <iostream>
 #include <string>
 #include <string_view>
 
@@ -57,7 +59,7 @@ namespace {
 		if (bytes.empty())
 			return {};
 		return std::string(reinterpret_cast<const char*>(bytes.data()),
-			static_cast<std::size_t>(static_cast<std::uint64_t>(bytes.size())));
+			static_cast<std::size_t>(bytes.size()));
 	}
 }
 
@@ -69,7 +71,7 @@ int test_encode_empty() {
 	int result = 0;
 	const auto encoded = Base64Encode(BinaryData{});
 	ASSERT_TRUE("test_encode_empty", encoded == "");
-	ASSERT_EQUAL("test_encode_empty", 0u, encoded.Length());
+	ASSERT_EQUAL("test_encode_empty", Size{0}, encoded.Length());
 	RETURN_TEST("test_encode_empty", result);
 }
 
@@ -112,12 +114,12 @@ int test_encode_span_overload() {
 int test_encode_all_bytes() {
 	int result = 0;
 	BinaryData original;
-	original.reserve(Size{256});
+	original.reserve(ByteSize{256});
 	for (std::size_t i = 0; i < 256; ++i)
 		original.push_back(static_cast<std::byte>(i));
 	const auto encoded = Base64Encode(original);
 	ASSERT_TRUE("test_encode_all_bytes", static_cast<bool>(encoded));
-	ASSERT_TRUE("test_encode_all_bytes", encoded.Length() > 0);
+	ASSERT_TRUE("test_encode_all_bytes", encoded.Length() > Size{0});
 	RETURN_TEST("test_encode_all_bytes", result);
 }
 
@@ -128,7 +130,7 @@ int test_encode_all_bytes() {
 int test_decode_empty() {
 	int result = 0;
 	const auto decoded = Base64Decode("");
-	ASSERT_EQUAL("test_decode_empty", Size{0}, decoded.size());
+	ASSERT_EQUAL("test_decode_empty", ByteSize{0}, decoded.size());
 	RETURN_TEST("test_decode_empty", result);
 }
 
@@ -166,19 +168,19 @@ int test_decode_invalid_character() {
 int test_roundtrip_padding_sizes() {
 	int result = 0;
 	const auto one = Base64Decode(std::string_view{Base64Encode(ToBytes("A"))});
-	ASSERT_EQUAL("test_roundtrip_padding_sizes", Size{1}, one.size());
-	ASSERT_EQUAL("test_roundtrip_padding_sizes", static_cast<unsigned char>('A'), static_cast<unsigned char>(one[Size{0}]));
+	ASSERT_EQUAL("test_roundtrip_padding_sizes", ByteSize{1}, one.size());
+	ASSERT_EQUAL("test_roundtrip_padding_sizes", static_cast<unsigned char>('A'), static_cast<unsigned char>(one[ByteSize{0}]));
 	const auto two = Base64Decode(std::string_view{Base64Encode(ToBytes("AB"))});
-	ASSERT_EQUAL("test_roundtrip_padding_sizes", Size{2}, two.size());
+	ASSERT_EQUAL("test_roundtrip_padding_sizes", ByteSize{2}, two.size());
 	const auto three = Base64Decode(std::string_view{Base64Encode(ToBytes("ABC"))});
-	ASSERT_EQUAL("test_roundtrip_padding_sizes", Size{3}, three.size());
+	ASSERT_EQUAL("test_roundtrip_padding_sizes", ByteSize{3}, three.size());
 	RETURN_TEST("test_roundtrip_padding_sizes", result);
 }
 
 int test_roundtrip_all_bytes() {
 	int result = 0;
 	BinaryData original;
-	original.reserve(Size{256});
+	original.reserve(ByteSize{256});
 	for (std::size_t i = 0; i < 256; ++i)
 		original.push_back(static_cast<std::byte>(i));
 	const auto decoded = Base64Decode(std::string_view{Base64Encode(original)});

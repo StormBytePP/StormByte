@@ -38,6 +38,7 @@
  */
 
 #include <StormByte/base64.hxx>
+#include <StormByte/byte_size.hxx>
 #include <StormByte/exception.hxx>
 
 #include <array>
@@ -108,7 +109,7 @@ namespace {
 
 BinaryData StormByte::Base64Decode(std::string_view input) {
 	BinaryData output;
-	output.reserve(StormByte::Size{ static_cast<std::uint64_t>((input.size() / 4) * 3) });
+	output.reserve(ByteSize{(input.size() / 4) * 3});
 	std::uint32_t buffer = 0;
 	int bits_collected = 0;
 	for (char c : input) {

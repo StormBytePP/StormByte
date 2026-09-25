@@ -40,6 +40,7 @@
 #pragma once
 
 #include <StormByte/binary_data.hxx>
+#include <StormByte/byte_size.hxx>
 #include <StormByte/cstring.hxx>
 #include <StormByte/exception.hxx>
 #include <StormByte/expected.hxx>
@@ -55,7 +56,6 @@
 #include <optional>
 #include <span>
 #include <string>
-#include <type_traits>
 #include <tuple>
 #include <utility>
 
@@ -75,21 +75,6 @@ namespace StormByte {
 	 */
 	namespace Detail {
 		/**
-		 * @brief Identifies `std::array` so fixed-size containers can be decoded by index.
-		 * @tparam T Candidate type.
-		 */
-		template<typename T>
-		constexpr bool is_std_array_v = false;
-
-		/**
-		 * @brief Specialization for `std::array<U, N>`.
-		 * @tparam U Element type.
-		 * @tparam N Extent.
-		 */
-		template<typename U, std::size_t N>
-		constexpr bool is_std_array_v<std::array<U, N>> = true;
-
-		/**
 		 * @brief Compile-time false dependent on @p T.
 		 * @tparam T Ignored; exists so `static_assert` is delayed to instantiation.
 		 */
@@ -108,7 +93,7 @@ namespace StormByte {
 		 * @code
 		 * template<>
 		 * struct StormByte::Detail::Codec<MyType> {
-		 *     static std::size_t Size(const MyType& v) noexcept;
+		 *     static ByteSize Size(const MyType& v) noexcept;
 		 *     static BinaryData Write(const MyType& v) noexcept;
 		 *     static Expected<MyType, DeserializeError> Read(std::span<const std::byte>) noexcept;
 		 * };
@@ -123,13 +108,13 @@ namespace StormByte {
 			/**
 			 * @brief Serialized size of @p data.
 			 * @param[in] data Value to measure.
-			 * @return Size in bytes.
+			 * @return Size in bytes as @ref ByteSize.
 			 */
-			static std::size_t Size(const T& data) noexcept {
+			static ByteSize Size(const T& data) noexcept {
 				static_assert(codec_always_false_v<T>,
 					"Specialize StormByte::Detail::Codec<T> instead of Serializable<T>");
 				(void)data;
-				return 0;
+				return ByteSize{0};
 			}
 
 			/**
@@ -167,9 +152,9 @@ namespace StormByte {
 			/**
 			 * @brief Serialized size of @p data.
 			 * @param data Value to measure.
-			 * @return Size in bytes.
+			 * @return Size in bytes as @ref ByteSize.
 			 */
-			static STORMBYTE_PUBLIC std::size_t Size(const std::string& data) noexcept;
+			static STORMBYTE_PUBLIC ByteSize Size(const std::string& data) noexcept;
 
 			/**
 			 * @brief Encodes @p data.
@@ -197,9 +182,9 @@ namespace StormByte {
 			/**
 			 * @brief Serialized size of @p data.
 			 * @param data Value to measure.
-			 * @return Size in bytes.
+			 * @return Size in bytes as @ref ByteSize.
 			 */
-			static STORMBYTE_PUBLIC std::size_t Size(const std::wstring& data) noexcept;
+			static STORMBYTE_PUBLIC ByteSize Size(const std::wstring& data) noexcept;
 
 			/**
 			 * @brief Encodes @p data.
@@ -226,9 +211,9 @@ namespace StormByte {
 			/**
 			 * @brief Serialized size of @p data.
 			 * @param data Value to measure.
-			 * @return Size in bytes.
+			 * @return Size in bytes as @ref ByteSize.
 			 */
-			static STORMBYTE_PUBLIC std::size_t Size(const std::u16string& data) noexcept;
+			static STORMBYTE_PUBLIC ByteSize Size(const std::u16string& data) noexcept;
 
 			/**
 			 * @brief Encodes @p data.
@@ -255,9 +240,9 @@ namespace StormByte {
 			/**
 			 * @brief Serialized size of @p data.
 			 * @param data Value to measure.
-			 * @return Size in bytes.
+			 * @return Size in bytes as @ref ByteSize.
 			 */
-			static STORMBYTE_PUBLIC std::size_t Size(const std::u32string& data) noexcept;
+			static STORMBYTE_PUBLIC ByteSize Size(const std::u32string& data) noexcept;
 
 			/**
 			 * @brief Encodes @p data.
@@ -287,9 +272,9 @@ namespace StormByte {
 			/**
 			 * @brief Serialized size of @p data.
 			 * @param data Value to measure.
-			 * @return Size in bytes.
+			 * @return Size in bytes as @ref ByteSize.
 			 */
-			static STORMBYTE_PUBLIC std::size_t Size(const CString& data) noexcept;
+			static STORMBYTE_PUBLIC ByteSize Size(const CString& data) noexcept;
 
 			/**
 			 * @brief Encodes @p data.
@@ -318,9 +303,9 @@ namespace StormByte {
 			/**
 			 * @brief Serialized size of @p data.
 			 * @param data Value to measure.
-			 * @return Size in bytes.
+			 * @return Size in bytes as @ref ByteSize.
 			 */
-			static STORMBYTE_PUBLIC std::size_t Size(const WCString& data) noexcept;
+			static STORMBYTE_PUBLIC ByteSize Size(const WCString& data) noexcept;
 
 			/**
 			 * @brief Encodes @p data.
@@ -362,7 +347,7 @@ namespace StormByte {
 	 */
 	template<typename T>
 	class Serializable {
-		using DecayedT = std::decay_t<T>;	///< Value type stored by this wrapper.
+		using DecayedT = std::remove_cvref_t<T>;	///< Value type stored by this wrapper.
 
 		public:
 			/**
@@ -419,9 +404,9 @@ namespace StormByte {
 			/**
 			 * @brief Serialized size of @p data.
 			 * @param[in] data Value to measure.
-			 * @return Size in bytes of @ref StormByte::Serializable::Serialize for the same value.
+			 * @return @ref ByteSize of @ref StormByte::Serializable::Serialize for the same value.
 			 */
-			static std::size_t Size(const DecayedT& data) noexcept;
+			static ByteSize Size(const DecayedT& data) noexcept;
 
 		private:
 			const DecayedT& m_data;	///< Referenced value. Not owned.
@@ -476,30 +461,30 @@ namespace StormByte {
 			 * @brief Serialized size of a container.
 			 * @tparam U Defaulted to @p T; see @ref StormByte::Serializable::SerializeTrivial.
 			 * @param[in] data Container to measure.
-			 * @return `8` plus the sum of element sizes.
+			 * @return `8` plus the sum of element sizes, as @ref ByteSize.
 			 */
 			template<typename U = T>
-			static std::size_t SizeContainer(const DecayedT& data) noexcept
+			static ByteSize SizeContainer(const DecayedT& data) noexcept
 			requires Type::Container<U>;
 
 			/**
 			 * @brief Serialized size of a pair.
 			 * @tparam U Defaulted to @p T; see @ref StormByte::Serializable::SerializeTrivial.
 			 * @param[in] data Pair to measure.
-			 * @return Sum of member sizes.
+			 * @return Sum of member sizes as @ref ByteSize.
 			 */
 			template<typename U = T>
-			static std::size_t SizePair(const DecayedT& data) noexcept
+			static ByteSize SizePair(const DecayedT& data) noexcept
 			requires Type::Pair<U>;
 
 			/**
 			 * @brief Serialized size of an optional.
 			 * @tparam U Defaulted to @p T; see @ref StormByte::Serializable::SerializeTrivial.
 			 * @param[in] data Optional to measure.
-			 * @return `sizeof(bool)` plus the value size when engaged.
+			 * @return `sizeof(bool)` plus the value size when engaged, as @ref ByteSize.
 			 */
 			template<typename U = T>
-			static std::size_t SizeOptional(const DecayedT& data) noexcept
+			static ByteSize SizeOptional(const DecayedT& data) noexcept
 			requires Type::Optional<U>;
 
 			/**

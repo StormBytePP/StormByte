@@ -37,6 +37,7 @@
  * SPDX-License-Identifier: LGPL-3.0-or-later OR LicenseRef-StormByte-Commercial
  */
 
+#include <StormByte/size.hxx>
 #include <StormByte/test_handlers.h>
 #include <StormByte/wcstring.hxx>
 
@@ -65,7 +66,7 @@ int test_default_is_null() {
 	int result = 0;
 	WCString text;
 	ASSERT_TRUE("test_default_is_null", View(text) == nullptr);
-	ASSERT_EQUAL("test_default_is_null", 0u, text.Length());
+	ASSERT_EQUAL("test_default_is_null", Size{0}, text.Length());
 	ASSERT_FALSE("test_default_is_null", static_cast<bool>(text));
 	RETURN_TEST("test_default_is_null", result);
 }
@@ -84,7 +85,7 @@ int test_construct_from_empty() {
 	ASSERT_TRUE("test_construct_from_empty", View(text) != nullptr);
 	ASSERT_TRUE("test_construct_from_empty", static_cast<bool>(text));
 	ASSERT_EQUAL("test_construct_from_empty", 0, std::wcscmp(View(text), L""));
-	ASSERT_EQUAL("test_construct_from_empty", 0u, text.Length());
+	ASSERT_EQUAL("test_construct_from_empty", Size{0}, text.Length());
 	RETURN_TEST("test_construct_from_empty", result);
 }
 
@@ -94,7 +95,7 @@ int test_construct_copies_text() {
 	WCString text(raw);
 	ASSERT_TRUE("test_construct_copies_text", View(text) != raw);
 	ASSERT_EQUAL("test_construct_copies_text", 0, std::wcscmp(View(text), L"hello"));
-	ASSERT_EQUAL("test_construct_copies_text", 5u, text.Length());
+	ASSERT_EQUAL("test_construct_copies_text", Size{5}, text.Length());
 	ASSERT_TRUE("test_construct_copies_text", static_cast<bool>(text));
 	RETURN_TEST("test_construct_copies_text", result);
 }
@@ -103,7 +104,7 @@ int test_construct_stops_at_embedded_nul() {
 	int result = 0;
 	const wchar_t raw[] = { L'a', L'b', L'\0', L'c', L'\0' };
 	WCString text(raw);
-	ASSERT_EQUAL("test_construct_stops_at_embedded_nul", 2u, text.Length());
+	ASSERT_EQUAL("test_construct_stops_at_embedded_nul", Size{2}, text.Length());
 	ASSERT_EQUAL("test_construct_stops_at_embedded_nul", 0, std::wcscmp(View(text), L"ab"));
 	RETURN_TEST("test_construct_stops_at_embedded_nul", result);
 }
@@ -113,7 +114,7 @@ int test_construct_unicode() {
 	WCString text(L"cañón 日本語");
 	ASSERT_TRUE("test_construct_unicode", View(text) != nullptr);
 	ASSERT_EQUAL("test_construct_unicode", 0, std::wcscmp(View(text), L"cañón 日本語"));
-	ASSERT_EQUAL("test_construct_unicode", std::wcslen(L"cañón 日本語"), text.Length());
+	ASSERT_EQUAL("test_construct_unicode", Size{std::wcslen(L"cañón 日本語")}, text.Length());
 	RETURN_TEST("test_construct_unicode", result);
 }
 
@@ -121,7 +122,7 @@ int test_construct_long() {
 	int result = 0;
 	const std::wstring raw(4096, L'X');
 	WCString text(raw.c_str());
-	ASSERT_EQUAL("test_construct_long", raw.size(), text.Length());
+	ASSERT_EQUAL("test_construct_long", Size{raw.size()}, text.Length());
 	ASSERT_EQUAL("test_construct_long", 0, std::wcscmp(View(text), raw.c_str()));
 	RETURN_TEST("test_construct_long", result);
 }
@@ -242,8 +243,8 @@ int test_swap_exchanges() {
 int test_subscript_characters() {
 	int result = 0;
 	WCString text(L"ab");
-	ASSERT_EQUAL("test_subscript_characters", L'a', text[0]);
-	ASSERT_EQUAL("test_subscript_characters", L'b', text[1]);
+	ASSERT_EQUAL("test_subscript_characters", L'a', text[Size{0}]);
+	ASSERT_EQUAL("test_subscript_characters", L'b', text[Size{1}]);
 	RETURN_TEST("test_subscript_characters", result);
 }
 
@@ -257,7 +258,7 @@ int test_subscript_nul_at_length() {
 int test_subscript_empty() {
 	int result = 0;
 	WCString text(L"");
-	ASSERT_EQUAL("test_subscript_empty", L'\0', text[0]);
+	ASSERT_EQUAL("test_subscript_empty", L'\0', text[Size{0}]);
 	ASSERT_EQUAL("test_subscript_empty", L'\0', text[text.Length()]);
 	RETURN_TEST("test_subscript_empty", result);
 }

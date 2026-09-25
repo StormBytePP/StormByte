@@ -9,7 +9,7 @@
 
 This repository is **StormByte Base**: the C++26 foundation of the StormByte suite.
 
-It is the module every other StormByte library links. Public headers live under `StormByte/` and cover exceptions, `Expected`, little-endian serialization, `CString` / `WCString`, `BinaryData`, `Size`, UUID v4, bitmasks, clonable types, a reentrant `ThreadLock`, and the `StormByte::Type` concepts.
+It is the module every other StormByte library links. Public headers live under `StormByte/` and cover exceptions, `Expected`, little-endian serialization, `CString` / `WCString`, `BinaryData`, `Size`, `ByteSize`, UUID v4, bitmasks, clonable types, a reentrant `ThreadLock`, and the `StormByte::Type` concepts.
 
 The suite is split on purpose. Buffer, Config, Crypto, Database, Logger, Multimedia, Network, String and System are **other repositories**. They depend on this one; this one does not implement them.
 
@@ -18,16 +18,19 @@ The suite is split on purpose. Buffer, Config, Crypto, Database, Logger, Multime
 - **Exceptions** — `StormByte::Exception` with `std::format` messages stored in `CString` (`what()` is a `const char*` owned by the exception).
 - **Error** — `Domain`, `Category`, `Code` and `Fault` for `std::error_code`. `Fault` is not thrown; its text is a `CString`.
 - **Expected** — `Expected<T, E>` on top of `std::expected`, references via `reference_wrapper`, errors as `shared_ptr<E>`, plus `Unexpected`.
-- **Serialization** — `Serializable<T>` to `BinaryData`, always little-endian, no BOM and no version tag. Optional / pair / container / trivial / `Detail::Codec<T>`.
-- **CString / WCString** — owned NUL-terminated narrow and wide buffers, safe to use across a DLL boundary. Not `std::string` / `std::wstring`. Construct from C string, `string_view` / `wstring_view` and `string` / `wstring` (copy onto Base's heap). Content equality, `<=>`, `swap` and `std::hash`.
-- **BinaryData** — owned contiguous `std::byte` sequence, safe to use across a DLL boundary. Same kind of API as `std::vector<std::byte>`. Lengths use `Size`. `HexDump` prints offset + hex + ASCII; column count is `std::size_t`.
-- **Size** — `uint64_t` byte count, same width on every host and safe across a DLL. IEC and SI units, `*` / `/` / `%`, IEC text as `CString`.
+- **Serialization** — `Serializable<T>` to `BinaryData`, always little-endian, no BOM and no version tag. Optional / pair / container / trivial / `Detail::Codec<T>`. On-wire lengths are `ByteSize`.
+- **CString / WCString** — owned NUL-terminated narrow and wide buffers, safe to use across a DLL boundary. Not `std::string` / `std::wstring`. `Length()` is `Size`. Construct from C string, `string_view` / `wstring_view` and `string` / `wstring` (copy onto Base's heap). Content equality, `<=>`, `swap` and `std::hash`.
+- **BinaryData** — owned contiguous `std::byte` sequence, safe to use across a DLL boundary. Same kind of API as `std::vector<std::byte>`. Lengths and indices use `ByteSize`. `HexDump` prints offset + hex + ASCII; column count is `std::size_t`.
+- **Size** — abstract unit count (`uint64_t` storage), same width on every host and safe across a DLL. Implicit only to `std::size_t`. Character counts, iteration counts, “how many items”.
+- **ByteSize** — octet length (`uint64_t` storage). Implicit only to `std::size_t`. IEC / SI units (`1 * KiB`), human-readable `CString` (`1.00 KiB`). Area products are deleted.
 - **UUID** — RFC 4122 version 4 (`GenerateUUIDv4`).
 - **Bitmask** — CRTP flags over `Type::UnsignedEnum`.
 - **Clonable** — virtual `Clone` / `Move` into `shared_ptr` or `unique_ptr`.
 - **ThreadLock** — owner-thread reentry; `Unlock` from a non-owner is a no-op.
-- **Type concepts** — `StormByte::Type::*` (`String`, `Container`, `Optional`, `Pair`, enums, …). No `enable_if` / `void_t` next to them.
+- **Type concepts** — `StormByte::Type::*` (`String`, `Container`, `Optional`, `Pair`, `Numeral`, `Array`, …). `Numeral` includes `Size` and `ByteSize`. No `enable_if` / `void_t` next to them.
 - **Platform / visibility** — `WINDOWS` / `LINUX` / `MACOS`, `BIT32` / `BIT64`, `CLANG` / `GCC` / `MSVC` (clang-cl is `CLANG`, not `MSVC`).
+
+Public Base APIs do not take or return a raw `std::size_t` / `std::uint64_t` when the value is a count. Characters and units are `Size`. Octets are `ByteSize`.
 
 ## The rest of the suite
 
@@ -56,6 +59,7 @@ The suite is split on purpose. Buffer, Config, Crypto, Database, Logger, Multime
 - [CString / WCString](#cstring--wcstring)
 - [BinaryData](#binarydata)
 - [Size](#size)
+- [ByteSize](#bytesize)
 - [Serialization](#serialization)
 - [UUID](#uuid)
 - [ThreadLock](#threadlock)
@@ -147,12 +151,15 @@ Owned buffers. `operator bool` is true when the pointer is not null: `""` / `L""
 
 Construct from `const char*` / `const wchar_t*` (null stays null), from `std::string_view` / `std::wstring_view`, and from `const std::string&` / `const std::wstring&`. Those last two **copy** onto Base's heap. They are not a heap steal. An empty `string` / view yields `""` / `L""`, not a null buffer.
 
+`Length()` returns `Size` (character count, not octets). `operator[]` takes `Size`.
+
 `==` / `!=` / `<=>` compare text, not addresses. Two nulls are equal; null is not equal to `""` / `L""` and orders before any text. `swap` exchanges buffers. `std::hash` hashes the text (`0` when null), so the types work in `std::set` and `std::unordered_set`.
 
 `explicit operator const char*` / `const wchar_t*` has the same lifetime as `std::string::c_str()` / `std::wstring::c_str()`. Implicit `std::string` / `std::wstring` and `operator<<` are inline (caller CRT).
 
 ```cpp
 #include <StormByte/cstring.hxx>
+#include <StormByte/size.hxx>
 #include <StormByte/wcstring.hxx>
 #include <iostream>
 #include <set>
@@ -163,7 +170,7 @@ using namespace StormByte;
 int main() {
 	CString text("hello");
 	if (text)
-		std::cout << text << " " << text.Length() << std::endl;
+		std::cout << text << " " << static_cast<std::size_t>(text.Length()) << std::endl;
 
 	CString from_std{std::string("hello")};
 	if (text == from_std && text == "hello")
@@ -174,7 +181,7 @@ int main() {
 		std::cout << "null" << std::endl;
 
 	CString empty("");
-	if (empty && empty.Length() == 0 && text < empty)
+	if (empty && empty.Length() == Size{0} && text < empty)
 		std::cout << "empty but valid" << std::endl;
 
 	std::set<CString> ordered{CString("b"), CString("a")};
@@ -192,15 +199,15 @@ int main() {
 
 `BinaryData` owns its storage on StormByte Base’s heap. Construction, growth and destruction always run in this library. Other suite modules can carry payloads, encoded blobs, file images or wire fragments without exporting `std::vector<std::byte>`.
 
-It is not text (`CString`) and not a structured document. Lengths are `StormByte::Size`. Member names stay lowercase to match the STL.
+It is not text (`CString`) and not a structured document. Lengths and indices are `StormByte::ByteSize`. Member names stay lowercase to match the STL.
 
 For `<algorithm>` and `std::ranges` it supports everything `std::vector<std::byte>` supports on a contiguous sequence of bytes: copy / transform / sort / reverse / rotate / unique / remove / replace / partition / heap / set operations / binary search / permutations, plus iterators, `std::span` and insert / erase / assign / append / `operator+=` / emplace. `std::iota` is the exception that is *also* true of `std::vector<std::byte>`: `std::byte` is an enum class and has no `operator++`.
 
-`at()` throws `OutOfBoundsError`. `operator[]` is unchecked, like `std::vector`.
+`at()` throws `OutOfBoundsError`. `operator[]` is unchecked, like `std::vector`, and takes `ByteSize`.
 
 Compare with another `BinaryData` or with `std::span<const std::byte>` (`==`, `!=`, `<=>`, both operand orders).
 
-**Hex dump.** `HexDump()` and `HexDump(std::size_t columns)` return a `CString`. Each line is an 8-digit offset, a row of hex bytes, and the same bytes as ASCII (non-printable as `.`). `columns` is a **row width**, not a byte length — it is `std::size_t`, not `Size`. `0` prints every byte on one line. The default is 16 columns.
+**Hex dump.** `HexDump()` and `HexDump(std::size_t columns)` return a `CString`. Each line is an 8-digit offset, a row of hex bytes, and the same bytes as ASCII (non-printable as `.`). `columns` is a **row width**, not a byte length — it is `std::size_t`, not `ByteSize`. `0` prints every byte on one line. The default is 16 columns.
 
 **`std::vector` and `std::span`.** You can build a `BinaryData` from a `span` or from a caller-owned `vector`. You can view the bytes as a `span` (implicit). You can copy them out to a `vector` (`explicit operator std::vector<std::byte>`). The rvalue overloads *look* like a move: the source is emptied after the copy. They are not a heap steal. Base cannot donate its pointer to a foreign `vector`, and it cannot adopt a caller `vector` pointer. Peak usage is two copies during the transfer.
 
@@ -210,8 +217,8 @@ Compare with another `BinaryData` or with `std::span<const std::byte>` (`==`, `!
 
 ```cpp
 #include <StormByte/binary_data.hxx>
+#include <StormByte/byte_size.hxx>
 #include <StormByte/serializable.hxx>
-#include <StormByte/size.hxx>
 #include <algorithm>
 #include <iostream>
 #include <ranges>
@@ -231,8 +238,9 @@ int main() {
 	if (!payload.empty())
 		payload.front() = std::byte{0x01};
 
-	const Size n = payload.size();
-	std::cout << static_cast<unsigned long long>(n.Value()) << std::endl;
+	const ByteSize n = payload.size();
+	const std::size_t host = n;
+	std::cout << host << std::endl;
 	std::cout << payload.HexDump(8) << std::endl;
 
 	std::vector<std::byte> caller = static_cast<std::vector<std::byte>>(payload);
@@ -250,7 +258,6 @@ int main() {
 
 ```cpp
 #include <StormByte/binary_data.hxx>
-#include <StormByte/size.hxx>
 #include <algorithm>
 #include <array>
 
@@ -267,34 +274,72 @@ BinaryData from_range() {
 
 ### Size
 
-`Size` is a `uint64_t` byte count. It is the same width on 32-bit and 64-bit hosts and safe to return across a DLL. It is not a `std::size_t`.
+`Size` is an **abstract unit count**, not an octet length. Storage is `uint64_t`, the same width on 32-bit and 64-bit hosts, and safe to return across a DLL.
 
-`Size{100}` is valid. A negative integer is undefined and `assert`s when assertions are on. Read the count with `Value()` or `explicit operator uint64_t`. There is no `size_t` conversion; cast `Value()` yourself if a host `size_t` is required.
+Use it for “how many characters”, “how many items”, “how many steps”. Octet lengths belong to `ByteSize`.
 
-IEC units (`B`, `KiB`, `MiB`, `GiB`, `TiB`, `PiB`, `EiB`) and SI units (`KB`, `MB`, `GB`, `TB`, `PB`, `EB`) are `constexpr` objects. Scale a unit with `*`: `4 * MiB`, `4.2 * KiB` (nearest byte), `GiB * 2`. Scale an existing `Size` with a positive integer: `4 * s`, `s * 4`. `s / 4` and `s % 4` return `uint64_t` (how many pieces fit, leftover bytes). There is no `Size * Size` and no floating-point scale of a `Size`.
+Implicit conversion exists only to `std::size_t` (clamped to `size_t::max`). Every other integral destination is `explicit` and clamps to `T::max`. There is no `Value()` and no `operator bool`.
 
-`operator CString` builds IEC text (`B`, `KiB`, …) in the StormByte DLL. `operator std::string` and `operator<<` are inline and copy that text into the caller’s heap.
+`Size{100}` is valid. A negative integer is undefined and `assert`s when assertions are on.
+
+All arithmetic with another `Size` or with any `Type::Integral` yields `Size`. Mixed `==` / `<=>` with integers and with `ByteSize` compare the numeric counts. `std::size_t n = size_a + 3 * size_b;` works because the sum is a `Size` and that converts implicitly.
+
+`operator CString` / `operator WCString` print the raw count.
 
 ```cpp
+#include <StormByte/cstring.hxx>
 #include <StormByte/size.hxx>
 #include <iostream>
 
 using namespace StormByte;
 
 int main() {
-	const Size chunk{4 * MiB + 512 * KiB};
-	const Size twice = 2 * chunk;
-	const auto pieces = twice / 1024;
-	const auto leftover = twice % 1024;
+	const Size chars{5};
+	const Size more = chars + 3;
+	const std::size_t host = more * 2;
+	if (chars == 5 && 5 == chars)
+		std::cout << static_cast<CString>(more) << " " << host << std::endl;
+}
+```
+
+### ByteSize
+
+`ByteSize` is an **octet length**. Storage is `uint64_t`, the same width on every host, and safe to return across a DLL.
+
+Implicit conversion exists only to `std::size_t` (clamped). Every other integral destination is `explicit`. There is no `Value()` and no `operator bool`.
+
+Area products (`ByteSize * ByteSize`) are deleted: two lengths do not make a length. Scaling by a `Size` or by an integer is allowed and yields `ByteSize`.
+
+IEC factories live on the type (`ByteSize::KiB(1)`). Free constants live in `StormByte` so `1 * KiB` and `2 * MiB` work after `using namespace StormByte`. SI constants (`KB`…`EB`) are the same pattern.
+
+`operator CString` / `operator WCString` print IEC text: `0 B`, `1023 B`, `1.00 KiB`, `1.50 MiB`. Only the `B` unit stays without decimals.
+
+```cpp
+#include <StormByte/byte_size.hxx>
+#include <StormByte/cstring.hxx>
+#include <iostream>
+
+using namespace StormByte;
+
+int main() {
+	const ByteSize chunk = 4 * MiB + 512 * KiB;
+	const ByteSize twice = chunk * 2;
+	const ByteSize pieces = twice / 1024;
+	const ByteSize leftover = twice % 1024;
+	const std::size_t host = chunk;
 
 	std::cout << chunk << std::endl;
-	std::cout << twice.Value() << " " << pieces << " " << leftover << std::endl;
+	std::cout << static_cast<CString>(twice) << " " << pieces << " " << leftover << std::endl;
+	std::cout << host << std::endl;
+
+	if ((1 * KiB) == ByteSize{1024} && chunk > 1 * MiB)
+		std::cout << "units" << std::endl;
 }
 ```
 
 ### Serialization
 
-Wire is little-endian. `Serialize()` returns `BinaryData`. `Deserialize` reads a prefix; leftover bytes stay with the caller. Custom types specialize `StormByte::Detail::Codec<T>` (`Size` / `Write` / `Read`), not `Serializable<T>`.
+Wire is little-endian. `Serialize()` returns `BinaryData`. `Deserialize` reads a prefix; leftover bytes stay with the caller. Custom types specialize `StormByte::Detail::Codec<T>` (`Size` returns `ByteSize` / `Write` / `Read`), not `Serializable<T>`.
 
 `BinaryData` is a `Type::Container` of `std::byte`. No `Codec` specialization is required; the container path writes the same layout as `std::vector<std::byte>`.
 
@@ -359,6 +404,8 @@ public:
 
 ```cpp
 #include <StormByte/binary_data.hxx>
+#include <StormByte/byte_size.hxx>
+#include <StormByte/size.hxx>
 #include <StormByte/type_traits.hxx>
 #include <string>
 #include <vector>
@@ -370,6 +417,8 @@ static_assert(Type::String<std::string>);
 static_assert(Type::Container<std::vector<int>>);
 static_assert(Type::Container<BinaryData>);
 static_assert(Type::Sized<BinaryData>);
+static_assert(Type::Numeral<Size>);
+static_assert(Type::Numeral<ByteSize>);
 static_assert(Type::Optional<std::optional<int>>);
 ```
 

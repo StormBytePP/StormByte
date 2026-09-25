@@ -53,6 +53,8 @@
  * @brief Root namespace of the StormByte suite.
  */
 namespace StormByte {
+	class Size;
+
 	/**
 	 * @class CString
 	 * @brief Owned NUL-terminated buffer, safe to use across a DLL boundary.
@@ -181,9 +183,9 @@ namespace StormByte {
 
 			/**
 			 * @brief Character count (`strlen`), or `0` when empty or null.
-			 * @return Length.
+			 * @return Length as @ref StormByte::Size (units, not bytes).
 			 */
-			std::size_t Length() const noexcept;
+			Size Length() const noexcept;
 
 			/**
 			 * @brief Character at @p index.
@@ -191,7 +193,7 @@ namespace StormByte {
 			 * @return The character.
 			 * @note Null or `index > Length()` is undefined. Checked with `assert` when assertions are on.
 			 */
-			char operator[](std::size_t index) const noexcept;
+			char operator[](const Size& index) const noexcept;
 
 			/**
 			 * @brief `true` when the buffer pointer is not null.
@@ -359,6 +361,8 @@ namespace StormByte {
 		left.swap(right);
 	}
 }
+
+#include <StormByte/size.hxx>
 
 /**
  * @brief Hash of the text (`0` when the buffer is null).

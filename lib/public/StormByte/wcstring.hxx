@@ -43,6 +43,7 @@
 
 #include <compare>
 #include <cstddef>
+#include <cwchar>
 #include <functional>
 #include <ostream>
 #include <string>
@@ -53,13 +54,15 @@
  * @brief Root namespace of the StormByte suite.
  */
 namespace StormByte {
+	class Size;
+
 	/**
 	 * @class WCString
 	 * @brief Owned NUL-terminated wide buffer, safe to use across a DLL boundary.
 	 *
-	 * Wide counterpart of @ref CString. Not a replacement of `std::wstring`.
-	 * The class is minimal: copy, move, reset, a C wide-string view,
-	 * `Length`, subscript, equality, ordering, swap and conversions.
+	 * This is not a replacement or reimplementation of `std::wstring`.
+	 * The class is minimal on purpose: copy, move, reset, a C wide-string
+	 * view, `Length`, subscript, equality, ordering, swap and conversions.
 	 *
 	 * `operator const wchar_t*` is the analogue of `std::wstring::c_str()`.
 	 * The pointer is valid only until this object is destroyed, moved
@@ -86,6 +89,9 @@ namespace StormByte {
 	 *
 	 * `operator std::wstring`, `operator std::wstring_view` and
 	 * `operator<<` are inline so they run in the caller’s translation unit.
+	 *
+	 * If the text never leaves the module that created it, or the
+	 * program is not built for Windows, use `std::wstring`.
 	 */
 	class STORMBYTE_PUBLIC WCString final {
 		public:
@@ -178,9 +184,9 @@ namespace StormByte {
 
 			/**
 			 * @brief Character count (`wcslen`), or `0` when empty or null.
-			 * @return Length.
+			 * @return Length as @ref StormByte::Size (units, not bytes).
 			 */
-			std::size_t Length() const noexcept;
+			Size Length() const noexcept;
 
 			/**
 			 * @brief Character at @p index.
@@ -188,7 +194,7 @@ namespace StormByte {
 			 * @return The character.
 			 * @note Null or `index > Length()` is undefined. Checked with `assert` when assertions are on.
 			 */
-			wchar_t operator[](std::size_t index) const noexcept;
+			wchar_t operator[](const Size& index) const noexcept;
 
 			/**
 			 * @brief `true` when the buffer pointer is not null.
@@ -356,6 +362,8 @@ namespace StormByte {
 		left.swap(right);
 	}
 }
+
+#include <StormByte/size.hxx>
 
 /**
  * @brief Hash of the text (`0` when the buffer is null).

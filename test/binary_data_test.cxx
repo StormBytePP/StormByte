@@ -38,6 +38,7 @@
  */
 
 #include <StormByte/binary_data.hxx>
+#include <StormByte/byte_size.hxx>
 #include <StormByte/exception.hxx>
 #include <StormByte/serializable.hxx>
 #include <StormByte/size.hxx>
@@ -58,20 +59,21 @@
 #include <vector>
 
 using StormByte::BinaryData;
+using StormByte::ByteSize;
 using StormByte::OutOfBoundsError;
 using StormByte::Size;
 
 namespace {
 	BinaryData Bytes(std::initializer_list<unsigned char> list) {
 		BinaryData data;
-		data.reserve(Size{list.size()});
+		data.reserve(ByteSize{list.size()});
 		for (unsigned char value : list)
 			data.push_back(static_cast<std::byte>(value));
 		return data;
 	}
 
 	bool SameBytes(const BinaryData& data, std::initializer_list<unsigned char> list) {
-		if (data.size() != Size{list.size()})
+		if (data.size() != ByteSize{list.size()})
 			return false;
 		auto it = data.begin();
 		for (unsigned char value : list) {
@@ -219,7 +221,7 @@ int test_binary_data_algorithm_minmax_element() {
 
 int test_binary_data_algorithm_copy() {
 	BinaryData source = Bytes({1, 2, 3, 4});
-	BinaryData dest(Size{4}, std::byte{0});
+	BinaryData dest(ByteSize{4}, std::byte{0});
 	std::copy(source.begin(), source.end(), dest.begin());
 	ASSERT_TRUE("test_binary_data_algorithm_copy", source == dest);
 	RETURN_TEST("test_binary_data_algorithm_copy", 0);
@@ -234,7 +236,7 @@ int test_binary_data_algorithm_copy_backward() {
 
 int test_binary_data_algorithm_copy_if() {
 	BinaryData source = Bytes({1, 2, 3, 4});
-	BinaryData dest(Size{4}, std::byte{0});
+	BinaryData dest(ByteSize{4}, std::byte{0});
 	auto last = std::copy_if(source.begin(), source.end(), dest.begin(),
 		[](std::byte b) { return static_cast<unsigned>(b) % 2u == 0u; });
 	dest.erase(last, dest.end());
@@ -244,28 +246,28 @@ int test_binary_data_algorithm_copy_if() {
 
 int test_binary_data_algorithm_copy_n() {
 	BinaryData source = Bytes({1, 2, 3, 4});
-	BinaryData dest(Size{2}, std::byte{0});
+	BinaryData dest(ByteSize{2}, std::byte{0});
 	std::copy_n(source.begin(), 2, dest.begin());
 	ASSERT_TRUE("test_binary_data_algorithm_copy_n", SameBytes(dest, {1, 2}));
 	RETURN_TEST("test_binary_data_algorithm_copy_n", 0);
 }
 
 int test_binary_data_algorithm_fill() {
-	BinaryData data(Size{4}, std::byte{0});
+	BinaryData data(ByteSize{4}, std::byte{0});
 	std::fill(data.begin(), data.end(), std::byte{0xAB});
 	ASSERT_TRUE("test_binary_data_algorithm_fill", SameBytes(data, {0xAB, 0xAB, 0xAB, 0xAB}));
 	RETURN_TEST("test_binary_data_algorithm_fill", 0);
 }
 
 int test_binary_data_algorithm_fill_n() {
-	BinaryData data(Size{4}, std::byte{0});
+	BinaryData data(ByteSize{4}, std::byte{0});
 	std::fill_n(data.begin(), 2, std::byte{9});
 	ASSERT_TRUE("test_binary_data_algorithm_fill_n", SameBytes(data, {9, 9, 0, 0}));
 	RETURN_TEST("test_binary_data_algorithm_fill_n", 0);
 }
 
 int test_binary_data_algorithm_generate() {
-	BinaryData data(Size{3}, std::byte{0});
+	BinaryData data(ByteSize{3}, std::byte{0});
 	unsigned n = 1;
 	std::generate(data.begin(), data.end(), [&n] {
 		return static_cast<std::byte>(n++);
@@ -275,7 +277,7 @@ int test_binary_data_algorithm_generate() {
 }
 
 int test_binary_data_algorithm_generate_n() {
-	BinaryData data(Size{4}, std::byte{0});
+	BinaryData data(ByteSize{4}, std::byte{0});
 	unsigned n = 5;
 	std::generate_n(data.begin(), 2, [&n] {
 		return static_cast<std::byte>(n++);
@@ -293,7 +295,7 @@ int test_binary_data_algorithm_iter_swap() {
 
 int test_binary_data_algorithm_move() {
 	BinaryData source = Bytes({1, 2, 3});
-	BinaryData dest(Size{3}, std::byte{0});
+	BinaryData dest(ByteSize{3}, std::byte{0});
 	std::move(source.begin(), source.end(), dest.begin());
 	ASSERT_TRUE("test_binary_data_algorithm_move", SameBytes(dest, {1, 2, 3}));
 	RETURN_TEST("test_binary_data_algorithm_move", 0);
@@ -316,7 +318,7 @@ int test_binary_data_algorithm_remove() {
 
 int test_binary_data_algorithm_remove_copy() {
 	BinaryData source = Bytes({1, 2, 1, 3});
-	BinaryData dest(Size{4}, std::byte{0});
+	BinaryData dest(ByteSize{4}, std::byte{0});
 	auto last = std::remove_copy(source.begin(), source.end(), dest.begin(), std::byte{1});
 	dest.erase(last, dest.end());
 	ASSERT_TRUE("test_binary_data_algorithm_remove_copy", SameBytes(dest, {2, 3}));
@@ -341,7 +343,7 @@ int test_binary_data_algorithm_replace() {
 
 int test_binary_data_algorithm_replace_copy() {
 	BinaryData source = Bytes({1, 2, 1});
-	BinaryData dest(Size{3}, std::byte{0});
+	BinaryData dest(ByteSize{3}, std::byte{0});
 	std::replace_copy(source.begin(), source.end(), dest.begin(), std::byte{1}, std::byte{9});
 	ASSERT_TRUE("test_binary_data_algorithm_replace_copy", SameBytes(dest, {9, 2, 9}));
 	RETURN_TEST("test_binary_data_algorithm_replace_copy", 0);
@@ -365,7 +367,7 @@ int test_binary_data_algorithm_reverse() {
 
 int test_binary_data_algorithm_reverse_copy() {
 	BinaryData source = Bytes({1, 2, 3});
-	BinaryData dest(Size{3}, std::byte{0});
+	BinaryData dest(ByteSize{3}, std::byte{0});
 	std::reverse_copy(source.begin(), source.end(), dest.begin());
 	ASSERT_TRUE("test_binary_data_algorithm_reverse_copy", SameBytes(dest, {3, 2, 1}));
 	RETURN_TEST("test_binary_data_algorithm_reverse_copy", 0);
@@ -380,7 +382,7 @@ int test_binary_data_algorithm_rotate() {
 
 int test_binary_data_algorithm_rotate_copy() {
 	BinaryData source = Bytes({1, 2, 3, 4});
-	BinaryData dest(Size{4}, std::byte{0});
+	BinaryData dest(ByteSize{4}, std::byte{0});
 	std::rotate_copy(source.begin(), source.begin() + 2, source.end(), dest.begin());
 	ASSERT_TRUE("test_binary_data_algorithm_rotate_copy", SameBytes(dest, {3, 4, 1, 2}));
 	RETURN_TEST("test_binary_data_algorithm_rotate_copy", 0);
@@ -393,9 +395,9 @@ int test_binary_data_algorithm_shift() {
 	ASSERT_TRUE("test_binary_data_algorithm_shift", SameBytes(left, {2, 3, 4}));
 	BinaryData right = Bytes({1, 2, 3, 4});
 	std::shift_right(right.begin(), right.end(), 1);
-	ASSERT_TRUE("test_binary_data_algorithm_shift", right[Size{1}] == std::byte{1});
-	ASSERT_TRUE("test_binary_data_algorithm_shift", right[Size{2}] == std::byte{2});
-	ASSERT_TRUE("test_binary_data_algorithm_shift", right[Size{3}] == std::byte{3});
+	ASSERT_TRUE("test_binary_data_algorithm_shift", right[ByteSize{1}] == std::byte{1});
+	ASSERT_TRUE("test_binary_data_algorithm_shift", right[ByteSize{2}] == std::byte{2});
+	ASSERT_TRUE("test_binary_data_algorithm_shift", right[ByteSize{3}] == std::byte{3});
 	RETURN_TEST("test_binary_data_algorithm_shift", 0);
 }
 
@@ -426,7 +428,7 @@ int test_binary_data_algorithm_unique() {
 
 int test_binary_data_algorithm_unique_copy() {
 	BinaryData source = Bytes({1, 1, 2, 2, 3});
-	BinaryData dest(Size{5}, std::byte{0});
+	BinaryData dest(ByteSize{5}, std::byte{0});
 	auto last = std::unique_copy(source.begin(), source.end(), dest.begin());
 	dest.erase(last, dest.end());
 	ASSERT_TRUE("test_binary_data_algorithm_unique_copy", SameBytes(dest, {1, 2, 3}));
@@ -552,7 +554,7 @@ int test_binary_data_algorithm_search_n() {
 
 int test_binary_data_algorithm_adjacent_difference() {
 	BinaryData source = Bytes({1, 3, 6, 10});
-	BinaryData dest(Size{4}, std::byte{0});
+	BinaryData dest(ByteSize{4}, std::byte{0});
 	std::adjacent_difference(source.begin(), source.end(), dest.begin(),
 		[](std::byte a, std::byte b) {
 			return static_cast<std::byte>(static_cast<unsigned>(a) - static_cast<unsigned>(b));
@@ -574,7 +576,7 @@ int test_binary_data_algorithm_inner_product() {
 }
 
 int test_binary_data_algorithm_iota() {
-	BinaryData data(Size{4}, std::byte{0});
+	BinaryData data(ByteSize{4}, std::byte{0});
 	unsigned n = 1;
 	for (auto it = data.begin(); it != data.end(); ++it)
 		*it = static_cast<std::byte>(n++);
@@ -592,7 +594,7 @@ int test_binary_data_algorithm_numeric_accumulate() {
 
 int test_binary_data_algorithm_partial_sum() {
 	BinaryData source = Bytes({1, 2, 3, 4});
-	BinaryData dest(Size{4}, std::byte{0});
+	BinaryData dest(ByteSize{4}, std::byte{0});
 	std::partial_sum(source.begin(), source.end(), dest.begin(),
 		[](std::byte a, std::byte b) {
 			return static_cast<std::byte>(static_cast<unsigned>(a) + static_cast<unsigned>(b));
@@ -624,8 +626,8 @@ int test_binary_data_algorithm_partition() {
 
 int test_binary_data_algorithm_partition_copy() {
 	BinaryData source = Bytes({1, 2, 3, 4});
-	BinaryData yes(Size{4}, std::byte{0});
-	BinaryData no(Size{4}, std::byte{0});
+	BinaryData yes(ByteSize{4}, std::byte{0});
+	BinaryData no(ByteSize{4}, std::byte{0});
 	const auto odd = [](std::byte b) { return static_cast<unsigned>(b) % 2u == 1u; };
 	const auto [yend, nend] = std::partition_copy(source.begin(), source.end(), yes.begin(), no.begin(), odd);
 	yes.erase(yend, yes.end());
@@ -700,7 +702,7 @@ int test_binary_data_algorithm_includes() {
 int test_binary_data_algorithm_merge() {
 	BinaryData a = Bytes({1, 3, 5});
 	BinaryData b = Bytes({2, 4, 6});
-	BinaryData dest(Size{6}, std::byte{0});
+	BinaryData dest(ByteSize{6}, std::byte{0});
 	std::merge(a.begin(), a.end(), b.begin(), b.end(), dest.begin());
 	ASSERT_TRUE("test_binary_data_algorithm_merge", SameBytes(dest, {1, 2, 3, 4, 5, 6}));
 	RETURN_TEST("test_binary_data_algorithm_merge", 0);
@@ -716,7 +718,7 @@ int test_binary_data_algorithm_inplace_merge() {
 int test_binary_data_algorithm_set_difference() {
 	BinaryData a = Bytes({1, 2, 3, 4});
 	BinaryData b = Bytes({2, 4});
-	BinaryData dest(Size{4}, std::byte{0});
+	BinaryData dest(ByteSize{4}, std::byte{0});
 	auto last = std::set_difference(a.begin(), a.end(), b.begin(), b.end(), dest.begin());
 	dest.erase(last, dest.end());
 	ASSERT_TRUE("test_binary_data_algorithm_set_difference", SameBytes(dest, {1, 3}));
@@ -726,7 +728,7 @@ int test_binary_data_algorithm_set_difference() {
 int test_binary_data_algorithm_set_intersection() {
 	BinaryData a = Bytes({1, 2, 3, 4});
 	BinaryData b = Bytes({2, 4, 6});
-	BinaryData dest(Size{4}, std::byte{0});
+	BinaryData dest(ByteSize{4}, std::byte{0});
 	auto last = std::set_intersection(a.begin(), a.end(), b.begin(), b.end(), dest.begin());
 	dest.erase(last, dest.end());
 	ASSERT_TRUE("test_binary_data_algorithm_set_intersection", SameBytes(dest, {2, 4}));
@@ -736,7 +738,7 @@ int test_binary_data_algorithm_set_intersection() {
 int test_binary_data_algorithm_set_symmetric_difference() {
 	BinaryData a = Bytes({1, 2, 3});
 	BinaryData b = Bytes({2, 3, 4});
-	BinaryData dest(Size{4}, std::byte{0});
+	BinaryData dest(ByteSize{4}, std::byte{0});
 	auto last = std::set_symmetric_difference(a.begin(), a.end(), b.begin(), b.end(), dest.begin());
 	dest.erase(last, dest.end());
 	ASSERT_TRUE("test_binary_data_algorithm_set_symmetric_difference", SameBytes(dest, {1, 4}));
@@ -746,7 +748,7 @@ int test_binary_data_algorithm_set_symmetric_difference() {
 int test_binary_data_algorithm_set_union() {
 	BinaryData a = Bytes({1, 3});
 	BinaryData b = Bytes({2, 3, 4});
-	BinaryData dest(Size{4}, std::byte{0});
+	BinaryData dest(ByteSize{4}, std::byte{0});
 	auto last = std::set_union(a.begin(), a.end(), b.begin(), b.end(), dest.begin());
 	dest.erase(last, dest.end());
 	ASSERT_TRUE("test_binary_data_algorithm_set_union", SameBytes(dest, {1, 2, 3, 4}));
@@ -773,21 +775,21 @@ int test_binary_data_algorithm_is_sorted_until() {
 int test_binary_data_algorithm_nth_element() {
 	BinaryData data = Bytes({4, 1, 3, 2});
 	std::nth_element(data.begin(), data.begin() + 1, data.end());
-	ASSERT_TRUE("test_binary_data_algorithm_nth_element", data[Size{1}] == std::byte{2});
+	ASSERT_TRUE("test_binary_data_algorithm_nth_element", data[ByteSize{1}] == std::byte{2});
 	RETURN_TEST("test_binary_data_algorithm_nth_element", 0);
 }
 
 int test_binary_data_algorithm_partial_sort() {
 	BinaryData data = Bytes({4, 1, 3, 2});
 	std::partial_sort(data.begin(), data.begin() + 2, data.end());
-	ASSERT_TRUE("test_binary_data_algorithm_partial_sort", data[Size{0}] == std::byte{1});
-	ASSERT_TRUE("test_binary_data_algorithm_partial_sort", data[Size{1}] == std::byte{2});
+	ASSERT_TRUE("test_binary_data_algorithm_partial_sort", data[ByteSize{0}] == std::byte{1});
+	ASSERT_TRUE("test_binary_data_algorithm_partial_sort", data[ByteSize{1}] == std::byte{2});
 	RETURN_TEST("test_binary_data_algorithm_partial_sort", 0);
 }
 
 int test_binary_data_algorithm_partial_sort_copy() {
 	BinaryData source = Bytes({4, 1, 3, 2});
-	BinaryData dest(Size{2}, std::byte{0});
+	BinaryData dest(ByteSize{2}, std::byte{0});
 	std::partial_sort_copy(source.begin(), source.end(), dest.begin(), dest.end());
 	ASSERT_TRUE("test_binary_data_algorithm_partial_sort_copy", SameBytes(dest, {1, 2}));
 	RETURN_TEST("test_binary_data_algorithm_partial_sort_copy", 0);
@@ -812,9 +814,9 @@ int test_binary_data_algorithm_stable_sort() {
 // -------------------
 
 int test_binary_data_capacity_clear_keeps_capacity() {
-	BinaryData data(Size{8}, std::byte{1});
-	data.reserve(Size{32});
-	const Size cap = data.capacity();
+	BinaryData data(ByteSize{8}, std::byte{1});
+	data.reserve(ByteSize{32});
+	const ByteSize cap = data.capacity();
 	data.clear();
 	ASSERT_TRUE("test_binary_data_capacity_clear_keeps_capacity", data.empty());
 	ASSERT_TRUE("test_binary_data_capacity_clear_keeps_capacity", data.capacity() >= cap);
@@ -823,52 +825,52 @@ int test_binary_data_capacity_clear_keeps_capacity() {
 
 int test_binary_data_capacity_max_size() {
 	BinaryData data;
-	ASSERT_TRUE("test_binary_data_capacity_max_size", data.max_size() > Size{0});
+	ASSERT_TRUE("test_binary_data_capacity_max_size", data.max_size() > ByteSize{0});
 	RETURN_TEST("test_binary_data_capacity_max_size", 0);
 }
 
 int test_binary_data_capacity_reserve() {
 	BinaryData data;
-	data.reserve(Size{64});
+	data.reserve(ByteSize{64});
 	ASSERT_TRUE("test_binary_data_capacity_reserve", data.empty());
-	ASSERT_TRUE("test_binary_data_capacity_reserve", data.capacity() >= Size{64});
+	ASSERT_TRUE("test_binary_data_capacity_reserve", data.capacity() >= ByteSize{64});
 	RETURN_TEST("test_binary_data_capacity_reserve", 0);
 }
 
 int test_binary_data_capacity_resize_grow_zero() {
 	BinaryData data = Bytes({1, 2});
-	data.resize(Size{4});
+	data.resize(ByteSize{4});
 	ASSERT_TRUE("test_binary_data_capacity_resize_grow_zero", SameBytes(data, {1, 2, 0, 0}));
 	RETURN_TEST("test_binary_data_capacity_resize_grow_zero", 0);
 }
 
 int test_binary_data_capacity_resize_grow_value() {
 	BinaryData data = Bytes({1});
-	data.resize(Size{3}, std::byte{9});
+	data.resize(ByteSize{3}, std::byte{9});
 	ASSERT_TRUE("test_binary_data_capacity_resize_grow_value", SameBytes(data, {1, 9, 9}));
 	RETURN_TEST("test_binary_data_capacity_resize_grow_value", 0);
 }
 
 int test_binary_data_capacity_resize_shrink() {
 	BinaryData data = Bytes({1, 2, 3, 4});
-	data.resize(Size{2});
+	data.resize(ByteSize{2});
 	ASSERT_TRUE("test_binary_data_capacity_resize_shrink", SameBytes(data, {1, 2}));
 	RETURN_TEST("test_binary_data_capacity_resize_shrink", 0);
 }
 
 int test_binary_data_capacity_resize_zero() {
 	BinaryData data = Bytes({1, 2, 3});
-	data.resize(Size{0});
+	data.resize(ByteSize{0});
 	ASSERT_TRUE("test_binary_data_capacity_resize_zero", data.empty());
 	RETURN_TEST("test_binary_data_capacity_resize_zero", 0);
 }
 
 int test_binary_data_capacity_shrink_to_fit() {
 	BinaryData data;
-	data.reserve(Size{128});
+	data.reserve(ByteSize{128});
 	data.push_back(std::byte{1});
 	data.shrink_to_fit();
-	ASSERT_TRUE("test_binary_data_capacity_shrink_to_fit", data.size() == Size{1});
+	ASSERT_TRUE("test_binary_data_capacity_shrink_to_fit", data.size() == ByteSize{1});
 	ASSERT_TRUE("test_binary_data_capacity_shrink_to_fit", data.capacity() >= data.size());
 	RETURN_TEST("test_binary_data_capacity_shrink_to_fit", 0);
 }
@@ -924,7 +926,7 @@ int test_binary_data_concepts_container_shape() {
 	static_assert(StormByte::Type::Container<BinaryData>);
 	static_assert(StormByte::Type::Sized<BinaryData>);
 	static_assert(StormByte::Type::HasPushBack<BinaryData>);
-	static_assert(StormByte::Type::HasSubscript<BinaryData, Size>);
+	static_assert(StormByte::Type::HasSubscript<BinaryData, ByteSize>);
 	static_assert(StormByte::Type::HasSubscript<BinaryData, std::size_t>);
 	static_assert(!StormByte::Type::HasPushFront<BinaryData>);
 	static_assert(!StormByte::Type::HasInsert<BinaryData>);
@@ -966,13 +968,13 @@ int test_binary_data_construct_copy_move() {
 }
 
 int test_binary_data_construct_count_fill() {
-	BinaryData data(Size{3}, std::byte{7});
+	BinaryData data(ByteSize{3}, std::byte{7});
 	ASSERT_TRUE("test_binary_data_construct_count_fill", SameBytes(data, {7, 7, 7}));
 	RETURN_TEST("test_binary_data_construct_count_fill", 0);
 }
 
 int test_binary_data_construct_count_zero() {
-	BinaryData data(Size{3});
+	BinaryData data(ByteSize{3});
 	ASSERT_TRUE("test_binary_data_construct_count_zero", SameBytes(data, {0, 0, 0}));
 	RETURN_TEST("test_binary_data_construct_count_zero", 0);
 }
@@ -980,7 +982,7 @@ int test_binary_data_construct_count_zero() {
 int test_binary_data_construct_empty() {
 	BinaryData data;
 	ASSERT_TRUE("test_binary_data_construct_empty", data.empty());
-	ASSERT_TRUE("test_binary_data_construct_empty", data.size() == Size{0});
+	ASSERT_TRUE("test_binary_data_construct_empty", data.size() == ByteSize{0});
 	ASSERT_TRUE("test_binary_data_construct_empty", data.begin() == data.end());
 	ASSERT_TRUE("test_binary_data_construct_empty", data.data() == nullptr);
 	RETURN_TEST("test_binary_data_construct_empty", 0);
@@ -1010,9 +1012,9 @@ int test_binary_data_construct_initializer_list() {
 
 int test_binary_data_construct_pointer_count() {
 	const std::byte raw[] = {std::byte{9}, std::byte{8}};
-	BinaryData data(raw, Size{2});
+	BinaryData data(raw, ByteSize{2});
 	ASSERT_TRUE("test_binary_data_construct_pointer_count", SameBytes(data, {9, 8}));
-	BinaryData empty(static_cast<const std::byte*>(nullptr), Size{0});
+	BinaryData empty(static_cast<const std::byte*>(nullptr), ByteSize{0});
 	ASSERT_TRUE("test_binary_data_construct_pointer_count", empty.empty());
 	RETURN_TEST("test_binary_data_construct_pointer_count", 0);
 }
@@ -1050,8 +1052,8 @@ int test_binary_data_construct_vector() {
 
 int test_binary_data_access_at_ok() {
 	BinaryData data = Bytes({1, 2, 3});
-	ASSERT_TRUE("test_binary_data_access_at_ok", data.at(Size{0}) == std::byte{1});
-	data.at(Size{2}) = std::byte{9};
+	ASSERT_TRUE("test_binary_data_access_at_ok", data.at(ByteSize{0}) == std::byte{1});
+	data.at(ByteSize{2}) = std::byte{9};
 	ASSERT_TRUE("test_binary_data_access_at_ok", SameBytes(data, {1, 2, 9}));
 	RETURN_TEST("test_binary_data_access_at_ok", 0);
 }
@@ -1060,7 +1062,7 @@ int test_binary_data_access_at_throws() {
 	BinaryData data = Bytes({1});
 	bool threw = false;
 	try {
-		(void)data.at(Size{1});
+		(void)data.at(ByteSize{1});
 	} catch (const OutOfBoundsError&) {
 		threw = true;
 	}
@@ -1068,7 +1070,7 @@ int test_binary_data_access_at_throws() {
 	const BinaryData& cref = data;
 	threw = false;
 	try {
-		(void)cref.at(Size{2});
+		(void)cref.at(ByteSize{2});
 	} catch (const OutOfBoundsError&) {
 		threw = true;
 	}
@@ -1091,7 +1093,7 @@ int test_binary_data_access_span() {
 	std::span<std::byte> view = data;
 	ASSERT_EQUAL("test_binary_data_access_span", 3, view.size());
 	view[1] = std::byte{9};
-	ASSERT_TRUE("test_binary_data_access_span", data[Size{1}] == std::byte{9});
+	ASSERT_TRUE("test_binary_data_access_span", data[ByteSize{1}] == std::byte{9});
 	const BinaryData& cref = data;
 	std::span<const std::byte> cview = cref;
 	ASSERT_EQUAL("test_binary_data_access_span", 3, cview.size());
@@ -1100,9 +1102,9 @@ int test_binary_data_access_span() {
 
 int test_binary_data_access_subscript() {
 	BinaryData data = Bytes({1, 2, 3});
-	ASSERT_TRUE("test_binary_data_access_subscript", data[Size{0}] == std::byte{1});
-	data[Size{1}] = std::byte{9};
-	ASSERT_TRUE("test_binary_data_access_subscript", data.at(Size{1}) == std::byte{9});
+	ASSERT_TRUE("test_binary_data_access_subscript", data[ByteSize{0}] == std::byte{1});
+	data[ByteSize{1}] = std::byte{9};
+	ASSERT_TRUE("test_binary_data_access_subscript", data.at(ByteSize{1}) == std::byte{9});
 	RETURN_TEST("test_binary_data_access_subscript", 0);
 }
 
@@ -1169,7 +1171,7 @@ int test_binary_data_hexdump_columns_zero_single_line() {
 
 int test_binary_data_iterators_contiguous() {
 	BinaryData data = Bytes({1, 2, 3, 4});
-	ASSERT_TRUE("test_binary_data_iterators_contiguous", data.data() + 2 == &data[Size{2}]);
+	ASSERT_TRUE("test_binary_data_iterators_contiguous", data.data() + 2 == &data[ByteSize{2}]);
 	ASSERT_TRUE("test_binary_data_iterators_contiguous", data.end() == data.begin() + 4);
 	ASSERT_TRUE("test_binary_data_iterators_contiguous", std::contiguous_iterator<BinaryData::iterator>);
 	ASSERT_TRUE("test_binary_data_iterators_contiguous", std::contiguous_iterator<BinaryData::const_iterator>);
@@ -1224,7 +1226,7 @@ int test_binary_data_modifiers_append() {
 
 int test_binary_data_modifiers_append_empty() {
 	BinaryData data = Bytes({1});
-	data.append(static_cast<const std::byte*>(nullptr), Size{0});
+	data.append(static_cast<const std::byte*>(nullptr), ByteSize{0});
 	data.append(BinaryData{});
 	ASSERT_TRUE("test_binary_data_modifiers_append_empty", SameBytes(data, {1}));
 	RETURN_TEST("test_binary_data_modifiers_append_empty", 0);
@@ -1241,7 +1243,7 @@ int test_binary_data_modifiers_append_into_empty() {
 
 int test_binary_data_modifiers_assign() {
 	BinaryData data = Bytes({9, 9});
-	data.assign(Size{3}, std::byte{1});
+	data.assign(ByteSize{3}, std::byte{1});
 	ASSERT_TRUE("test_binary_data_modifiers_assign", SameBytes(data, {1, 1, 1}));
 	data.assign({std::byte{2}, std::byte{3}});
 	ASSERT_TRUE("test_binary_data_modifiers_assign", SameBytes(data, {2, 3}));
@@ -1251,7 +1253,7 @@ int test_binary_data_modifiers_assign() {
 	const unsigned char more[] = {5, 6};
 	data.assign(more, more + 2);
 	ASSERT_TRUE("test_binary_data_modifiers_assign", SameBytes(data, {5, 6}));
-	data.assign(Size{0}, std::byte{0});
+	data.assign(ByteSize{0}, std::byte{0});
 	ASSERT_TRUE("test_binary_data_modifiers_assign", data.empty());
 	RETURN_TEST("test_binary_data_modifiers_assign", 0);
 }
@@ -1272,7 +1274,7 @@ int test_binary_data_modifiers_insert() {
 	BinaryData data = Bytes({1, 4});
 	auto it = data.insert(data.begin() + 1, std::byte{2});
 	ASSERT_TRUE("test_binary_data_modifiers_insert", *it == std::byte{2});
-	data.insert(data.begin() + 2, Size{1}, std::byte{3});
+	data.insert(data.begin() + 2, ByteSize{1}, std::byte{3});
 	ASSERT_TRUE("test_binary_data_modifiers_insert", SameBytes(data, {1, 2, 3, 4}));
 	data.insert(data.end(), {std::byte{5}});
 	ASSERT_TRUE("test_binary_data_modifiers_insert", SameBytes(data, {1, 2, 3, 4, 5}));
@@ -1282,8 +1284,8 @@ int test_binary_data_modifiers_insert() {
 	const std::byte mid[] = {std::byte{7}};
 	data.insert(data.begin(), std::span<const std::byte>(mid, 1));
 	ASSERT_TRUE("test_binary_data_modifiers_insert", SameBytes(data, {7, 1, 2, 3, 4, 5, 6}));
-	data.insert(data.end(), Size{0}, std::byte{0});
-	ASSERT_TRUE("test_binary_data_modifiers_insert", data.size() == Size{7});
+	data.insert(data.end(), ByteSize{0}, std::byte{0});
+	ASSERT_TRUE("test_binary_data_modifiers_insert", data.size() == ByteSize{7});
 	RETURN_TEST("test_binary_data_modifiers_insert", 0);
 }
 
@@ -1362,29 +1364,29 @@ int test_binary_data_serializable_roundtrip() {
 int test_binary_data_construct_from_vector_copy() {
 	std::vector<std::byte> src{std::byte{1}, std::byte{2}, std::byte{3}};
 	const BinaryData data(src);
-	ASSERT_EQUAL("test_binary_data_construct_from_vector_copy", StormByte::Size{3}, data.size());
+	ASSERT_EQUAL("test_binary_data_construct_from_vector_copy", ByteSize{3}, data.size());
 	ASSERT_TRUE("test_binary_data_construct_from_vector_copy", src.size() == 3);
-	ASSERT_TRUE("test_binary_data_construct_from_vector_copy", data[StormByte::Size{0}] == std::byte{1});
-	ASSERT_TRUE("test_binary_data_construct_from_vector_copy", data[StormByte::Size{2}] == std::byte{3});
+	ASSERT_TRUE("test_binary_data_construct_from_vector_copy", data[ByteSize{0}] == std::byte{1});
+	ASSERT_TRUE("test_binary_data_construct_from_vector_copy", data[ByteSize{2}] == std::byte{3});
 	RETURN_TEST("test_binary_data_construct_from_vector_copy", 0);
 }
 
 int test_binary_data_construct_from_vector_rvalue_empties_source() {
 	std::vector<std::byte> src{std::byte{9}, std::byte{8}};
 	const BinaryData data(std::move(src));
-	ASSERT_EQUAL("test_binary_data_construct_from_vector_rvalue_empties_source", StormByte::Size{2}, data.size());
+	ASSERT_EQUAL("test_binary_data_construct_from_vector_rvalue_empties_source", ByteSize{2}, data.size());
 	ASSERT_TRUE("test_binary_data_construct_from_vector_rvalue_empties_source", src.empty());
-	ASSERT_TRUE("test_binary_data_construct_from_vector_rvalue_empties_source", data[StormByte::Size{0}] == std::byte{9});
+	ASSERT_TRUE("test_binary_data_construct_from_vector_rvalue_empties_source", data[ByteSize{0}] == std::byte{9});
 	RETURN_TEST("test_binary_data_construct_from_vector_rvalue_empties_source", 0);
 }
 
 int test_binary_data_convert_to_vector_copy_leaves_source() {
 	BinaryData data{std::byte{4}, std::byte{5}};
 	const std::vector<std::byte> out = static_cast<std::vector<std::byte>>(data);
-	ASSERT_EQUAL("test_binary_data_convert_to_vector_copy_leaves_source", StormByte::Size{2}, data.size());
+	ASSERT_EQUAL("test_binary_data_convert_to_vector_copy_leaves_source", ByteSize{2}, data.size());
 	ASSERT_TRUE("test_binary_data_convert_to_vector_copy_leaves_source", out.size() == 2);
 	ASSERT_TRUE("test_binary_data_convert_to_vector_copy_leaves_source", out[0] == std::byte{4});
-	ASSERT_TRUE("test_binary_data_convert_to_vector_copy_leaves_source", data[StormByte::Size{1}] == std::byte{5});
+	ASSERT_TRUE("test_binary_data_convert_to_vector_copy_leaves_source", data[ByteSize{1}] == std::byte{5});
 	RETURN_TEST("test_binary_data_convert_to_vector_copy_leaves_source", 0);
 }
 
@@ -1554,6 +1556,8 @@ int main() {
 	result += test_binary_data_compare_empty();
 	result += test_binary_data_compare_equal();
 	result += test_binary_data_compare_order();
+	result += test_binary_data_compare_span_equal();
+	result += test_binary_data_compare_span_order();
 
 	// -------------------
 	// Concepts
@@ -1612,11 +1616,12 @@ int main() {
 	result += test_binary_data_modifiers_assign();
 	result += test_binary_data_modifiers_erase();
 	result += test_binary_data_modifiers_insert();
+	result += test_binary_data_modifiers_plus_equal();
 	result += test_binary_data_modifiers_push_pop();
 	result += test_binary_data_modifiers_swap();
 
 	// -------------------
-	// Serializable
+	// Serializable (container path)
 	// -------------------
 	result += test_binary_data_serializable_empty();
 	result += test_binary_data_serializable_roundtrip();

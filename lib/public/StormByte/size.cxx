@@ -39,46 +39,373 @@
 
 #include <StormByte/size.hxx>
 
-#include <array>
-#include <cstdint>
 #include <cstdio>
+#include <cwchar>
 
-using namespace StormByte;
-
-namespace {
-	CString FormatByteSize(std::uint64_t bytes) noexcept {
-		static constexpr std::array<const char*, 7> units{
-			"B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"
-		};
-		std::uint64_t value = bytes;
-		std::size_t unit = 0;
-		std::uint64_t remainder = 0;
-		while (value >= 1024 && unit + 1 < units.size()) {
-			remainder = value % 1024;
-			value /= 1024;
-			++unit;
-		}
-
-		char buffer[32];
-		if (unit == 0 || remainder == 0)
-			std::snprintf(buffer, sizeof(buffer), "%llu %s",
-				static_cast<unsigned long long>(value), units[unit]);
-		else {
-			const unsigned tenths = static_cast<unsigned>((remainder * 10 + 512) / 1024);
-			if (tenths == 0)
-				std::snprintf(buffer, sizeof(buffer), "%llu %s",
-					static_cast<unsigned long long>(value), units[unit]);
-			else if (tenths == 10)
-				std::snprintf(buffer, sizeof(buffer), "%llu %s",
-					static_cast<unsigned long long>(value + 1), units[unit]);
-			else
-				std::snprintf(buffer, sizeof(buffer), "%llu.%u %s",
-					static_cast<unsigned long long>(value), tenths, units[unit]);
-		}
-		return CString(buffer);
+namespace StormByte {
+	Size::operator CString() const noexcept {
+		char buf[32];
+		const int n = std::snprintf(buf, sizeof(buf), "%zu", static_cast<std::size_t>(*this));
+		if (n <= 0)
+			return CString("0");
+		return CString(buf);
 	}
-}
 
-Size::operator CString() const noexcept {
-	return FormatByteSize(m_value);
+	Size::operator WCString() const noexcept {
+		wchar_t buf[32];
+		const int n = std::swprintf(buf, sizeof(buf) / sizeof(buf[0]), L"%zu", static_cast<std::size_t>(*this));
+		if (n <= 0)
+			return WCString(L"0");
+		return WCString(buf);
+	}
+
+	template STORMBYTE_INSTANTIATE Size::Size(char) noexcept;
+	template STORMBYTE_INSTANTIATE Size::Size(signed char) noexcept;
+	template STORMBYTE_INSTANTIATE Size::Size(unsigned char) noexcept;
+	template STORMBYTE_INSTANTIATE Size::Size(short) noexcept;
+	template STORMBYTE_INSTANTIATE Size::Size(unsigned short) noexcept;
+	template STORMBYTE_INSTANTIATE Size::Size(int) noexcept;
+	template STORMBYTE_INSTANTIATE Size::Size(unsigned int) noexcept;
+	template STORMBYTE_INSTANTIATE Size::Size(long) noexcept;
+	template STORMBYTE_INSTANTIATE Size::Size(unsigned long) noexcept;
+	template STORMBYTE_INSTANTIATE Size::Size(long long) noexcept;
+	template STORMBYTE_INSTANTIATE Size::Size(unsigned long long) noexcept;
+	template STORMBYTE_INSTANTIATE Size::Size(wchar_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size::Size(char8_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size::Size(char16_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size::Size(char32_t) noexcept;
+
+	template STORMBYTE_INSTANTIATE Size& Size::operator=(char) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator=(signed char) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator=(unsigned char) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator=(short) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator=(unsigned short) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator=(int) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator=(unsigned int) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator=(long) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator=(unsigned long) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator=(long long) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator=(unsigned long long) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator=(wchar_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator=(char8_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator=(char16_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator=(char32_t) noexcept;
+
+	template STORMBYTE_INSTANTIATE Size& Size::operator+=(char) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator+=(signed char) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator+=(unsigned char) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator+=(short) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator+=(unsigned short) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator+=(int) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator+=(unsigned int) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator+=(long) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator+=(unsigned long) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator+=(long long) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator+=(unsigned long long) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator+=(wchar_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator+=(char8_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator+=(char16_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator+=(char32_t) noexcept;
+
+	template STORMBYTE_INSTANTIATE Size& Size::operator-=(char) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator-=(signed char) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator-=(unsigned char) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator-=(short) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator-=(unsigned short) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator-=(int) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator-=(unsigned int) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator-=(long) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator-=(unsigned long) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator-=(long long) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator-=(unsigned long long) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator-=(wchar_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator-=(char8_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator-=(char16_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator-=(char32_t) noexcept;
+
+	template STORMBYTE_INSTANTIATE Size& Size::operator*=(char) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator*=(signed char) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator*=(unsigned char) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator*=(short) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator*=(unsigned short) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator*=(int) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator*=(unsigned int) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator*=(long) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator*=(unsigned long) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator*=(long long) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator*=(unsigned long long) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator*=(wchar_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator*=(char8_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator*=(char16_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator*=(char32_t) noexcept;
+
+	template STORMBYTE_INSTANTIATE Size& Size::operator/=(char) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator/=(signed char) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator/=(unsigned char) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator/=(short) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator/=(unsigned short) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator/=(int) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator/=(unsigned int) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator/=(long) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator/=(unsigned long) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator/=(long long) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator/=(unsigned long long) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator/=(wchar_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator/=(char8_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator/=(char16_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator/=(char32_t) noexcept;
+
+	template STORMBYTE_INSTANTIATE Size& Size::operator%=(char) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator%=(signed char) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator%=(unsigned char) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator%=(short) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator%=(unsigned short) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator%=(int) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator%=(unsigned int) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator%=(long) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator%=(unsigned long) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator%=(long long) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator%=(unsigned long long) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator%=(wchar_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator%=(char8_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator%=(char16_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size& Size::operator%=(char32_t) noexcept;
+
+	template STORMBYTE_INSTANTIATE Size::operator char() const noexcept;
+	template STORMBYTE_INSTANTIATE Size::operator signed char() const noexcept;
+	template STORMBYTE_INSTANTIATE Size::operator unsigned char() const noexcept;
+	template STORMBYTE_INSTANTIATE Size::operator short() const noexcept;
+	template STORMBYTE_INSTANTIATE Size::operator unsigned short() const noexcept;
+	template STORMBYTE_INSTANTIATE Size::operator int() const noexcept;
+	template STORMBYTE_INSTANTIATE Size::operator unsigned int() const noexcept;
+	template STORMBYTE_INSTANTIATE Size::operator long() const noexcept;
+	template STORMBYTE_INSTANTIATE Size::operator long long() const noexcept;
+	template STORMBYTE_INSTANTIATE Size::operator wchar_t() const noexcept;
+	template STORMBYTE_INSTANTIATE Size::operator char8_t() const noexcept;
+	template STORMBYTE_INSTANTIATE Size::operator char16_t() const noexcept;
+	template STORMBYTE_INSTANTIATE Size::operator char32_t() const noexcept;
+
+	template STORMBYTE_INSTANTIATE bool operator==(Size, char) noexcept;
+	template STORMBYTE_INSTANTIATE bool operator==(Size, signed char) noexcept;
+	template STORMBYTE_INSTANTIATE bool operator==(Size, unsigned char) noexcept;
+	template STORMBYTE_INSTANTIATE bool operator==(Size, short) noexcept;
+	template STORMBYTE_INSTANTIATE bool operator==(Size, unsigned short) noexcept;
+	template STORMBYTE_INSTANTIATE bool operator==(Size, int) noexcept;
+	template STORMBYTE_INSTANTIATE bool operator==(Size, unsigned int) noexcept;
+	template STORMBYTE_INSTANTIATE bool operator==(Size, long) noexcept;
+	template STORMBYTE_INSTANTIATE bool operator==(Size, unsigned long) noexcept;
+	template STORMBYTE_INSTANTIATE bool operator==(Size, long long) noexcept;
+	template STORMBYTE_INSTANTIATE bool operator==(Size, unsigned long long) noexcept;
+	template STORMBYTE_INSTANTIATE bool operator==(Size, wchar_t) noexcept;
+	template STORMBYTE_INSTANTIATE bool operator==(Size, char8_t) noexcept;
+	template STORMBYTE_INSTANTIATE bool operator==(Size, char16_t) noexcept;
+	template STORMBYTE_INSTANTIATE bool operator==(Size, char32_t) noexcept;
+
+	template STORMBYTE_INSTANTIATE bool operator==(char, Size) noexcept;
+	template STORMBYTE_INSTANTIATE bool operator==(signed char, Size) noexcept;
+	template STORMBYTE_INSTANTIATE bool operator==(unsigned char, Size) noexcept;
+	template STORMBYTE_INSTANTIATE bool operator==(short, Size) noexcept;
+	template STORMBYTE_INSTANTIATE bool operator==(unsigned short, Size) noexcept;
+	template STORMBYTE_INSTANTIATE bool operator==(int, Size) noexcept;
+	template STORMBYTE_INSTANTIATE bool operator==(unsigned int, Size) noexcept;
+	template STORMBYTE_INSTANTIATE bool operator==(long, Size) noexcept;
+	template STORMBYTE_INSTANTIATE bool operator==(unsigned long, Size) noexcept;
+	template STORMBYTE_INSTANTIATE bool operator==(long long, Size) noexcept;
+	template STORMBYTE_INSTANTIATE bool operator==(unsigned long long, Size) noexcept;
+	template STORMBYTE_INSTANTIATE bool operator==(wchar_t, Size) noexcept;
+	template STORMBYTE_INSTANTIATE bool operator==(char8_t, Size) noexcept;
+	template STORMBYTE_INSTANTIATE bool operator==(char16_t, Size) noexcept;
+	template STORMBYTE_INSTANTIATE bool operator==(char32_t, Size) noexcept;
+
+	template STORMBYTE_INSTANTIATE std::strong_ordering operator<=>(Size, char) noexcept;
+	template STORMBYTE_INSTANTIATE std::strong_ordering operator<=>(Size, signed char) noexcept;
+	template STORMBYTE_INSTANTIATE std::strong_ordering operator<=>(Size, unsigned char) noexcept;
+	template STORMBYTE_INSTANTIATE std::strong_ordering operator<=>(Size, short) noexcept;
+	template STORMBYTE_INSTANTIATE std::strong_ordering operator<=>(Size, unsigned short) noexcept;
+	template STORMBYTE_INSTANTIATE std::strong_ordering operator<=>(Size, int) noexcept;
+	template STORMBYTE_INSTANTIATE std::strong_ordering operator<=>(Size, unsigned int) noexcept;
+	template STORMBYTE_INSTANTIATE std::strong_ordering operator<=>(Size, long) noexcept;
+	template STORMBYTE_INSTANTIATE std::strong_ordering operator<=>(Size, unsigned long) noexcept;
+	template STORMBYTE_INSTANTIATE std::strong_ordering operator<=>(Size, long long) noexcept;
+	template STORMBYTE_INSTANTIATE std::strong_ordering operator<=>(Size, unsigned long long) noexcept;
+	template STORMBYTE_INSTANTIATE std::strong_ordering operator<=>(Size, wchar_t) noexcept;
+	template STORMBYTE_INSTANTIATE std::strong_ordering operator<=>(Size, char8_t) noexcept;
+	template STORMBYTE_INSTANTIATE std::strong_ordering operator<=>(Size, char16_t) noexcept;
+	template STORMBYTE_INSTANTIATE std::strong_ordering operator<=>(Size, char32_t) noexcept;
+
+	template STORMBYTE_INSTANTIATE std::strong_ordering operator<=>(char, Size) noexcept;
+	template STORMBYTE_INSTANTIATE std::strong_ordering operator<=>(signed char, Size) noexcept;
+	template STORMBYTE_INSTANTIATE std::strong_ordering operator<=>(unsigned char, Size) noexcept;
+	template STORMBYTE_INSTANTIATE std::strong_ordering operator<=>(short, Size) noexcept;
+	template STORMBYTE_INSTANTIATE std::strong_ordering operator<=>(unsigned short, Size) noexcept;
+	template STORMBYTE_INSTANTIATE std::strong_ordering operator<=>(int, Size) noexcept;
+	template STORMBYTE_INSTANTIATE std::strong_ordering operator<=>(unsigned int, Size) noexcept;
+	template STORMBYTE_INSTANTIATE std::strong_ordering operator<=>(long, Size) noexcept;
+	template STORMBYTE_INSTANTIATE std::strong_ordering operator<=>(unsigned long, Size) noexcept;
+	template STORMBYTE_INSTANTIATE std::strong_ordering operator<=>(long long, Size) noexcept;
+	template STORMBYTE_INSTANTIATE std::strong_ordering operator<=>(unsigned long long, Size) noexcept;
+	template STORMBYTE_INSTANTIATE std::strong_ordering operator<=>(wchar_t, Size) noexcept;
+	template STORMBYTE_INSTANTIATE std::strong_ordering operator<=>(char8_t, Size) noexcept;
+	template STORMBYTE_INSTANTIATE std::strong_ordering operator<=>(char16_t, Size) noexcept;
+	template STORMBYTE_INSTANTIATE std::strong_ordering operator<=>(char32_t, Size) noexcept;
+
+	template STORMBYTE_INSTANTIATE Size operator+(Size, char) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator+(Size, signed char) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator+(Size, unsigned char) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator+(Size, short) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator+(Size, unsigned short) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator+(Size, int) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator+(Size, unsigned int) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator+(Size, long) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator+(Size, unsigned long) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator+(Size, long long) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator+(Size, unsigned long long) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator+(Size, wchar_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator+(Size, char8_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator+(Size, char16_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator+(Size, char32_t) noexcept;
+
+	template STORMBYTE_INSTANTIATE Size operator+(char, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator+(signed char, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator+(unsigned char, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator+(short, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator+(unsigned short, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator+(int, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator+(unsigned int, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator+(long, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator+(unsigned long, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator+(long long, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator+(unsigned long long, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator+(wchar_t, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator+(char8_t, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator+(char16_t, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator+(char32_t, Size) noexcept;
+
+	template STORMBYTE_INSTANTIATE Size operator-(Size, char) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator-(Size, signed char) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator-(Size, unsigned char) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator-(Size, short) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator-(Size, unsigned short) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator-(Size, int) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator-(Size, unsigned int) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator-(Size, long) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator-(Size, unsigned long) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator-(Size, long long) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator-(Size, unsigned long long) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator-(Size, wchar_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator-(Size, char8_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator-(Size, char16_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator-(Size, char32_t) noexcept;
+
+	template STORMBYTE_INSTANTIATE Size operator-(char, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator-(signed char, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator-(unsigned char, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator-(short, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator-(unsigned short, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator-(int, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator-(unsigned int, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator-(long, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator-(unsigned long, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator-(long long, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator-(unsigned long long, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator-(wchar_t, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator-(char8_t, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator-(char16_t, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator-(char32_t, Size) noexcept;
+
+	template STORMBYTE_INSTANTIATE Size operator*(Size, char) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator*(Size, signed char) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator*(Size, unsigned char) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator*(Size, short) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator*(Size, unsigned short) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator*(Size, int) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator*(Size, unsigned int) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator*(Size, long) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator*(Size, unsigned long) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator*(Size, long long) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator*(Size, unsigned long long) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator*(Size, wchar_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator*(Size, char8_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator*(Size, char16_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator*(Size, char32_t) noexcept;
+
+	template STORMBYTE_INSTANTIATE Size operator*(char, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator*(signed char, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator*(unsigned char, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator*(short, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator*(unsigned short, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator*(int, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator*(unsigned int, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator*(long, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator*(unsigned long, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator*(long long, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator*(unsigned long long, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator*(wchar_t, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator*(char8_t, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator*(char16_t, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator*(char32_t, Size) noexcept;
+
+	template STORMBYTE_INSTANTIATE Size operator/(Size, char) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator/(Size, signed char) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator/(Size, unsigned char) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator/(Size, short) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator/(Size, unsigned short) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator/(Size, int) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator/(Size, unsigned int) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator/(Size, long) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator/(Size, unsigned long) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator/(Size, long long) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator/(Size, unsigned long long) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator/(Size, wchar_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator/(Size, char8_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator/(Size, char16_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator/(Size, char32_t) noexcept;
+
+	template STORMBYTE_INSTANTIATE Size operator/(char, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator/(signed char, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator/(unsigned char, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator/(short, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator/(unsigned short, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator/(int, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator/(unsigned int, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator/(long, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator/(unsigned long, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator/(long long, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator/(unsigned long long, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator/(wchar_t, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator/(char8_t, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator/(char16_t, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator/(char32_t, Size) noexcept;
+
+	template STORMBYTE_INSTANTIATE Size operator%(Size, char) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator%(Size, signed char) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator%(Size, unsigned char) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator%(Size, short) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator%(Size, unsigned short) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator%(Size, int) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator%(Size, unsigned int) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator%(Size, long) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator%(Size, unsigned long) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator%(Size, long long) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator%(Size, unsigned long long) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator%(Size, wchar_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator%(Size, char8_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator%(Size, char16_t) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator%(Size, char32_t) noexcept;
+
+	template STORMBYTE_INSTANTIATE Size operator%(char, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator%(signed char, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator%(unsigned char, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator%(short, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator%(unsigned short, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator%(int, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator%(unsigned int, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator%(long, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator%(unsigned long, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator%(long long, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator%(unsigned long long, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator%(wchar_t, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator%(char8_t, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator%(char16_t, Size) noexcept;
+	template STORMBYTE_INSTANTIATE Size operator%(char32_t, Size) noexcept;
 }

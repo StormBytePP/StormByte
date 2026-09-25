@@ -39,6 +39,7 @@
 
 #pragma once
 
+#include <StormByte/byte_size.hxx>
 #include <StormByte/cstring.hxx>
 #include <StormByte/exception.hxx>
 #include <StormByte/size.hxx>
@@ -84,6 +85,9 @@ namespace StormByte {
 	 * @c std::byte* iterators, @c std::span views and a vector-like API
 	 * so @c &lt;algorithm&gt; and @c std::ranges keep working.
 	 *
+	 * Occupied length, capacity and byte offsets are @ref ByteSize.
+	 * HexDump column width is @ref Size (a count of columns, not a payload).
+	 *
 	 * Member names are lowercase to match @c std::vector.
 	 *
 	 * @par Construction from / conversion to @c std::vector
@@ -107,7 +111,7 @@ namespace StormByte {
 			using value_type = std::byte;
 
 			/**
-			 * @brief STL size typedef; @ref size() returns @ref StormByte::Size.
+			 * @brief STL size typedef; @ref size() returns @ref StormByte::ByteSize.
 			 */
 			using size_type = std::size_t;
 
@@ -166,13 +170,13 @@ namespace StormByte {
 			 * @param count Element count.
 			 * @param value Fill byte.
 			 */
-			BinaryData(const StormByte::Size& count, std::byte value);
+			BinaryData(const StormByte::ByteSize& count, std::byte value);
 
 			/**
 			 * @brief Construct @p count zeroed bytes.
 			 * @param count Element count.
 			 */
-			explicit BinaryData(const StormByte::Size& count);
+			explicit BinaryData(const StormByte::ByteSize& count);
 
 			/**
 			 * @brief Copy bytes from a contiguous span.
@@ -185,7 +189,7 @@ namespace StormByte {
 			 * @param bytes Source pointer; may be null when @p count is zero.
 			 * @param count Byte count.
 			 */
-			BinaryData(const std::byte* bytes, const StormByte::Size& count);
+			BinaryData(const std::byte* bytes, const StormByte::ByteSize& count);
 
 			/**
 			 * @brief Copy from an initializer list.
@@ -393,21 +397,21 @@ namespace StormByte {
 
 			/**
 			 * @brief Occupied length in bytes.
-			 * @return @ref StormByte::Size (this is a byte length).
+			 * @return @ref StormByte::ByteSize.
 			 */
-			StormByte::Size size() const noexcept;
+			StormByte::ByteSize size() const noexcept;
 
 			/**
 			 * @brief Implementation maximum size in bytes.
-			 * @return @ref StormByte::Size.
+			 * @return @ref StormByte::ByteSize.
 			 */
-			StormByte::Size max_size() const noexcept;
+			StormByte::ByteSize max_size() const noexcept;
 
 			/**
 			 * @brief Allocated capacity in bytes.
-			 * @return @ref StormByte::Size.
+			 * @return @ref StormByte::ByteSize.
 			 */
-			StormByte::Size capacity() const noexcept;
+			StormByte::ByteSize capacity() const noexcept;
 
 			/**
 			 * @brief Whether the sequence holds no bytes.
@@ -419,20 +423,20 @@ namespace StormByte {
 			 * @brief Request capacity of at least @p new_cap bytes.
 			 * @param new_cap Requested capacity.
 			 */
-			void reserve(const StormByte::Size& new_cap);
+			void reserve(const StormByte::ByteSize& new_cap);
 
 			/**
 			 * @brief Resize to @p new_size bytes. Appended bytes are zero.
 			 * @param new_size New size.
 			 */
-			void resize(const StormByte::Size& new_size);
+			void resize(const StormByte::ByteSize& new_size);
 
 			/**
 			 * @brief Resize to @p new_size bytes. Appended bytes are @p value.
 			 * @param new_size New size.
 			 * @param value Fill for new bytes.
 			 */
-			void resize(const StormByte::Size& new_size, std::byte value);
+			void resize(const StormByte::ByteSize& new_size, std::byte value);
 
 			/**
 			 * @brief Release unused capacity when the implementation allows it.
@@ -449,14 +453,14 @@ namespace StormByte {
 			 * @param index Byte offset.
 			 * @return Reference to the byte at @p index.
 			 */
-			std::byte& operator[](const StormByte::Size& index) noexcept;
+			std::byte& operator[](const StormByte::ByteSize& index) noexcept;
 
 			/**
 			 * @brief Unchecked const subscript.
 			 * @param index Byte offset.
 			 * @return Const reference to the byte at @p index.
 			 */
-			const std::byte& operator[](const StormByte::Size& index) const noexcept;
+			const std::byte& operator[](const StormByte::ByteSize& index) const noexcept;
 
 			/**
 			 * @brief Checked mutable subscript.
@@ -464,7 +468,7 @@ namespace StormByte {
 			 * @return Reference to the byte at @p index.
 			 * @throws StormByte::OutOfBoundsError When @p index is not less than @ref size().
 			 */
-			std::byte& at(const StormByte::Size& index);
+			std::byte& at(const StormByte::ByteSize& index);
 
 			/**
 			 * @brief Checked const subscript.
@@ -472,7 +476,7 @@ namespace StormByte {
 			 * @return Const reference to the byte at @p index.
 			 * @throws StormByte::OutOfBoundsError When @p index is not less than @ref size().
 			 */
-			const std::byte& at(const StormByte::Size& index) const;
+			const std::byte& at(const StormByte::ByteSize& index) const;
 
 			/**
 			 * @brief First byte.
@@ -555,7 +559,7 @@ namespace StormByte {
 			 * @param count New size.
 			 * @param value Fill byte.
 			 */
-			void assign(const StormByte::Size& count, std::byte value);
+			void assign(const StormByte::ByteSize& count, std::byte value);
 
 			/**
 			 * @brief Replace contents with a copy of @p bytes.
@@ -589,7 +593,7 @@ namespace StormByte {
 			 * @param bytes Source pointer; may be null when @p count is zero.
 			 * @param count Byte count.
 			 */
-			void append(const std::byte* bytes, const StormByte::Size& count);
+			void append(const std::byte* bytes, const StormByte::ByteSize& count);
 
 			/**
 			 * @brief Append a copy of @p other.
@@ -660,7 +664,7 @@ namespace StormByte {
 			 * @param value Fill byte.
 			 * @return Iterator to the first inserted byte, or @p pos when @p count is zero.
 			 */
-			iterator insert(const_iterator pos, const StormByte::Size& count, std::byte value);
+			iterator insert(const_iterator pos, const StormByte::ByteSize& count, std::byte value);
 
 			/**
 			 * @brief Insert an initializer list before @p pos.
@@ -713,7 +717,7 @@ namespace StormByte {
 			/**
 			 * @brief Hexadecimal dump of the occupied bytes, sixteen bytes per row.
 			 *
-			 * Same as @ref HexDump(std::size_t) with @c 16.
+			 * Same as @ref HexDump(Size) with @c 16.
 			 *
 			 * @return Dump text owned by Base. Empty when this sequence is empty.
 			 */
@@ -724,14 +728,14 @@ namespace StormByte {
 			 *
 			 * Each line is an 8-digit offset, @p columns bytes as hex, and the
 			 * same bytes as ASCII (non-printable shown as @c '.').
-			 * @p columns is a row width, not a byte length: it is @c std::size_t,
-			 * not @ref StormByte::Size.
+			 * @p columns is a row width, not a byte length: it is @ref Size,
+			 * not @ref ByteSize.
 			 * @c 0 prints every byte on one line (still with offset and ASCII).
 			 *
 			 * @param columns Bytes per row; @c 0 means a single row.
 			 * @return Dump text owned by Base. Empty when this sequence is empty.
 			 */
-			CString HexDump(std::size_t columns) const;
+			CString HexDump(Size columns) const;
 
 		private:
 			/**
@@ -793,7 +797,7 @@ namespace StormByte {
 	BinaryData::BinaryData(const R& range)
 		: BinaryData() {
 		if constexpr (requires { std::size(range); })
-			reserve(StormByte::Size{ static_cast<std::uint64_t>(std::size(range)) });
+			reserve(StormByte::ByteSize{std::size(range)});
 		for (auto&& b : range)
 			push_back(static_cast<std::byte>(b));
 	}
@@ -811,7 +815,7 @@ namespace StormByte {
 			*this = std::move(range);
 		} else {
 			if constexpr (requires { std::size(range); })
-				reserve(StormByte::Size{ static_cast<std::uint64_t>(std::size(range)) });
+				reserve(StormByte::ByteSize{std::size(range)});
 			for (auto&& b : range)
 				push_back(static_cast<std::byte>(b));
 		}

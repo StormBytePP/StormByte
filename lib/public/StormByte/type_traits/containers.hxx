@@ -39,8 +39,10 @@
 
 #pragma once
 
+#include <array>
 #include <concepts>
 #include <string>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 
@@ -49,7 +51,7 @@
  * @brief Root namespace of the StormByte suite.
  */
 namespace StormByte {
-	class Size;	///< Byte count. Defined in size.hxx. Forwarded so Type::Sized can name it.
+	class Size;	///< Unit count. Defined in size.hxx. Forwarded so Type::Sized can name it.
 
 	/**
 	 * @namespace String
@@ -110,6 +112,44 @@ namespace StormByte {
 		 * @{
 		 */
 
+		namespace Detail {
+			/**
+			 * @brief Primary: @p T is not `std::array`.
+			 * @tparam T Decayed type.
+			 */
+			template<typename T>
+			inline constexpr bool ArrayV = false;
+
+			/**
+			 * @brief Partial: exact `std::array<U, N>`.
+			 * @tparam U Element type.
+			 * @tparam N Extent.
+			 *
+			 * Specialisation only. Do not use `tuple_size_v` in the
+			 * concept: any type with `value_type` (e.g. @ref StormByte::BinaryData)
+			 * would instantiate an incomplete `std::tuple_size`.
+			 */
+			template<typename U, std::size_t N>
+			inline constexpr bool ArrayV<std::array<U, N>> = true;
+		}
+
+		/**
+		 * @brief `std::array<U, N>` after stripping cv/ref.
+		 * @tparam T Type to test.
+		 *
+		 * Same case @ref StormByte::Serializable uses when decoding a
+		 * container: fixed extent, assign by index, no `insert(end)`.
+		 * C arrays, `std::span` and other fixed buffers do not match.
+		 *
+		 * @code
+		 * static_assert(Type::Array<std::array<int, 4>>);
+		 * static_assert(Type::Array<const std::array<int, 4>&>);
+		 * static_assert(!Type::Array<int[4]>);
+		 * @endcode
+		 */
+		template<typename T>
+		concept Array = Detail::ArrayV<std::remove_cvref_t<T>>;
+
 		/**
 		 * @brief Has `begin()`, `end()` and `value_type`, and is not a @ref StormByte::Type::String.
 		 * @tparam T Type to test (cv/ref as written; strings use `std::decay_t`).
@@ -167,10 +207,10 @@ namespace StormByte {
 		 * @brief @ref StormByte::Type::Container that publishes `size()`.
 		 * @tparam C Container type (cv/ref ignored).
 		 *
-		 * The return type of `size()` is either implicitly convertible
-		 * to `std::size_t` (STL containers) or @ref StormByte::Size
-		 * (octet lengths in the suite). @ref StormByte::Size does not
-		 * convert to an integer implicitly; that exit stays explicit.
+		 * The return type of `size()` is implicitly convertible to
+		 * `std::size_t` (STL containers and @ref StormByte::Size) or
+		 * is exactly @ref StormByte::Size. `Size` converts to
+		 * `std::size_t` implicitly (clamp on a 32-bit host).
 		 *
 		 * @code
 		 * static_assert(Type::Sized<std::vector<int>>);
