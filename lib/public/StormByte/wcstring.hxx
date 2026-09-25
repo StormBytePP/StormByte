@@ -73,6 +73,10 @@ namespace StormByte {
 	 * constructed from `L""` is empty (`Length() == 0`) and valid.
 	 * A default-constructed object is null.
 	 *
+	 * Construction from `std::wstring` / `std::wstring_view` *copies* onto
+	 * Base's heap. It is not a heap steal. An empty source yields `L""`,
+	 * not a null buffer.
+	 *
 	 * `operator[]` is an observer. Valid indices are `[0, Length()]`;
 	 * `Length()` is the trailing NUL. A null buffer or an index past
 	 * `Length()` is undefined and `assert`s when assertions are on.
@@ -83,7 +87,7 @@ namespace StormByte {
 	 * `operator std::wstring`, `operator std::wstring_view` and
 	 * `operator<<` are inline so they run in the caller’s translation unit.
 	 */
-	class STORMBYTE_PUBLIC WCString {
+	class STORMBYTE_PUBLIC WCString final {
 		public:
 			/**
 			 * @name Life
@@ -100,6 +104,20 @@ namespace StormByte {
 			 * @param str Source; may be null.
 			 */
 			explicit WCString(const wchar_t* str) noexcept;
+
+			/**
+			 * @brief Copies @p sv onto Base's heap.
+			 * @param sv Source view. Copied up to the first NUL, then terminated.
+			 * @note Not a heap steal. Empty yields @c L"".
+			 */
+			explicit WCString(std::wstring_view sv) noexcept;
+
+			/**
+			 * @brief Copies @p str onto Base's heap.
+			 * @param str Source. Remains valid and unchanged.
+			 * @note Not a heap steal. Empty yields @c L"".
+			 */
+			explicit WCString(const std::wstring& str) noexcept;
 
 			/**
 			 * @brief Copy constructor.
@@ -290,6 +308,13 @@ namespace StormByte {
 			 * @return New buffer, or null.
 			 */
 			static const wchar_t* Duplicate(const wchar_t* str) noexcept;
+
+			/**
+			 * @brief Copies @p sv into a new buffer and appends NUL.
+			 * @param sv Source view.
+			 * @return New buffer (`L""` when @p sv is empty).
+			 */
+			static const wchar_t* Duplicate(std::wstring_view sv) noexcept;
 	};
 
 	/**

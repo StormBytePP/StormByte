@@ -18,12 +18,11 @@ The suite is split on purpose. Buffer, Config, Crypto, Database, Logger, Multime
 - **Exceptions** — `StormByte::Exception` with `std::format` messages stored in `CString` (`what()` is a `const char*` owned by the exception).
 - **Error** — `Domain`, `Category`, `Code` and `Fault` for `std::error_code`. `Fault` is not thrown; its text is a `CString`.
 - **Expected** — `Expected<T, E>` on top of `std::expected`, references via `reference_wrapper`, errors as `shared_ptr<E>`, plus `Unexpected`.
-- **Serialization** — `Serializable<T>` to `BinaryData`, always little-endian, no BOM and no version tag. Optional / pair / container / trivial / `Detail::Codec<T>`. `Deserialize` takes `BinaryData` or `span`.
-- **CString / WCString** — owned NUL-terminated narrow and wide buffers, safe to use across a DLL boundary. Not `std::string` / `std::wstring`. Content equality, `<=>`, `swap` and `std::hash`.
-- **BinaryData** — owned contiguous `std::byte` sequence, safe to use across a DLL boundary. Same kind of API as `std::vector<std::byte>`. Lengths use `Size`. Public APIs no longer return or take a free `std::vector<std::byte>`.
+- **Serialization** — `Serializable<T>` to `BinaryData`, always little-endian, no BOM and no version tag. Optional / pair / container / trivial / `Detail::Codec<T>`.
+- **CString / WCString** — owned NUL-terminated narrow and wide buffers, safe to use across a DLL boundary. Not `std::string` / `std::wstring`. Construct from C string, `string_view` / `wstring_view` and `string` / `wstring` (copy onto Base's heap). Content equality, `<=>`, `swap` and `std::hash`.
+- **BinaryData** — owned contiguous `std::byte` sequence, safe to use across a DLL boundary. Same kind of API as `std::vector<std::byte>`. Lengths use `Size`. `HexDump` prints offset + hex + ASCII; column count is `std::size_t`.
 - **Size** — `uint64_t` byte count, same width on every host and safe across a DLL. IEC and SI units, `*` / `/` / `%`, IEC text as `CString`.
 - **UUID** — RFC 4122 version 4 (`GenerateUUIDv4`).
-- **Base64** — `Base64Encode` returns `CString`. `Base64Decode` returns `BinaryData`.
 - **Bitmask** — CRTP flags over `Type::UnsignedEnum`.
 - **Clonable** — virtual `Clone` / `Move` into `shared_ptr` or `unique_ptr`.
 - **ThreadLock** — owner-thread reentry; `Unlock` from a non-owner is a no-op.
@@ -146,6 +145,8 @@ A module adds its own enum, specializes `Error::Domain`, and puts `make_error_co
 
 Owned buffers. `operator bool` is true when the pointer is not null: `""` / `L""` are valid empty text; a default-constructed object is null.
 
+Construct from `const char*` / `const wchar_t*` (null stays null), from `std::string_view` / `std::wstring_view`, and from `const std::string&` / `const std::wstring&`. Those last two **copy** onto Base's heap. They are not a heap steal. An empty `string` / view yields `""` / `L""`, not a null buffer.
+
 `==` / `!=` / `<=>` compare text, not addresses. Two nulls are equal; null is not equal to `""` / `L""` and orders before any text. `swap` exchanges buffers. `std::hash` hashes the text (`0` when null), so the types work in `std::set` and `std::unordered_set`.
 
 `explicit operator const char*` / `const wchar_t*` has the same lifetime as `std::string::c_str()` / `std::wstring::c_str()`. Implicit `std::string` / `std::wstring` and `operator<<` are inline (caller CRT).
@@ -155,6 +156,7 @@ Owned buffers. `operator bool` is true when the pointer is not null: `""` / `L""
 #include <StormByte/wcstring.hxx>
 #include <iostream>
 #include <set>
+#include <string>
 
 using namespace StormByte;
 
@@ -163,8 +165,8 @@ int main() {
 	if (text)
 		std::cout << text << " " << text.Length() << std::endl;
 
-	CString other("hello");
-	if (text == other && text == "hello")
+	CString from_std{std::string("hello")};
+	if (text == from_std && text == "hello")
 		std::cout << "same text" << std::endl;
 
 	text.Reset();
@@ -192,17 +194,19 @@ int main() {
 
 It is not text (`CString`) and not a structured document. Lengths are `StormByte::Size`. Member names stay lowercase to match the STL.
 
-For `<algorithm>` and `std::ranges` it supports everything `std::vector<std::byte>` supports on a contiguous sequence of bytes: copy / transform / sort / reverse / rotate / unique / remove / replace / partition / heap / set operations / binary search / permutations, plus iterators, `std::span` and insert / erase / assign / append / emplace. `std::iota` is the exception that is *also* true of `std::vector<std::byte>`: `std::byte` is an enum class and has no `operator++`.
+For `<algorithm>` and `std::ranges` it supports everything `std::vector<std::byte>` supports on a contiguous sequence of bytes: copy / transform / sort / reverse / rotate / unique / remove / replace / partition / heap / set operations / binary search / permutations, plus iterators, `std::span` and insert / erase / assign / append / `operator+=` / emplace. `std::iota` is the exception that is *also* true of `std::vector<std::byte>`: `std::byte` is an enum class and has no `operator++`.
 
 `at()` throws `OutOfBoundsError`. `operator[]` is unchecked, like `std::vector`.
 
+Compare with another `BinaryData` or with `std::span<const std::byte>` (`==`, `!=`, `<=>`, both operand orders).
+
+**Hex dump.** `HexDump()` and `HexDump(std::size_t columns)` return a `CString`. Each line is an 8-digit offset, a row of hex bytes, and the same bytes as ASCII (non-printable as `.`). `columns` is a **row width**, not a byte length — it is `std::size_t`, not `Size`. `0` prints every byte on one line. The default is 16 columns.
+
 **`std::vector` and `std::span`.** You can build a `BinaryData` from a `span` or from a caller-owned `vector`. You can view the bytes as a `span` (implicit). You can copy them out to a `vector` (`explicit operator std::vector<std::byte>`). The rvalue overloads *look* like a move: the source is emptied after the copy. They are not a heap steal. Base cannot donate its pointer to a foreign `vector`, and it cannot adopt a caller `vector` pointer. Peak usage is two copies during the transfer.
 
-`append(BinaryData&&)` is different: both sides live on Base’s heap, so that move is real.
+`append(BinaryData&&)` / `operator+=(BinaryData&&)` is different: both sides live on Base’s heap, so that move is real when `*this` is empty.
 
 `Serializable<BinaryData>` uses the container path. The wire is the same as `std::vector<std::byte>`: `uint64` little-endian count, then the payload.
-
-`Serialize()` itself returns `BinaryData`. So do `Base64Decode` and `Codec::Write`.
 
 ```cpp
 #include <StormByte/binary_data.hxx>
@@ -219,7 +223,7 @@ using namespace StormByte;
 int main() {
 	BinaryData payload{std::byte{0xDE}, std::byte{0xAD}, std::byte{0xBE}, std::byte{0xEF}};
 	payload.push_back(std::byte{0x00});
-	payload.append(std::span<const std::byte>(payload.span().first(2)));
+	payload += payload.span().first(2);
 
 	std::ranges::reverse(payload);
 	std::sort(payload.begin(), payload.end());
@@ -229,12 +233,13 @@ int main() {
 
 	const Size n = payload.size();
 	std::cout << static_cast<unsigned long long>(n.Value()) << std::endl;
+	std::cout << payload.HexDump(8) << std::endl;
 
 	std::vector<std::byte> caller = static_cast<std::vector<std::byte>>(payload);
 	BinaryData back{std::move(caller)};
 
 	BinaryData extra{std::byte{0xFF}};
-	back.append(std::move(extra));
+	back += std::move(extra);
 
 	auto blob = Serializable<BinaryData>(back).Serialize();
 	auto loaded = Serializable<BinaryData>::Deserialize(blob);
@@ -289,11 +294,9 @@ int main() {
 
 ### Serialization
 
-Wire is little-endian. `Serialize()` returns `BinaryData`. `Deserialize` reads a prefix from `BinaryData` or `span`; leftover bytes stay with the caller. Custom types specialize `StormByte::Detail::Codec<T>` (`Size` / `Write` / `Read`), not `Serializable<T>`. `Write` also returns `BinaryData`.
+Wire is little-endian. `Serialize()` returns `BinaryData`. `Deserialize` reads a prefix; leftover bytes stay with the caller. Custom types specialize `StormByte::Detail::Codec<T>` (`Size` / `Write` / `Read`), not `Serializable<T>`.
 
-`BinaryData` is a `Type::Container` of `std::byte`. No `Codec` specialization is required; the container path writes the same layout as a local `std::vector<std::byte>` would.
-
-Do not put `std::vector<std::byte>` in a public signature. Convert at the call site if a host API still wants a vector.
+`BinaryData` is a `Type::Container` of `std::byte`. No `Codec` specialization is required; the container path writes the same layout as `std::vector<std::byte>`.
 
 ```cpp
 #include <StormByte/serializable.hxx>

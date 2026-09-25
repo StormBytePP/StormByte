@@ -53,11 +53,26 @@ const wchar_t* WCString::Duplicate(const wchar_t* str) noexcept {
 	return out;
 }
 
+const wchar_t* WCString::Duplicate(std::wstring_view sv) noexcept {
+	const std::size_t len = sv.size();
+	wchar_t* out = new wchar_t[len + 1];
+	if (len != 0)
+		std::wmemcpy(out, sv.data(), len);
+	out[len] = L'\0';
+	return out;
+}
+
 WCString::WCString() noexcept
 : m_data(nullptr) {}
 
 WCString::WCString(const wchar_t* str) noexcept
 : m_data(Duplicate(str)) {}
+
+WCString::WCString(std::wstring_view sv) noexcept
+: m_data(Duplicate(sv)) {}
+
+WCString::WCString(const std::wstring& str) noexcept
+: m_data(Duplicate(std::wstring_view(str))) {}
 
 WCString::WCString(const WCString& other) noexcept
 : m_data(Duplicate(other.m_data)) {}

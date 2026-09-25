@@ -53,11 +53,26 @@ const char* CString::Duplicate(const char* str) noexcept {
 	return out;
 }
 
+const char* CString::Duplicate(std::string_view sv) noexcept {
+	const std::size_t len = sv.size();
+	char* out = new char[len + 1];
+	if (len != 0)
+		std::memcpy(out, sv.data(), len);
+	out[len] = '\0';
+	return out;
+}
+
 CString::CString() noexcept
 : m_data(nullptr) {}
 
 CString::CString(const char* str) noexcept
 : m_data(Duplicate(str)) {}
+
+CString::CString(std::string_view sv) noexcept
+: m_data(Duplicate(sv)) {}
+
+CString::CString(const std::string& str) noexcept
+: m_data(Duplicate(std::string_view(str))) {}
 
 CString::CString(const CString& other) noexcept
 : m_data(Duplicate(other.m_data)) {}

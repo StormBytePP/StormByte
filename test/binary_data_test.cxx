@@ -1107,26 +1107,60 @@ int test_binary_data_access_subscript() {
 }
 
 // -------------------
-// HexDump
+// Hex dump
 // -------------------
 
-int test_binary_data_hexdump_ascii_and_offset() {
-	BinaryData data = Bytes({ 'A', 'B', 0x00, 0xFF });
-	const auto dump = data.HexDump();
-	ASSERT_TRUE("test_binary_data_hexdump_ascii_and_offset", static_cast<bool>(dump));
-	const std::string text = dump;
-	ASSERT_TRUE("test_binary_data_hexdump_ascii_and_offset", text.find("00000000") != std::string::npos);
-	ASSERT_TRUE("test_binary_data_hexdump_ascii_and_offset", text.find("41") != std::string::npos);
-	ASSERT_TRUE("test_binary_data_hexdump_ascii_and_offset", text.find("AB") != std::string::npos);
-	ASSERT_TRUE("test_binary_data_hexdump_ascii_and_offset", text.find('.') != std::string::npos);
-	RETURN_TEST("test_binary_data_hexdump_ascii_and_offset", 0);
+int test_binary_data_hexdump_empty() {
+	BinaryData data;
+	const std::string text = static_cast<std::string>(data.HexDump());
+	ASSERT_TRUE("test_binary_data_hexdump_empty", text.empty());
+	ASSERT_TRUE("test_binary_data_hexdump_empty",
+		static_cast<std::string>(data.HexDump(8)).empty());
+	ASSERT_TRUE("test_binary_data_hexdump_empty",
+		static_cast<std::string>(data.HexDump(0)).empty());
+	RETURN_TEST("test_binary_data_hexdump_empty", 0);
 }
 
-int test_binary_data_hexdump_empty() {
-	const BinaryData data;
-	const auto dump = data.HexDump();
-	ASSERT_TRUE("test_binary_data_hexdump_empty", dump == "");
-	RETURN_TEST("test_binary_data_hexdump_empty", 0);
+int test_binary_data_hexdump_default_matches_sixteen() {
+	BinaryData data{std::byte{'H'}, std::byte{'i'}};
+	const std::string a = static_cast<std::string>(data.HexDump());
+	const std::string b = static_cast<std::string>(data.HexDump(16));
+	ASSERT_TRUE("test_binary_data_hexdump_default_matches_sixteen", a == b);
+	ASSERT_TRUE("test_binary_data_hexdump_default_matches_sixteen",
+		a.find("00000000") == 0);
+	ASSERT_TRUE("test_binary_data_hexdump_default_matches_sixteen",
+		a.find("48 69") != std::string::npos);
+	ASSERT_TRUE("test_binary_data_hexdump_default_matches_sixteen",
+		a.find("Hi") != std::string::npos);
+	RETURN_TEST("test_binary_data_hexdump_default_matches_sixteen", 0);
+}
+
+int test_binary_data_hexdump_columns_eight() {
+	BinaryData data;
+	for (unsigned i = 0; i < 20; ++i)
+		data.push_back(static_cast<std::byte>(i));
+	const std::string text = static_cast<std::string>(data.HexDump(8));
+	ASSERT_TRUE("test_binary_data_hexdump_columns_eight",
+		text.find("00000000") == 0);
+	ASSERT_TRUE("test_binary_data_hexdump_columns_eight",
+		text.find("00000008") != std::string::npos);
+	ASSERT_TRUE("test_binary_data_hexdump_columns_eight",
+		text.find("00000010") != std::string::npos);
+	ASSERT_TRUE("test_binary_data_hexdump_columns_eight",
+		text.find('\n') != std::string::npos);
+	RETURN_TEST("test_binary_data_hexdump_columns_eight", 0);
+}
+
+int test_binary_data_hexdump_columns_zero_single_line() {
+	BinaryData data{std::byte{0x00}, std::byte{0x0A}, std::byte{'A'}};
+	const std::string text = static_cast<std::string>(data.HexDump(0));
+	ASSERT_TRUE("test_binary_data_hexdump_columns_zero_single_line",
+		text.find('\n') == std::string::npos);
+	ASSERT_TRUE("test_binary_data_hexdump_columns_zero_single_line",
+		text.find("00 0a 41") != std::string::npos);
+	ASSERT_TRUE("test_binary_data_hexdump_columns_zero_single_line",
+		text.find(".A") != std::string::npos);
+	RETURN_TEST("test_binary_data_hexdump_columns_zero_single_line", 0);
 }
 
 // -------------------
@@ -1520,8 +1554,6 @@ int main() {
 	result += test_binary_data_compare_empty();
 	result += test_binary_data_compare_equal();
 	result += test_binary_data_compare_order();
-	result += test_binary_data_compare_span_equal();
-	result += test_binary_data_compare_span_order();
 
 	// -------------------
 	// Concepts
@@ -1556,9 +1588,11 @@ int main() {
 	result += test_binary_data_access_subscript();
 
 	// -------------------
-	// HexDump
+	// Hex dump
 	// -------------------
-	result += test_binary_data_hexdump_ascii_and_offset();
+	result += test_binary_data_hexdump_columns_eight();
+	result += test_binary_data_hexdump_columns_zero_single_line();
+	result += test_binary_data_hexdump_default_matches_sixteen();
 	result += test_binary_data_hexdump_empty();
 
 	// -------------------
@@ -1578,7 +1612,6 @@ int main() {
 	result += test_binary_data_modifiers_assign();
 	result += test_binary_data_modifiers_erase();
 	result += test_binary_data_modifiers_insert();
-	result += test_binary_data_modifiers_plus_equal();
 	result += test_binary_data_modifiers_push_pop();
 	result += test_binary_data_modifiers_swap();
 

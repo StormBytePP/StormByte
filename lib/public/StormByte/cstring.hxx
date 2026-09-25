@@ -73,6 +73,10 @@ namespace StormByte {
 	 * constructed from `""` is empty (`Length() == 0`) and valid.
 	 * A default-constructed object is null.
 	 *
+	 * Construction from `std::string` / `std::string_view` *copies* onto
+	 * Base's heap. It is not a heap steal. An empty source yields `""`,
+	 * not a null buffer.
+	 *
 	 * `operator[]` is an observer. Valid indices are `[0, Length()]`;
 	 * `Length()` is the trailing NUL. A null buffer or an index past
 	 * `Length()` is undefined and `assert`s when assertions are on.
@@ -86,7 +90,7 @@ namespace StormByte {
 	 * If the text never leaves the module that created it, or the
 	 * program is not built for Windows, use `std::string`.
 	 */
-	class STORMBYTE_PUBLIC CString {
+	class STORMBYTE_PUBLIC CString final {
 		public:
 			/**
 			 * @name Life
@@ -103,6 +107,20 @@ namespace StormByte {
 			 * @param str Source; may be null.
 			 */
 			explicit CString(const char* str) noexcept;
+
+			/**
+			 * @brief Copies @p sv onto Base's heap.
+			 * @param sv Source view. Copied up to the first NUL, then terminated.
+			 * @note Not a heap steal. Empty yields @c "".
+			 */
+			explicit CString(std::string_view sv) noexcept;
+
+			/**
+			 * @brief Copies @p str onto Base's heap.
+			 * @param str Source. Remains valid and unchanged.
+			 * @note Not a heap steal. Empty yields @c "".
+			 */
+			explicit CString(const std::string& str) noexcept;
 
 			/**
 			 * @brief Copy constructor.
@@ -293,6 +311,13 @@ namespace StormByte {
 			 * @return New buffer, or null.
 			 */
 			static const char* Duplicate(const char* str) noexcept;
+
+			/**
+			 * @brief Copies @p sv into a new buffer and appends NUL.
+			 * @param sv Source view.
+			 * @return New buffer (`""` when @p sv is empty).
+			 */
+			static const char* Duplicate(std::string_view sv) noexcept;
 	};
 
 	/**
