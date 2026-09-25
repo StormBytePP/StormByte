@@ -52,6 +52,7 @@
 #include <numeric>
 #include <ranges>
 #include <span>
+#include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -573,8 +574,6 @@ int test_binary_data_algorithm_inner_product() {
 }
 
 int test_binary_data_algorithm_iota() {
-	// std::iota is not usable with std::byte: enum class has no operator++.
-	// Same sequential fill a vector<byte> would need by hand.
 	BinaryData data(Size{4}, std::byte{0});
 	unsigned n = 1;
 	for (auto it = data.begin(); it != data.end(); ++it)
@@ -898,6 +897,25 @@ int test_binary_data_compare_order() {
 	RETURN_TEST("test_binary_data_compare_order", 0);
 }
 
+int test_binary_data_compare_span_equal() {
+	BinaryData data = Bytes({1, 2, 3});
+	const std::byte raw[] = { std::byte{1}, std::byte{2}, std::byte{3} };
+	const std::span<const std::byte> view{raw, 3};
+	ASSERT_TRUE("test_binary_data_compare_span_equal", data == view);
+	ASSERT_TRUE("test_binary_data_compare_span_equal", view == data);
+	ASSERT_TRUE("test_binary_data_compare_span_equal", !(data != view));
+	RETURN_TEST("test_binary_data_compare_span_equal", 0);
+}
+
+int test_binary_data_compare_span_order() {
+	BinaryData data = Bytes({1, 2, 3});
+	const std::byte raw[] = { std::byte{1}, std::byte{2}, std::byte{4} };
+	const std::span<const std::byte> view{raw, 3};
+	ASSERT_TRUE("test_binary_data_compare_span_order", (data <=> view) == std::strong_ordering::less);
+	ASSERT_TRUE("test_binary_data_compare_span_order", data != view);
+	RETURN_TEST("test_binary_data_compare_span_order", 0);
+}
+
 // -------------------
 // Concepts
 // -------------------
@@ -1089,6 +1107,29 @@ int test_binary_data_access_subscript() {
 }
 
 // -------------------
+// HexDump
+// -------------------
+
+int test_binary_data_hexdump_ascii_and_offset() {
+	BinaryData data = Bytes({ 'A', 'B', 0x00, 0xFF });
+	const auto dump = data.HexDump();
+	ASSERT_TRUE("test_binary_data_hexdump_ascii_and_offset", static_cast<bool>(dump));
+	const std::string text = dump;
+	ASSERT_TRUE("test_binary_data_hexdump_ascii_and_offset", text.find("00000000") != std::string::npos);
+	ASSERT_TRUE("test_binary_data_hexdump_ascii_and_offset", text.find("41") != std::string::npos);
+	ASSERT_TRUE("test_binary_data_hexdump_ascii_and_offset", text.find("AB") != std::string::npos);
+	ASSERT_TRUE("test_binary_data_hexdump_ascii_and_offset", text.find('.') != std::string::npos);
+	RETURN_TEST("test_binary_data_hexdump_ascii_and_offset", 0);
+}
+
+int test_binary_data_hexdump_empty() {
+	const BinaryData data;
+	const auto dump = data.HexDump();
+	ASSERT_TRUE("test_binary_data_hexdump_empty", dump == "");
+	RETURN_TEST("test_binary_data_hexdump_empty", 0);
+}
+
+// -------------------
 // Iterators
 // -------------------
 
@@ -1210,6 +1251,22 @@ int test_binary_data_modifiers_insert() {
 	data.insert(data.end(), Size{0}, std::byte{0});
 	ASSERT_TRUE("test_binary_data_modifiers_insert", data.size() == Size{7});
 	RETURN_TEST("test_binary_data_modifiers_insert", 0);
+}
+
+int test_binary_data_modifiers_plus_equal() {
+	BinaryData data = Bytes({1});
+	const std::byte extra[] = { std::byte{2}, std::byte{3} };
+	data += std::span<const std::byte>{extra, 2};
+	ASSERT_TRUE("test_binary_data_modifiers_plus_equal", SameBytes(data, {1, 2, 3}));
+	BinaryData tail = Bytes({4});
+	data += tail;
+	ASSERT_TRUE("test_binary_data_modifiers_plus_equal", SameBytes(data, {1, 2, 3, 4}));
+	ASSERT_TRUE("test_binary_data_modifiers_plus_equal", SameBytes(tail, {4}));
+	BinaryData moved = Bytes({5});
+	data += std::move(moved);
+	ASSERT_TRUE("test_binary_data_modifiers_plus_equal", SameBytes(data, {1, 2, 3, 4, 5}));
+	ASSERT_TRUE("test_binary_data_modifiers_plus_equal", moved.empty());
+	RETURN_TEST("test_binary_data_modifiers_plus_equal", 0);
 }
 
 int test_binary_data_modifiers_push_pop() {
@@ -1463,6 +1520,8 @@ int main() {
 	result += test_binary_data_compare_empty();
 	result += test_binary_data_compare_equal();
 	result += test_binary_data_compare_order();
+	result += test_binary_data_compare_span_equal();
+	result += test_binary_data_compare_span_order();
 
 	// -------------------
 	// Concepts
@@ -1497,6 +1556,12 @@ int main() {
 	result += test_binary_data_access_subscript();
 
 	// -------------------
+	// HexDump
+	// -------------------
+	result += test_binary_data_hexdump_ascii_and_offset();
+	result += test_binary_data_hexdump_empty();
+
+	// -------------------
 	// Iterators
 	// -------------------
 	result += test_binary_data_iterators_contiguous();
@@ -1513,6 +1578,7 @@ int main() {
 	result += test_binary_data_modifiers_assign();
 	result += test_binary_data_modifiers_erase();
 	result += test_binary_data_modifiers_insert();
+	result += test_binary_data_modifiers_plus_equal();
 	result += test_binary_data_modifiers_push_pop();
 	result += test_binary_data_modifiers_swap();
 

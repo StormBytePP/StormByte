@@ -39,7 +39,11 @@
 
 #include <StormByte/binary_data.hxx>
 
+#include <algorithm>
+#include <cstring>
 #include <cstdint>
+#include <cstdio>
+#include <string>
 #include <vector>
 
 namespace StormByte {
@@ -54,6 +58,22 @@ namespace StormByte {
 
 		StormByte::Size AsSize(std::size_t n) {
 			return StormByte::Size{ static_cast<std::uint64_t>(n) };
+		}
+
+		std::strong_ordering CompareBytes(std::span<const std::byte> lhs, std::span<const std::byte> rhs) noexcept {
+			const std::size_t n = std::min(lhs.size(), rhs.size());
+			if (n != 0) {
+				const int cmp = std::memcmp(lhs.data(), rhs.data(), n);
+				if (cmp < 0)
+					return std::strong_ordering::less;
+				if (cmp > 0)
+					return std::strong_ordering::greater;
+			}
+			if (lhs.size() < rhs.size())
+				return std::strong_ordering::less;
+			if (lhs.size() > rhs.size())
+				return std::strong_ordering::greater;
+			return std::strong_ordering::equal;
 		}
 	}
 
@@ -149,6 +169,18 @@ namespace StormByte {
 
 	std::strong_ordering BinaryData::operator<=>(const BinaryData& other) const noexcept {
 		return m_storage->bytes <=> other.m_storage->bytes;
+	}
+
+	bool BinaryData::operator==(std::span<const std::byte> bytes) const noexcept {
+		return (*this <=> bytes) == std::strong_ordering::equal;
+	}
+
+	bool BinaryData::operator!=(std::span<const std::byte> bytes) const noexcept {
+		return !(*this == bytes);
+	}
+
+	std::strong_ordering BinaryData::operator<=>(std::span<const std::byte> bytes) const noexcept {
+		return CompareBytes(span(), bytes);
 	}
 
 	BinaryData::iterator BinaryData::begin() noexcept {
@@ -351,6 +383,21 @@ namespace StormByte {
 		other.shrink_to_fit();
 	}
 
+	BinaryData& BinaryData::operator+=(std::span<const std::byte> bytes) {
+		append(bytes);
+		return *this;
+	}
+
+	BinaryData& BinaryData::operator+=(const BinaryData& other) {
+		append(other);
+		return *this;
+	}
+
+	BinaryData& BinaryData::operator+=(BinaryData&& other) {
+		append(std::move(other));
+		return *this;
+	}
+
 	void BinaryData::push_back(std::byte value) {
 		m_storage->bytes.push_back(value);
 	}
@@ -400,7 +447,48 @@ namespace StormByte {
 		m_storage.swap(other.m_storage);
 	}
 
+	CString BinaryData::HexDump() const {
+		if (empty())
+			return CString("");
+
+		std::string out;
+		const auto n = AsIndex(size());
+		out.reserve((n / 16 + 1) * 80);
+		char line[96];
+		for (std::size_t offset = 0; offset < n; offset += 16) {
+			const std::size_t chunk = std::min<std::size_t>(16, n - offset);
+			int used = std::snprintf(line, sizeof(line), "%08zx ", offset);
+			if (used < 0)
+				used = 0;
+			for (std::size_t i = 0; i < 16; ++i) {
+				if (i < chunk) {
+					used += std::snprintf(line + used, sizeof(line) - static_cast<std::size_t>(used),
+						"%02X ", static_cast<unsigned>(m_storage->bytes[offset + i]));
+				} else {
+					used += std::snprintf(line + used, sizeof(line) - static_cast<std::size_t>(used), "   ");
+				}
+			}
+			used += std::snprintf(line + used, sizeof(line) - static_cast<std::size_t>(used), " ");
+			for (std::size_t i = 0; i < chunk; ++i) {
+				const auto c = static_cast<unsigned char>(m_storage->bytes[offset + i]);
+				line[used++] = (c >= 0x20 && c <= 0x7E) ? static_cast<char>(c) : '.';
+			}
+			line[used++] = '\n';
+			line[used] = '\0';
+			out.append(line, static_cast<std::size_t>(used));
+		}
+		return CString(out.c_str());
+	}
+
 	void swap(BinaryData& lhs, BinaryData& rhs) noexcept {
 		lhs.swap(rhs);
+	}
+
+	bool operator==(std::span<const std::byte> bytes, const BinaryData& data) noexcept {
+		return data == bytes;
+	}
+
+	bool operator!=(std::span<const std::byte> bytes, const BinaryData& data) noexcept {
+		return data != bytes;
 	}
 }

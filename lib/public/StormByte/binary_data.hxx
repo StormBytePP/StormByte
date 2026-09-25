@@ -39,6 +39,7 @@
 
 #pragma once
 
+#include <StormByte/cstring.hxx>
 #include <StormByte/exception.hxx>
 #include <StormByte/size.hxx>
 #include <StormByte/type_traits.hxx>
@@ -296,6 +297,27 @@ namespace StormByte {
 			 * @return @c std::strong_ordering.
 			 */
 			std::strong_ordering operator<=>(const BinaryData& other) const noexcept;
+
+			/**
+			 * @brief Equality with a contiguous view.
+			 * @param bytes View to compare.
+			 * @return @c true when sizes and bytes match.
+			 */
+			bool operator==(std::span<const std::byte> bytes) const noexcept;
+
+			/**
+			 * @brief Inequality with a contiguous view.
+			 * @param bytes View to compare.
+			 * @return @c true when sizes or bytes differ.
+			 */
+			bool operator!=(std::span<const std::byte> bytes) const noexcept;
+
+			/**
+			 * @brief Three-way lexicographical comparison with a contiguous view.
+			 * @param bytes View to compare.
+			 * @return @c std::strong_ordering.
+			 */
+			std::strong_ordering operator<=>(std::span<const std::byte> bytes) const noexcept;
 
 			/**
 			 * @brief Mutable iterator to the first byte.
@@ -570,18 +592,37 @@ namespace StormByte {
 			void append(const std::byte* bytes, const StormByte::Size& count);
 
 			/**
-			 * @brief Append a copy of @p other.
-			 * @param other Source sequence. Unchanged.
+			 * @brief Append a copy of another sequence.
+			 * @param other Source sequence.
 			 */
 			void append(const BinaryData& other);
 
 			/**
-			 * @brief Append @p other and leave it empty.
-			 * @param other Source sequence on Base's heap.
-			 * @note Same-heap transfer: bytes move into @c *this and @p other
-			 *       is cleared. This is a real move, not a vector CRT steal.
+			 * @brief Append another sequence. Same-heap move when @c *this is empty.
+			 * @param other Source sequence; emptied after the append.
 			 */
 			void append(BinaryData&& other);
+
+			/**
+			 * @brief Append a copy of @p bytes.
+			 * @param bytes Source view.
+			 * @return @c *this.
+			 */
+			BinaryData& operator+=(std::span<const std::byte> bytes);
+
+			/**
+			 * @brief Append a copy of another sequence.
+			 * @param other Source sequence.
+			 * @return @c *this.
+			 */
+			BinaryData& operator+=(const BinaryData& other);
+
+			/**
+			 * @brief Append another sequence. Same-heap move when @c *this is empty.
+			 * @param other Source sequence; emptied after the append.
+			 * @return @c *this.
+			 */
+			BinaryData& operator+=(BinaryData&& other);
 
 			/**
 			 * @brief Append one byte.
@@ -590,8 +631,8 @@ namespace StormByte {
 			void push_back(std::byte value);
 
 			/**
-			 * @brief Append a byte constructed in place.
-			 * @tparam T Source type convertible to the underlying value of @c std::byte.
+			 * @brief Append a byte constructed from a single value convertible to @c unsigned char.
+			 * @tparam T Source type.
 			 * @param value Value forwarded into @c std::byte.
 			 * @return Reference to the appended byte.
 			 */
@@ -668,18 +709,24 @@ namespace StormByte {
 			 */
 			void swap(BinaryData& other) noexcept;
 
+			/**
+			 * @brief Hexadecimal dump of the occupied bytes.
+			 *
+			 * Each line is an 8-digit offset, sixteen bytes as hex, and the
+			 * same sixteen bytes as ASCII (non-printable shown as @c '.').
+			 * An empty sequence yields an empty @ref CString.
+			 *
+			 * @return Dump text owned by Base.
+			 */
+			CString HexDump() const;
+
 		private:
 			/**
-			 * @brief Heap block owned by Base. Hidden from Doxygen.
 			 * @cond
 			 */
 			struct Storage;
-			/** @endcond */
-
-			/**
-			 * @brief Opaque pointer to @ref Storage.
-			 */
 			std::unique_ptr<Storage> m_storage;
+			/** @endcond */
 	};
 
 	/**
@@ -690,9 +737,24 @@ namespace StormByte {
 	STORMBYTE_PUBLIC void swap(BinaryData& lhs, BinaryData& rhs) noexcept;
 
 	/**
+	 * @brief Equality between a view and a sequence.
+	 * @param bytes View.
+	 * @param data Sequence.
+	 * @return Same as @c data == bytes.
+	 */
+	STORMBYTE_PUBLIC bool operator==(std::span<const std::byte> bytes, const BinaryData& data) noexcept;
+
+	/**
+	 * @brief Inequality between a view and a sequence.
+	 * @param bytes View.
+	 * @param data Sequence.
+	 * @return Same as @c data != bytes.
+	 */
+	STORMBYTE_PUBLIC bool operator!=(std::span<const std::byte> bytes, const BinaryData& data) noexcept;
+
+	/**
 	 * @brief Copy from an input range of byte-convertible values.
 	 * @tparam R Range type satisfying @ref StormByte::Type::ByteInputRange.
-	 * @param range Source range.
 	 */
 	template<Type::ByteInputRange R>
 	BinaryData::BinaryData(const R& range)
@@ -706,7 +768,6 @@ namespace StormByte {
 	/**
 	 * @brief Consume an rvalue range. Moves when @p R is an rvalue @ref BinaryData.
 	 * @tparam R Range type satisfying @ref StormByte::Type::ByteInputRange.
-	 * @param range Source range.
 	 */
 	template<Type::ByteInputRange R>
 	BinaryData::BinaryData(R&& range)
@@ -725,8 +786,6 @@ namespace StormByte {
 	/**
 	 * @brief Replace contents with the range @c [first, last).
 	 * @tparam InputIt Input iterator whose value converts to @c std::byte.
-	 * @param first Start of the source range.
-	 * @param last End of the source range.
 	 */
 	template<typename InputIt>
 	void BinaryData::assign(InputIt first, InputIt last) {
@@ -738,9 +797,6 @@ namespace StormByte {
 	/**
 	 * @brief Insert the range @c [first, last) before @p pos.
 	 * @tparam InputIt Input iterator whose value converts to @c std::byte.
-	 * @param pos Insertion point.
-	 * @param first Start of the source range.
-	 * @param last End of the source range.
 	 * @return Iterator to the first inserted byte, or @p pos when the range is empty.
 	 */
 	template<typename InputIt>
@@ -755,9 +811,8 @@ namespace StormByte {
 	}
 
 	/**
-	 * @brief Append a byte constructed in place.
-	 * @tparam T Source type convertible to the underlying value of @c std::byte.
-	 * @param value Value forwarded into @c std::byte.
+	 * @brief Append a byte constructed from a single value convertible to @c unsigned char.
+	 * @tparam T Source type.
 	 * @return Reference to the appended byte.
 	 */
 	template<typename T>
