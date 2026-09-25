@@ -25,7 +25,7 @@ The suite is split on purpose. Buffer, Config, Crypto, Database, Logger, Multime
 - **ByteSize** — octet length (`uint64_t` storage). Implicit only to `std::size_t`. IEC / SI units (`1 * KiB`), human-readable `CString` (`1.00 KiB`). Area products are deleted.
 - **UUID** — RFC 4122 version 4 (`GenerateUUIDv4`).
 - **Bitmask** — CRTP flags over `Type::UnsignedEnum`.
-- **Clonable** — virtual `Clone` / `Move` into `shared_ptr` or `unique_ptr`.
+- **Clonable** — virtual `Clone` / `Move` into `Shared<T>` or `Unique<T>` (Base heap). `Shared` converts to `std::shared_ptr`; `Unique` does not convert to `std::unique_ptr<T>`.
 - **ThreadLock** — owner-thread reentry; `Unlock` from a non-owner is a no-op.
 - **Type concepts** — `StormByte::Type::*` (`String`, `Container`, `Optional`, `Pair`, `Numeral`, `Array`, …). `Numeral` includes `Size` and `ByteSize`. No `enable_if` / `void_t` next to them.
 - **Platform / visibility** — `WINDOWS` / `LINUX` / `MACOS`, `BIT32` / `BIT64`, `CLANG` / `GCC` / `MSVC` (clang-cl is `CLANG`, not `MSVC`).
@@ -387,17 +387,43 @@ The owner may `Lock()` again. Another thread blocks. `Unlock()` from a non-owner
 
 ### Clonable
 
+`Clone` / `Move` / `MakePointer` allocate on Base's heap. Construct owners only that way (`Heap::MakeShared` / `Heap::MakeUnique`). Do not pass `std::shared_ptr` or `std::unique_ptr` as the second template argument.
+
+`PointerType` is `Shared<T>` (default) or `Unique<T>`. Overrides that return `PointerType` from `MakePointer` stay as they are. After construction, `Shared` converts implicitly to `std::shared_ptr<T>` (same control block). `Unique` converts on move to `std::unique_ptr<T, Heap::ObjectDeleter>`, not to `std::unique_ptr<T>`.
+
 ```cpp
 #include <StormByte/clonable.hxx>
 #include <memory>
 
 using namespace StormByte;
 
-class Shape : public Clonable<Shape, std::shared_ptr<Shape>> {
+class Shape : public Clonable<Shape> {
 public:
-	virtual std::shared_ptr<Shape> Clone() const override = 0;
-	virtual std::shared_ptr<Shape> Move() override = 0;
+	PointerType Clone() const override {
+		return MakePointer<Shape>(*this);
+	}
+
+	PointerType Move() override {
+		return MakePointer<Shape>(std::move(*this));
+	}
 };
+
+class Token : public Clonable<Token, Unique<Token>> {
+public:
+	PointerType Clone() const override {
+		return MakePointer<Token>(*this);
+	}
+
+	PointerType Move() override {
+		return MakePointer<Token>(std::move(*this));
+	}
+};
+
+void use(const Shape& shape) {
+	Shape::PointerType copy = shape.Clone();
+	std::shared_ptr<Shape> as_std = copy;
+	(void)as_std;
+}
 ```
 
 ### Type concepts

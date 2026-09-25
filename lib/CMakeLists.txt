@@ -5,10 +5,10 @@ option(STORMBYTE_SHARED "Build StormByte as a shared library" ON)
 file(GLOB_RECURSE STORMBYTE_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_LIST_DIR}/*.cxx")
 
 if(STORMBYTE_SHARED)
-    add_library(StormByte SHARED ${STORMBYTE_SOURCES})
-    target_compile_definitions(StormByte PUBLIC STORMBYTE_SHARED)
+	add_library(StormByte SHARED ${STORMBYTE_SOURCES})
+	target_compile_definitions(StormByte PUBLIC STORMBYTE_SHARED)
 else()
-    add_library(StormByte STATIC ${STORMBYTE_SOURCES})
+	add_library(StormByte STATIC ${STORMBYTE_SOURCES})
 endif()
 
 set_target_properties(StormByte PROPERTIES
@@ -39,4 +39,5 @@ endif()
 
 target_include_directories(StormByte
 	SYSTEM BEFORE PUBLIC "${CMAKE_CURRENT_LIST_DIR}/public"
+	PRIVATE "${CMAKE_CURRENT_LIST_DIR}/private"
 )
