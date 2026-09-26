@@ -193,7 +193,9 @@ namespace StormByte {
 			 * @return Digits, no unit suffix.
 			 */
 			inline operator std::string() const {
-				return static_cast<std::string>(static_cast<CString>(*this));
+				// By name. static_cast<CString> is CString(std::string) on GCC,
+				// and that calls this operator again.
+				return operator CString().operator std::string();
 			}
 
 			/**
