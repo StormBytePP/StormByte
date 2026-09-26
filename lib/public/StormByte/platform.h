@@ -81,3 +81,14 @@
 #elif defined(_MSC_VER)
     #define MSVC
 #endif
+
+// ---------------------------------------------------------------------------
+// Force the body into the caller. `inline` alone is only a hint.
+// ---------------------------------------------------------------------------
+#if defined(MSVC)
+    #define STORMBYTE_FORCE_INLINE __forceinline
+#elif defined(GCC) || defined(CLANG)
+    #define STORMBYTE_FORCE_INLINE inline __attribute__((always_inline))
+#else
+    #define STORMBYTE_FORCE_INLINE inline
+#endif
