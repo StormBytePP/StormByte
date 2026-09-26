@@ -192,7 +192,7 @@ namespace StormByte {
 			 * @brief Decimal text on the caller heap.
 			 * @return Digits, no unit suffix.
 			 */
-			inline operator std::string() const {
+			STORMBYTE_FORCE_INLINE operator std::string() const {
 				// By name. static_cast<CString> is CString(std::string) on GCC,
 				// and that calls this operator again.
 				return operator CString().operator std::string();

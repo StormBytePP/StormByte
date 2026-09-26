@@ -315,17 +315,6 @@ BinaryData::operator std::span<const std::byte>() const noexcept {
 	return span();
 }
 
-BinaryData::operator std::vector<std::byte>() const& {
-	return std::vector<std::byte>(m_storage->bytes.begin(), m_storage->bytes.end());
-}
-
-BinaryData::operator std::vector<std::byte>() && {
-	std::vector<std::byte> out(m_storage->bytes.begin(), m_storage->bytes.end());
-	clear();
-	shrink_to_fit();
-	return out;
-}
-
 void BinaryData::assign(const ByteSize& count, std::byte value) {
 	m_storage->bytes.assign(AsIndex(count), value);
 }

@@ -87,8 +87,9 @@ namespace StormByte {
 	 * Equality and `<=>` compare text, not addresses. Two nulls are
 	 * equal. Null is not equal to `""`. Null orders before any text.
 	 *
-	 * `operator std::string`, `operator std::string_view` and
-	 * `operator<<` are inline so they run in the caller’s translation unit.
+	 * `operator std::string` and `operator<<` are `STORMBYTE_FORCE_INLINE`
+	 * so the caller CRT owns the string and the stream buffer. `inline` on an
+	 * exported class can still be a call into this DLL.
 	 *
 	 * If the text never leaves the module that created it, or the
 	 * program is not built for Windows, use `std::string`.
@@ -239,7 +240,7 @@ namespace StormByte {
 			 * @brief Copy of the text in the caller’s heap.
 			 * @return Empty string when the buffer is null.
 			 */
-			inline operator std::string() const {
+			STORMBYTE_FORCE_INLINE operator std::string() const {
 				const char* text = static_cast<const char*>(*this);
 				return text ? std::string(text) : std::string();
 			}
@@ -249,7 +250,7 @@ namespace StormByte {
 			 * @param stream Destination.
 			 * @return @p stream.
 			 */
-			inline std::ostream& operator<<(std::ostream& stream) const {
+			STORMBYTE_FORCE_INLINE std::ostream& operator<<(std::ostream& stream) const {
 				const char* text = static_cast<const char*>(*this);
 				if (text)
 					stream << text;

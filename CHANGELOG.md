@@ -69,6 +69,7 @@ If you landed here from a release link and have not read the tree:
 - **`ByteSize` / `Size`.** The integer constructors stay in the header. GCC does not emit a `constexpr` constructor that is both an `extern template` and an explicit instantiation, so `SizeTests` crashed and `ByteSize(unsigned long long)` was missing from the shared library. The operators are still one copy in the DLL. `++` / `--` build the step with the private constructor, so they do not instantiate `unsigned int` early.
 - **`Size` / `ByteSize` to `std::string`.** The conversion calls `operator CString()` by name. On GCC, `static_cast<CString>` picks `CString(std::string)` and that calls the same operator again until the stack dies.
 - **`CString` / `WCString`.** Each constructs from the other. Narrow text is UTF-8. `ByteSize`'s wide form uses that conversion. `swprintf` and `%s` is a narrow string on glibc and a wide string on the Windows CRT, so `1.00 KiB` did not match.
+- **Caller containers.** `CString::operator std::string`, `WCString::operator std::wstring`, `Size` / `ByteSize` `operator std::string`, their `operator<<`, and `BinaryData::operator std::vector` are `STORMBYTE_FORCE_INLINE`. On an exported class, `inline` can still be a call into the DLL, so the container was allocated here and freed by the caller. The vector operators were out of line; they now copy through `span()` in the caller, then `clear()` on Base's heap.
 
 [2.0.0]: https://github.com/StormBytePP/StormByte/compare/1.2.0...2.0.0
 

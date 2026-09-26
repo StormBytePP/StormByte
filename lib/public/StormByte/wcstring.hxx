@@ -88,8 +88,9 @@ namespace StormByte {
 	 * Equality and `<=>` compare text, not addresses. Two nulls are
 	 * equal. Null is not equal to `L""`. Null orders before any text.
 	 *
-	 * `operator std::wstring`, `operator std::wstring_view` and
-	 * `operator<<` are inline so they run in the caller’s translation unit.
+	 * `operator std::wstring` and `operator<<` are `STORMBYTE_FORCE_INLINE`
+	 * so the caller CRT owns the string and the stream buffer. `inline` on an
+	 * exported class can still be a call into this DLL.
 	 *
 	 * If the text never leaves the module that created it, or the
 	 * program is not built for Windows, use `std::wstring`.
@@ -240,7 +241,7 @@ namespace StormByte {
 			 * @brief Copy of the text in the caller’s heap.
 			 * @return Empty string when the buffer is null.
 			 */
-			inline operator std::wstring() const {
+			STORMBYTE_FORCE_INLINE operator std::wstring() const {
 				const wchar_t* text = static_cast<const wchar_t*>(*this);
 				return text ? std::wstring(text) : std::wstring();
 			}
@@ -250,7 +251,7 @@ namespace StormByte {
 			 * @param stream Destination.
 			 * @return @p stream.
 			 */
-			inline std::wostream& operator<<(std::wostream& stream) const {
+			STORMBYTE_FORCE_INLINE std::wostream& operator<<(std::wostream& stream) const {
 				const wchar_t* text = static_cast<const wchar_t*>(*this);
 				if (text)
 					stream << text;

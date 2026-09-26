@@ -541,9 +541,13 @@ namespace StormByte {
 			/**
 			 * @brief Copy bytes onto the caller CRT as a @c std::vector.
 			 * @return New vector owned by the caller. @c *this is unchanged.
-			 * @note Not a heap steal. The vector allocation is the caller's.
+			 * @note Not a heap steal. `STORMBYTE_FORCE_INLINE` so the vector
+			 *       is not allocated inside this DLL.
 			 */
-			explicit operator std::vector<std::byte>() const&;
+			STORMBYTE_FORCE_INLINE explicit operator std::vector<std::byte>() const& {
+				const std::span<const std::byte> bytes = span();
+				return std::vector<std::byte>(bytes.begin(), bytes.end());
+			}
 
 			/**
 			 * @brief Copy bytes onto the caller CRT, then release this object's storage.
@@ -552,7 +556,13 @@ namespace StormByte {
 			 *       pointer to a foreign @c std::vector. Peak usage is two copies
 			 *       during the transfer; @c *this is empty afterwards.
 			 */
-			explicit operator std::vector<std::byte>() &&;
+			STORMBYTE_FORCE_INLINE explicit operator std::vector<std::byte>() && {
+				const std::span<const std::byte> bytes = span();
+				std::vector<std::byte> out(bytes.begin(), bytes.end());
+				clear();
+				shrink_to_fit();
+				return out;
+			}
 
 			/**
 			 * @brief Replace contents with @p count copies of @p value.
